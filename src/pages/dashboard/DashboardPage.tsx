@@ -18,6 +18,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface ReviewCycle {
+  id: string;
+  title: string;
+  status: string;
+  _count?: {
+    total_feedback: number;
+    pending_feedback: number;
+    completed_feedback: number;
+  };
+}
+
 interface FeedbackResponse {
   id: string;
   submitted_at: string;
@@ -75,6 +86,7 @@ function LoadingFeedback() {
 export function DashboardPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewCycles, setReviewCycles] = useState<ReviewCycle[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     activeReviews: 0,
     pendingFeedback: 0,
@@ -101,7 +113,7 @@ export function DashboardPage() {
       }
 
       // For each review cycle, get the feedback request counts
-      const cyclesWithCounts = await Promise.all(cyclesData.map(async (cycle) => {
+      const cyclesWithCounts = await Promise.all((cyclesData || []).map(async (cycle) => {
         const { data: requests, error: requestsError } = await supabase
           .from('feedback_requests')
           .select('id, status')
@@ -127,7 +139,14 @@ export function DashboardPage() {
       }));
 
       console.log('Fetched review cycles with counts:', cyclesWithCounts);
-      setReviewCycles(cyclesWithCounts || []);
+      setReviewCycles(cyclesWithCounts);
+      
+      // Update stats with active reviews count
+      setStats(prev => ({
+        ...prev,
+        activeReviews: cyclesWithCounts.filter(c => c.status === 'active').length,
+        pendingFeedback: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.pending_feedback || 0), 0)
+      }));
 
       // Get recent feedback
       const { data: recentFeedback, error: feedbackError } = await supabase
@@ -138,12 +157,12 @@ export function DashboardPage() {
           relationship,
           strengths,
           areas_for_improvement,
-          feedback_request (
-            employee:employees (
+          feedback_request!inner (
+            employee:employees!inner (
               name,
               role
             ),
-            review_cycle:review_cycles (
+            review_cycle:review_cycles!inner (
               id,
               title
             )
@@ -169,6 +188,7 @@ export function DashboardPage() {
 
       setStats(prev => ({
         ...prev,
+        completedReviews: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.completed_feedback || 0), 0),
         recentFeedback: formattedFeedback
       }));
     } catch (error) {
@@ -296,10 +316,10 @@ export function DashboardPage() {
                 <div className="mb-2 flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">
-                      {feedback.employee?.name} - {feedback.employee?.role}
+                      {feedback.feedback_request.employee.name} - {feedback.feedback_request.employee.role}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {feedback.review_cycle?.title}
+                      {feedback.feedback_request.review_cycle.title}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -341,10 +361,10 @@ export function DashboardPage() {
                     <span className="font-medium">From: </span>
                     <span className="text-muted-foreground">
                       {feedback.relationship === 'senior_colleague'
-                        ? `Senior Colleague (More senior than ${feedback.employee?.role})`
+                        ? `Senior Colleague (More senior than ${feedback.feedback_request.employee.role})`
                         : feedback.relationship === 'equal_colleague'
-                        ? `Equal Colleague (${feedback.employee?.role} or equivalent)`
-                        : `Junior Colleague (Less senior than ${feedback.employee?.role})`}
+                        ? `Equal Colleague (${feedback.feedback_request.employee.role} or equivalent)`
+                        : `Junior Colleague (Less senior than ${feedback.feedback_request.employee.role})`}
                     </span>
                   </div>
                   <div>

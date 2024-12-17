@@ -3,10 +3,11 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/lib/supabase';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check current session
@@ -43,7 +44,8 @@ export function LoginPage() {
           appearance={{ theme: ThemeSupa }}
           providers={['google']}
           redirectTo={`${window.location.origin}/dashboard`}
-          onAuthError={(error: Error) => {
+          showLinks={false}
+          onError={(error) => {
             console.error('Auth error:', error);
             toast({
               title: "Error",

@@ -29,12 +29,19 @@ interface FeedbackRequest {
   feedback: FeedbackResponse[];
 }
 
+interface ReviewCycle {
+  id: string;
+  title: string;
+  review_by_date: string;
+  status: string;
+}
+
 export function ManageReviewCyclePage() {
   const { cycleId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [reviewCycle, setReviewCycle] = useState<any>(null);
+  const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
@@ -82,7 +89,7 @@ export function ManageReviewCyclePage() {
           employee_id,
           unique_link,
           status,
-          employee:employees (
+          employee:employees!inner (
             id,
             name,
             role
