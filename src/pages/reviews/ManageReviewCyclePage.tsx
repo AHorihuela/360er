@@ -112,7 +112,11 @@ export function ManageReviewCyclePage() {
         employee_id: request.employee_id,
         unique_link: request.unique_link,
         status: request.status,
-        employee: request.employee,
+        employee: {
+          id: request.employee.id,
+          name: request.employee.name,
+          role: request.employee.role
+        },
         feedback: request.feedback || []
       }));
 
@@ -185,7 +189,7 @@ export function ManageReviewCyclePage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || !reviewCycle) {
     return <div>Loading...</div>;
   }
 

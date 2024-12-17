@@ -29,6 +29,15 @@ export function LoginPage() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleError = (error: Error) => {
+    console.error('Auth error:', error);
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-md space-y-8 rounded-lg border bg-card p-8 shadow-sm">
@@ -45,14 +54,7 @@ export function LoginPage() {
           providers={['google']}
           redirectTo={`${window.location.origin}/dashboard`}
           showLinks={false}
-          onError={(error) => {
-            console.error('Auth error:', error);
-            toast({
-              title: "Error",
-              description: error.message,
-              variant: "destructive",
-            });
-          }}
+          view="sign_in"
         />
       </div>
     </div>

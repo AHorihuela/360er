@@ -86,14 +86,13 @@ function LoadingFeedback() {
 export function DashboardPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [reviewCycles, setReviewCycles] = useState<ReviewCycle[]>([]);
+  const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     activeReviews: 0,
     pendingFeedback: 0,
     completedReviews: 0,
     recentFeedback: []
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchDashboardStats();
@@ -137,9 +136,6 @@ export function DashboardPage() {
           }
         };
       }));
-
-      console.log('Fetched review cycles with counts:', cyclesWithCounts);
-      setReviewCycles(cyclesWithCounts);
       
       // Update stats with active reviews count
       setStats(prev => ({
@@ -157,7 +153,7 @@ export function DashboardPage() {
           relationship,
           strengths,
           areas_for_improvement,
-          feedback_request!inner (
+          feedback_request:feedback_requests!inner (
             employee:employees!inner (
               name,
               role
