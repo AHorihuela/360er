@@ -22,6 +22,11 @@ export default defineConfig({
         },
       },
     },
+    target: 'esnext',
+    minify: 'esbuild',
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
   },
   server: {
     port: 3000,
