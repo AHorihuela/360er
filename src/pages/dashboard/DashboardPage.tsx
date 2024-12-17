@@ -170,15 +170,21 @@ export function DashboardPage() {
       if (feedbackError) throw feedbackError;
 
       // Transform the data to match our interface
-      const formattedFeedback = (recentFeedback || []).map((feedback): FeedbackResponse => ({
+      const formattedFeedback = (recentFeedback || []).map((feedback: any): FeedbackResponse => ({
         id: feedback.id,
         submitted_at: feedback.submitted_at,
         relationship: feedback.relationship,
         strengths: feedback.strengths,
         areas_for_improvement: feedback.areas_for_improvement,
         feedback_request: {
-          employee: feedback.feedback_request.employee,
-          review_cycle: feedback.feedback_request.review_cycle
+          employee: {
+            name: feedback.feedback_request.employee.name,
+            role: feedback.feedback_request.employee.role
+          },
+          review_cycle: {
+            id: feedback.feedback_request.review_cycle.id,
+            title: feedback.feedback_request.review_cycle.title
+          }
         }
       }));
 
