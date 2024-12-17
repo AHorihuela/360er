@@ -18,26 +18,29 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface FeedbackDetails {
+interface FeedbackResponse {
   id: string;
   submitted_at: string;
   relationship: string;
   strengths: string;
   areas_for_improvement: string;
-  employee: {
-    name: string;
-    role: string;
-  } | null;
-  review_cycle: {
-    title: string;
-  } | null;
+  feedback_request: {
+    employee: {
+      name: string;
+      role: string;
+    };
+    review_cycle: {
+      id: string;
+      title: string;
+    };
+  };
 }
 
 interface DashboardStats {
   activeReviews: number;
   pendingFeedback: number;
   completedReviews: number;
-  recentFeedback: FeedbackDetails[];
+  recentFeedback: FeedbackResponse[];
 }
 
 function LoadingCard() {
@@ -86,28 +89,47 @@ export function DashboardPage() {
 
   async function fetchDashboardStats() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get active review cycles
-      const { data: activeReviews, error: reviewsError } = await supabase
+      console.log('Fetching review cycles...');
+      const { data: cyclesData, error: cyclesError } = await supabase
         .from('review_cycles')
-        .select('id')
-        .eq('created_by', user.id)
-        .eq('status', 'active');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (reviewsError) throw reviewsError;
+      if (cyclesError) {
+        console.error('Error fetching review cycles:', cyclesError);
+        throw cyclesError;
+      }
 
-      // Get pending feedback requests
-      const { data: pendingFeedback, error: pendingError } = await supabase
-        .from('feedback_requests')
-        .select('id, review_cycle_id')
-        .eq('status', 'pending')
-        .in('review_cycle_id', activeReviews?.map(r => r.id) || []);
+      // For each review cycle, get the feedback request counts
+      const cyclesWithCounts = await Promise.all(cyclesData.map(async (cycle) => {
+        const { data: requests, error: requestsError } = await supabase
+          .from('feedback_requests')
+          .select('id, status')
+          .eq('review_cycle_id', cycle.id);
 
-      if (pendingError) throw pendingError;
+        if (requestsError) {
+          console.error('Error fetching feedback requests:', requestsError);
+          return cycle;
+        }
 
-      // Get recent feedback with detailed information
+        const total = requests?.length || 0;
+        const pending = requests?.filter(r => r.status === 'pending').length || 0;
+        const completed = requests?.filter(r => r.status === 'completed').length || 0;
+
+        return {
+          ...cycle,
+          _count: {
+            total_feedback: total,
+            pending_feedback: pending,
+            completed_feedback: completed
+          }
+        };
+      }));
+
+      console.log('Fetched review cycles with counts:', cyclesWithCounts);
+      setReviewCycles(cyclesWithCounts || []);
+
+      // Get recent feedback
       const { data: recentFeedback, error: feedbackError } = await supabase
         .from('feedback_responses')
         .select(`
@@ -116,15 +138,14 @@ export function DashboardPage() {
           relationship,
           strengths,
           areas_for_improvement,
-          feedback_request:feedback_requests (
+          feedback_request (
             employee:employees (
               name,
               role
             ),
             review_cycle:review_cycles (
               id,
-              title,
-              created_by
+              title
             )
           )
         `)
@@ -133,28 +154,23 @@ export function DashboardPage() {
 
       if (feedbackError) throw feedbackError;
 
-      // Filter feedback to only show responses from review cycles created by the user
-      const userFeedback = recentFeedback?.filter(
-        feedback => feedback.feedback_request?.review_cycle?.created_by === user.id
-      );
-
       // Transform the data to match our interface
-      const formattedFeedback = userFeedback?.map(feedback => ({
+      const formattedFeedback = (recentFeedback || []).map((feedback): FeedbackResponse => ({
         id: feedback.id,
         submitted_at: feedback.submitted_at,
         relationship: feedback.relationship,
         strengths: feedback.strengths,
         areas_for_improvement: feedback.areas_for_improvement,
-        employee: feedback.feedback_request?.employee || null,
-        review_cycle: feedback.feedback_request?.review_cycle || null
-      })) || [];
+        feedback_request: {
+          employee: feedback.feedback_request.employee,
+          review_cycle: feedback.feedback_request.review_cycle
+        }
+      }));
 
-      setStats({
-        activeReviews: activeReviews?.length || 0,
-        pendingFeedback: pendingFeedback?.length || 0,
-        completedReviews: formattedFeedback.length,
+      setStats(prev => ({
+        ...prev,
         recentFeedback: formattedFeedback
-      });
+      }));
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {

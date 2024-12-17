@@ -11,7 +11,7 @@ interface Employee {
   role: string;
 }
 
-interface FeedbackSummary {
+interface FeedbackResponse {
   id: string;
   relationship: string;
   overall_rating: number;
@@ -26,7 +26,7 @@ interface FeedbackRequest {
   unique_link: string;
   status: string;
   employee: Employee;
-  feedback?: FeedbackSummary[];
+  feedback: FeedbackResponse[];
 }
 
 export function ManageReviewCyclePage() {
@@ -65,15 +65,29 @@ export function ManageReviewCyclePage() {
       setEmployees(employeesData);
 
       // Fetch existing feedback requests with feedback
-      const { data: requestsData, error: requestsError } = await supabase
+      await fetchFeedbackRequests();
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function fetchFeedbackRequests() {
+    try {
+      const { data: requests, error: requestsError } = await supabase
         .from('feedback_requests')
         .select(`
           id,
           employee_id,
           unique_link,
           status,
-          employee:employees(*),
-          feedback:feedback_responses(
+          employee:employees (
+            id,
+            name,
+            role
+          ),
+          feedback:feedback_responses (
             id,
             relationship,
             overall_rating,
@@ -85,11 +99,24 @@ export function ManageReviewCyclePage() {
         .eq('review_cycle_id', cycleId);
 
       if (requestsError) throw requestsError;
-      setFeedbackRequests(requestsData);
+
+      const typedRequests: FeedbackRequest[] = (requests || []).map(request => ({
+        id: request.id,
+        employee_id: request.employee_id,
+        unique_link: request.unique_link,
+        status: request.status,
+        employee: request.employee,
+        feedback: request.feedback || []
+      }));
+
+      setFeedbackRequests(typedRequests);
     } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching feedback requests:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch feedback requests",
+        variant: "destructive",
+      });
     }
   }
 
