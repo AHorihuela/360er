@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle representing 360 degrees -->
+  <circle cx="16" cy="16" r="15" stroke="#4F46E5" stroke-width="2" />
+  
+  <!-- Inner elements representing feedback flow -->
+  <path d="M16 8C19.3137 8 22 10.6863 22 14C22 17.3137 19.3137 20 16 20C14.4633 20 13.0615 19.4223 12 18.4722L9 20L10.5278 17C9.57771 15.9385 9 14.5367 9 13C9 9.68629 11.6863 7 15 7"
+    stroke="#4F46E5" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Central dot -->
+  <circle cx="16" cy="16" r="2" fill="#4F46E5" />
+  
+  <!-- Feedback arrows -->
+  <path d="M16 4L18 6L16 8M16 24L14 22L16 20M28 16L26 18L24 16M4 16L6 14L8 16" 
+    stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg> 
