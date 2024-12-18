@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -48,6 +48,7 @@ export function ManageReviewCyclePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -186,13 +187,23 @@ export function ManageReviewCyclePage() {
   }
 
   async function handleDeleteFeedback(feedbackId: string) {
+    if (deletingFeedbackId) return; // Prevent multiple deletes
+    
     try {
-      const { error } = await supabase
+      setDeletingFeedbackId(feedbackId);
+      console.log('Attempting to delete feedback:', feedbackId);
+      
+      const { error: deleteError } = await supabase
         .from('feedback_responses')
         .delete()
         .eq('id', feedbackId);
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('Error deleting feedback:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('Feedback deleted successfully');
 
       // Update the local state to reflect the deletion
       setFeedbackRequests(feedbackRequests.map(request => ({
@@ -205,12 +216,14 @@ export function ManageReviewCyclePage() {
         description: "The feedback has been deleted successfully.",
       });
     } catch (error) {
-      console.error('Error deleting feedback:', error);
+      console.error('Error in handleDeleteFeedback:', error);
       toast({
         title: "Error",
-        description: "Failed to delete feedback",
+        description: error instanceof Error ? error.message : "Failed to delete feedback. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeletingFeedbackId(null);
     }
   }
 
@@ -301,8 +314,13 @@ export function ManageReviewCyclePage() {
                                 onClick={() => handleDeleteFeedback(feedback.id)}
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 title="Delete feedback"
+                                disabled={deletingFeedbackId === feedback.id}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deletingFeedbackId === feedback.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                             <span className="text-xs text-muted-foreground">
