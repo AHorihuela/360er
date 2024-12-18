@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -185,6 +185,35 @@ export function ManageReviewCyclePage() {
     });
   }
 
+  async function handleDeleteFeedback(feedbackId: string) {
+    try {
+      const { error } = await supabase
+        .from('feedback_responses')
+        .delete()
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+
+      // Update the local state to reflect the deletion
+      setFeedbackRequests(feedbackRequests.map(request => ({
+        ...request,
+        feedback: request.feedback?.filter(f => f.id !== feedbackId) || []
+      })));
+
+      toast({
+        title: "Feedback Deleted",
+        description: "The feedback has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete feedback",
+        variant: "destructive",
+      });
+    }
+  }
+
   if (isLoading || !reviewCycle) {
     return <div>Loading...</div>;
   }
@@ -262,9 +291,19 @@ export function ManageReviewCyclePage() {
                       {request.feedback.map((feedback) => (
                         <div key={feedback.id} className="rounded-lg border bg-muted/50 p-4 space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium capitalize">
-                              {feedback.relationship.replace('_', ' ')}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium capitalize">
+                                {feedback.relationship.replace('_', ' ')}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteFeedback(feedback.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                             <span className="text-xs text-muted-foreground">
                               {new Date(feedback.submitted_at).toLocaleDateString()}
                             </span>
