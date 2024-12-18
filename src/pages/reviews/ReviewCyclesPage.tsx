@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { PlusIcon, Users, ChevronDown, Trash2, CalendarIcon, Badge } from 'lucide-react';
+import { PlusIcon, Users, ChevronDown, Trash2, CalendarIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -326,10 +326,10 @@ export function ReviewCyclesPage() {
                     <div className="flex items-center gap-2">
                       <Badge variant={
                         cycle.status === 'active' 
-                          ? 'success'
-                          : cycle.status === 'completed'
                           ? 'default'
-                          : 'secondary'
+                          : cycle.status === 'completed'
+                          ? 'secondary'
+                          : 'outline'
                       }>
                         {cycle.status}
                       </Badge>

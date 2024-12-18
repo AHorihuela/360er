@@ -279,42 +279,6 @@ export function DashboardPage() {
     navigate('/');
   };
 
-  async function handleDeleteReviewCycle(cycleId: string) {
-    try {
-      // Delete the review cycle (this will cascade delete feedback requests and responses)
-      const { error: deleteError } = await supabase
-        .from('review_cycles')
-        .delete()
-        .eq('id', cycleId);
-
-      if (deleteError) throw deleteError;
-
-      // Update local state
-      setStats(prev => ({
-        ...prev,
-        activeReviews: prev.activeReviews - 1,
-        recentFeedback: prev.recentFeedback.filter(
-          f => f.feedback_request.review_cycle.id !== cycleId
-        )
-      }));
-
-      toast({
-        title: "Review Cycle Deleted",
-        description: "The review cycle and all associated feedback have been deleted.",
-      });
-
-      // Refresh dashboard stats
-      fetchDashboardStats();
-    } catch (error) {
-      console.error('Error deleting review cycle:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete review cycle. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }
-
   async function handleDeleteFeedback(feedbackId: string) {
     try {
       // Delete the feedback response

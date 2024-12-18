@@ -254,7 +254,7 @@ export function ManageReviewCyclePage() {
                   <div className="mt-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-medium">Feedback Received ({request.feedback.length})</h4>
-                      <Badge variant={request.status === 'completed' ? 'success' : 'secondary'}>
+                      <Badge variant={request.status === 'completed' ? 'default' : 'secondary'}>
                         {request.status === 'completed' ? 'Completed' : 'Pending'}
                       </Badge>
                     </div>
