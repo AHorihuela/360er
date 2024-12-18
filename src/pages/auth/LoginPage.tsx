@@ -57,6 +57,7 @@ export function LoginPage() {
           providers={[]}
           redirectTo={`${window.location.origin}/dashboard`}
           view={view}
+          showLinks={false}
         />
 
         <div className="text-center">
