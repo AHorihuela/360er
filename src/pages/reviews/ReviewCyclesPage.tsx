@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { PlusIcon, Users, ChevronDown, Trash2 } from 'lucide-react';
+import { PlusIcon, Users, ChevronDown, Trash2, CalendarIcon, Badge } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -109,17 +109,27 @@ export function ReviewCyclesPage() {
         throw cyclesError;
       }
 
-      // For each review cycle, get the feedback request counts
+      console.log('Raw cycles data:', cyclesData);
+
+      // For each review cycle, get the feedback request counts with status
       const cyclesWithCounts = await Promise.all(cyclesData.map(async (cycle) => {
         const { data: requests, error: requestsError } = await supabase
           .from('feedback_requests')
-          .select('id, status')
+          .select(`
+            id,
+            status,
+            feedback_responses (
+              id
+            )
+          `)
           .eq('review_cycle_id', cycle.id);
 
         if (requestsError) {
           console.error('Error fetching feedback requests:', requestsError);
           return cycle;
         }
+
+        console.log('Feedback requests for cycle:', cycle.id, requests);
 
         const total = requests?.length || 0;
         const pending = requests?.filter(r => r.status === 'pending').length || 0;
@@ -138,7 +148,12 @@ export function ReviewCyclesPage() {
       console.log('Fetched review cycles with counts:', cyclesWithCounts);
       setReviewCycles(cyclesWithCounts || []);
     } catch (error) {
-      console.error('Error fetching review cycles:', error);
+      console.error('Error in fetchReviewCycles:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch review cycles. Please refresh the page.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -186,46 +201,85 @@ export function ReviewCyclesPage() {
 
   async function handleDeleteCycle(cycleId: string) {
     try {
-      // First, delete all feedback responses for this cycle's feedback requests
-      const { data: requests } = await supabase
-        .from('feedback_requests')
-        .select('id')
-        .eq('review_cycle_id', cycleId);
+      console.log('Starting delete operation for cycle:', cycleId);
+      setIsLoading(true);
 
-      if (requests && requests.length > 0) {
-        const requestIds = requests.map(r => r.id);
-        await supabase
-          .from('feedback_responses')
-          .delete()
-          .in('feedback_request_id', requestIds);
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Authentication required');
+      }
+      
+      // First verify the cycle exists and belongs to the current user
+      const { data: existingCycle, error: checkError } = await supabase
+        .from('review_cycles')
+        .select('id, created_by')
+        .eq('id', cycleId)
+        .eq('created_by', user.id)
+        .single();
+      
+      if (checkError) {
+        console.error('Error checking cycle:', checkError);
+        throw checkError;
       }
 
-      // Then delete all feedback requests for this cycle
-      await supabase
+      if (!existingCycle) {
+        throw new Error('Review cycle not found or you do not have permission to delete it');
+      }
+
+      console.log('Deleting cycle:', cycleId, 'created by:', existingCycle.created_by);
+      
+      // Delete feedback requests first (although cascade should handle this)
+      const { error: requestsError } = await supabase
         .from('feedback_requests')
         .delete()
         .eq('review_cycle_id', cycleId);
 
-      // Finally delete the review cycle
-      const { error } = await supabase
+      if (requestsError) {
+        console.error('Error deleting feedback requests:', requestsError);
+        throw requestsError;
+      }
+
+      // Then delete the review cycle
+      const { data: deleteData, error: deleteError } = await supabase
         .from('review_cycles')
         .delete()
-        .eq('id', cycleId);
+        .eq('id', cycleId)
+        .eq('created_by', user.id) // Ensure we only delete if user owns it
+        .select();
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('Error deleting cycle:', deleteError);
+        throw deleteError;
+      }
 
-      setReviewCycles(reviewCycles.filter(cycle => cycle.id !== cycleId));
+      console.log('Delete response:', deleteData);
+
+      if (!deleteData || deleteData.length === 0) {
+        throw new Error('Failed to delete review cycle - no rows affected');
+      }
+
+      // Remove from local state first
+      setReviewCycles(prev => prev.filter(cycle => cycle.id !== cycleId));
+      
+      // Then fetch fresh data
+      await fetchReviewCycles();
+      
       toast({
         title: "Success",
-        description: "Review cycle deleted successfully",
+        description: "Review cycle and all related feedback deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting review cycle:', error);
+      console.error('Error in handleDeleteCycle:', error);
       toast({
         title: "Error",
-        description: "Failed to delete review cycle. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete review cycle. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -240,102 +294,117 @@ export function ReviewCyclesPage() {
       </div>
 
       {isLoading ? (
-        <div>Loading...</div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
       ) : (
         <div className="space-y-4">
           {reviewCycles.length === 0 ? (
-            <div className="rounded-lg border bg-card p-8 text-center">
-              <p className="text-muted-foreground">No review cycles found</p>
+            <div className="rounded-lg border border-dashed bg-background p-12 text-center">
+              <h3 className="text-lg font-semibold mb-2">No Review Cycles</h3>
+              <p className="text-muted-foreground mb-4">Get started by creating your first review cycle.</p>
+              <Button onClick={() => setShowModal(true)}>
+                <PlusIcon className="mr-2 h-4 w-4" />
+                Create Review Cycle
+              </Button>
             </div>
           ) : (
             reviewCycles.map((cycle) => (
-              <details
+              <div
                 key={cycle.id}
-                className="group rounded-lg border bg-card"
+                className="group rounded-lg border bg-card shadow-sm hover:shadow-md transition-shadow duration-200"
               >
-                <summary className="flex cursor-pointer items-center justify-between p-6 [&::-webkit-details-marker]:hidden">
-                  <div className="flex items-center gap-4">
-                    <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
-                    <div>
-                      <h3 className="font-semibold">{cycle.title}</h3>
-                      <p className="text-sm text-muted-foreground">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-semibold">{cycle.title}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarIcon className="h-4 w-4" />
                         Due by {new Date(cycle.review_by_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      cycle.status === 'active' 
-                        ? 'bg-green-100 text-green-700'
-                        : cycle.status === 'completed'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {cycle.status}
-                    </span>
-                  </div>
-                </summary>
-                <div className="border-t p-6">
-                  <div className="space-y-4">
-                    {cycle._count && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Progress:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-24 rounded-full bg-gray-200">
-                            <div 
-                              className="h-2 rounded-full bg-green-500" 
-                              style={{ 
-                                width: `${(cycle._count.completed_feedback / cycle._count.total_feedback) * 100}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">
-                            {Math.round((cycle._count.completed_feedback / cycle._count.total_feedback) * 100)}%
-                            <span className="ml-1 text-muted-foreground">
-                              ({cycle._count.completed_feedback} of {cycle._count.total_feedback} reviewers)
-                            </span>
-                          </span>
-                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center justify-end gap-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Cycle
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Review Cycle</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this review cycle? This will permanently delete all feedback requests and responses associated with this cycle.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteCycle(cycle.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleManageReviewCycle(cycle.id)}
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Manage Reviewees
-                      </Button>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={
+                        cycle.status === 'active' 
+                          ? 'success'
+                          : cycle.status === 'completed'
+                          ? 'default'
+                          : 'secondary'
+                      }>
+                        {cycle.status}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">Total Reviewees</div>
+                      <div className="text-2xl font-bold">{cycle._count?.total_feedback || 0}</div>
+                    </div>
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">Reviews Completed</div>
+                      <div className="text-2xl font-bold text-green-600">{cycle._count?.completed_feedback || 0}</div>
+                    </div>
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">Pending Reviews</div>
+                      <div className="text-2xl font-bold text-amber-600">{cycle._count?.pending_feedback || 0}</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Completion Progress</span>
+                      <span className="text-sm text-muted-foreground">
+                        {Math.round((cycle._count?.completed_feedback || 0) / (cycle._count?.total_feedback || 1) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-secondary">
+                      <div 
+                        className="h-2 rounded-full bg-primary transition-all duration-300" 
+                        style={{ 
+                          width: `${(cycle._count?.completed_feedback || 0) / (cycle._count?.total_feedback || 1) * 100}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-end gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Cycle
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Review Cycle</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this review cycle? This will permanently delete all feedback requests and responses associated with this cycle.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteCycle(cycle.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleManageReviewCycle(cycle.id)}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Manage Reviewees
+                    </Button>
                   </div>
                 </div>
-              </details>
+              </div>
             ))
           )}
         </div>

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Clock, CheckCircle, LogOut, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Activity, Clock, CheckCircle, LogOut, Trash2, Inbox } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -17,17 +17,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface ReviewCycle {
-  id: string;
-  title: string;
-  status: string;
-  _count?: {
-    total_feedback: number;
-    pending_feedback: number;
-    completed_feedback: number;
-  };
-}
 
 interface FeedbackResponse {
   id: string;
@@ -54,6 +43,53 @@ interface DashboardStats {
   recentFeedback: FeedbackResponse[];
 }
 
+function StatsCard({ icon: Icon, title, value, description, color }: {
+  icon: any;
+  title: string;
+  value: number;
+  description?: string;
+  color: string;
+}) {
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium">
+              {title}
+            </CardTitle>
+            <div className={`p-2 rounded-full ${color}`}>
+              <Icon className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-bold">{value}</div>
+            {description && (
+              <CardDescription className="mt-2 text-sm">
+                {description}
+              </CardDescription>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+    </div>
+  );
+}
+
+function EmptyFeedback() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="rounded-full bg-muted p-4 mb-4">
+        <Inbox className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">No feedback yet</h3>
+      <p className="text-sm text-muted-foreground text-center max-w-sm">
+        When you receive feedback from your team members, it will appear here.
+      </p>
+    </div>
+  );
+}
+
 function LoadingCard() {
   return (
     <Card>
@@ -72,6 +108,7 @@ function LoadingFeedback() {
         <div key={i} className="rounded-lg border p-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-1/4" />
               <Skeleton className="h-4 w-1/4" />
             </div>
             <Skeleton className="h-4 w-3/4" />
@@ -145,54 +182,91 @@ export function DashboardPage() {
       }));
 
       // Get recent feedback
-      const { data: recentFeedback, error: feedbackError } = await supabase
-        .from('feedback_responses')
-        .select(`
-          id,
-          submitted_at,
-          relationship,
-          strengths,
-          areas_for_improvement,
-          feedback_request:feedback_requests!inner (
-            employee:employees!inner (
-              name,
-              role
-            ),
-            review_cycle:review_cycles!inner (
+      console.log('Fetching recent feedback...');
+      try {
+        const { data: recentFeedback, error: feedbackError } = await supabase
+          .from('feedback_responses')
+          .select(`
+            id,
+            submitted_at,
+            relationship,
+            strengths,
+            areas_for_improvement,
+            feedback_request_id,
+            feedback_requests!feedback_request_id (
               id,
-              title
+              employee_id,
+              review_cycle_id,
+              employees!employee_id (
+                name,
+                role
+              ),
+              review_cycles!review_cycle_id (
+                id,
+                title
+              )
             )
-          )
-        `)
-        .order('submitted_at', { ascending: false })
-        .limit(5);
+          `)
+          .order('submitted_at', { ascending: false })
+          .limit(5);
 
-      if (feedbackError) throw feedbackError;
-
-      // Transform the data to match our interface
-      const formattedFeedback = (recentFeedback || []).map((feedback: any): FeedbackResponse => ({
-        id: feedback.id,
-        submitted_at: feedback.submitted_at,
-        relationship: feedback.relationship,
-        strengths: feedback.strengths,
-        areas_for_improvement: feedback.areas_for_improvement,
-        feedback_request: {
-          employee: {
-            name: feedback.feedback_request.employee.name,
-            role: feedback.feedback_request.employee.role
-          },
-          review_cycle: {
-            id: feedback.feedback_request.review_cycle.id,
-            title: feedback.feedback_request.review_cycle.title
-          }
+        if (feedbackError) {
+          console.error('Error fetching recent feedback:', feedbackError);
+          throw feedbackError;
         }
-      }));
 
-      setStats(prev => ({
-        ...prev,
-        completedReviews: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.completed_feedback || 0), 0),
-        recentFeedback: formattedFeedback
-      }));
+        console.log('Recent feedback data:', recentFeedback);
+
+        if (!recentFeedback || recentFeedback.length === 0) {
+          console.log('No feedback found');
+          setStats(prev => ({
+            ...prev,
+            recentFeedback: []
+          }));
+          return;
+        }
+
+        // Transform the data to match our interface
+        const formattedFeedback = recentFeedback
+          .filter((feedback: any) => 
+            feedback.feedback_requests?.employees && 
+            feedback.feedback_requests?.review_cycles
+          )
+          .map((feedback: any): FeedbackResponse => {
+            console.log('Processing feedback:', feedback);
+            return {
+              id: feedback.id,
+              submitted_at: feedback.submitted_at,
+              relationship: feedback.relationship,
+              strengths: feedback.strengths || '',
+              areas_for_improvement: feedback.areas_for_improvement || '',
+              feedback_request: {
+                employee: {
+                  name: feedback.feedback_requests.employees.name || 'Unknown',
+                  role: feedback.feedback_requests.employees.role || 'No role'
+                },
+                review_cycle: {
+                  id: feedback.feedback_requests.review_cycles.id,
+                  title: feedback.feedback_requests.review_cycles.title || 'Untitled Review'
+                }
+              }
+            };
+          });
+
+        console.log('Formatted feedback:', formattedFeedback);
+
+        setStats(prev => ({
+          ...prev,
+          recentFeedback: formattedFeedback
+        }));
+      } catch (error) {
+        console.error('Error in feedback processing:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load recent feedback. Please try again later.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -205,16 +279,53 @@ export function DashboardPage() {
     navigate('/');
   };
 
+  async function handleDeleteReviewCycle(cycleId: string) {
+    try {
+      // Delete the review cycle (this will cascade delete feedback requests and responses)
+      const { error: deleteError } = await supabase
+        .from('review_cycles')
+        .delete()
+        .eq('id', cycleId);
+
+      if (deleteError) throw deleteError;
+
+      // Update local state
+      setStats(prev => ({
+        ...prev,
+        activeReviews: prev.activeReviews - 1,
+        recentFeedback: prev.recentFeedback.filter(
+          f => f.feedback_request.review_cycle.id !== cycleId
+        )
+      }));
+
+      toast({
+        title: "Review Cycle Deleted",
+        description: "The review cycle and all associated feedback have been deleted.",
+      });
+
+      // Refresh dashboard stats
+      fetchDashboardStats();
+    } catch (error) {
+      console.error('Error deleting review cycle:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete review cycle. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
   async function handleDeleteFeedback(feedbackId: string) {
     try {
-      const { error } = await supabase
+      // Delete the feedback response
+      const { error: deleteError } = await supabase
         .from('feedback_responses')
         .delete()
         .eq('id', feedbackId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      // Update the stats to remove the deleted feedback
+      // Update the local state
       setStats(prev => ({
         ...prev,
         recentFeedback: prev.recentFeedback.filter(f => f.id !== feedbackId),
@@ -225,6 +336,9 @@ export function DashboardPage() {
         title: "Feedback deleted",
         description: "The feedback has been permanently deleted.",
       });
+
+      // Refresh the dashboard stats
+      fetchDashboardStats();
     } catch (error) {
       console.error('Error deleting feedback:', error);
       toast({
@@ -262,59 +376,66 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's an overview of your feedback system.
+          </p>
+        </div>
         <Button variant="outline" onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium">
-              <Activity className="h-4 w-4 text-blue-500" />
-              Active Reviews
-            </CardTitle>
-            <p className="text-2xl font-bold">{stats.activeReviews}</p>
-          </CardHeader>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium">
-              <Clock className="h-4 w-4 text-yellow-500" />
-              Pending Feedback
-            </CardTitle>
-            <p className="text-2xl font-bold">{stats.pendingFeedback}</p>
-          </CardHeader>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-medium">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Completed Reviews
-            </CardTitle>
-            <p className="text-2xl font-bold">{stats.completedReviews}</p>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <StatsCard
+          icon={Activity}
+          title="Active Reviews"
+          value={stats.activeReviews}
+          description="Currently ongoing review cycles"
+          color="bg-blue-500"
+        />
+        <StatsCard
+          icon={Clock}
+          title="Pending Feedback"
+          value={stats.pendingFeedback}
+          description="Awaiting responses"
+          color="bg-yellow-500"
+        />
+        <StatsCard
+          icon={CheckCircle}
+          title="Completed Reviews"
+          value={stats.completedReviews}
+          description="Successfully finished"
+          color="bg-green-500"
+        />
       </div>
 
       <Card>
         <CardHeader className="border-b p-4">
-          <CardTitle>Recent Feedback</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Feedback</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reviews')}>
+              View All Reviews
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="divide-y p-0">
           {stats.recentFeedback.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              No feedback received yet
-            </div>
+            <EmptyFeedback />
           ) : (
-            stats.recentFeedback.map((feedback) => (
-              <div key={feedback.id} className="p-4">
+            stats.recentFeedback.map((feedback, index) => (
+              <div
+                key={feedback.id}
+                className="p-4 hover:bg-muted/50 transition-colors animate-in fade-in slide-in-from-bottom-5 duration-500"
+                style={{ 
+                  animationDelay: `${index * 100}ms`,
+                  animationFillMode: 'backwards'
+                }}
+              >
                 <div className="mb-2 flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">

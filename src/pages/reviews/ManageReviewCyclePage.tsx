@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Star } from 'lucide-react';
+import { ArrowLeft, Copy, Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface Employee {
   id: string;
@@ -15,18 +16,20 @@ interface FeedbackResponse {
   id: string;
   relationship: string;
   overall_rating: number;
-  strengths: string;
-  areas_for_improvement: string;
+  strengths: string | null;
+  areas_for_improvement: string | null;
   submitted_at: string;
 }
 
 interface FeedbackRequest {
   id: string;
+  review_cycle_id: string;
   employee_id: string;
   unique_link: string;
-  status: string;
-  employee: Employee;
-  feedback: FeedbackResponse[];
+  status: 'pending' | 'completed';
+  created_at: string;
+  employee?: Employee;
+  feedback?: FeedbackResponse[];
 }
 
 interface ReviewCycle {
@@ -82,13 +85,15 @@ export function ManageReviewCyclePage() {
 
   async function fetchFeedbackRequests() {
     try {
-      const { data: requests, error: requestsError } = await supabase
+      const { data: requests, error } = await supabase
         .from('feedback_requests')
         .select(`
           id,
+          review_cycle_id,
           employee_id,
           unique_link,
           status,
+          created_at,
           employee:employees!inner (
             id,
             name,
@@ -105,20 +110,26 @@ export function ManageReviewCyclePage() {
         `)
         .eq('review_cycle_id', cycleId);
 
-      if (requestsError) throw requestsError;
+      if (error) throw error;
 
-      const typedRequests: FeedbackRequest[] = (requests || []).map(request => ({
-        id: request.id,
-        employee_id: request.employee_id,
-        unique_link: request.unique_link,
-        status: request.status,
-        employee: {
-          id: request.employee.id,
-          name: request.employee.name,
-          role: request.employee.role
-        },
-        feedback: request.feedback || []
-      }));
+      const typedRequests: FeedbackRequest[] = (requests || []).map(request => {
+        const employeeData = Array.isArray(request.employee) ? request.employee[0] : request.employee;
+        
+        return {
+          id: request.id,
+          review_cycle_id: request.review_cycle_id,
+          employee_id: request.employee_id,
+          unique_link: request.unique_link,
+          status: request.status as 'pending' | 'completed',
+          created_at: request.created_at,
+          employee: {
+            id: employeeData?.id || '',
+            name: employeeData?.name || '',
+            role: employeeData?.role || ''
+          },
+          feedback: (request.feedback || []) as FeedbackResponse[]
+        };
+      });
 
       setFeedbackRequests(typedRequests);
     } catch (error) {
@@ -174,21 +185,6 @@ export function ManageReviewCyclePage() {
     });
   }
 
-  function renderStars(rating: number) {
-    return (
-      <div className="flex items-center">
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            className={`h-4 w-4 ${
-              i < rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
-            }`}
-          />
-        ))}
-      </div>
-    );
-  }
-
   if (isLoading || !reviewCycle) {
     return <div>Loading...</div>;
   }
@@ -240,9 +236,9 @@ export function ManageReviewCyclePage() {
             feedbackRequests.map((request) => (
               <div key={request.id} className="p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{request.employee.name}</p>
-                    <p className="text-sm text-muted-foreground">{request.employee.role}</p>
+                  <div className="flex flex-col">
+                    <p className="font-medium">{request.employee?.name || 'Unknown'}</p>
+                    <p className="text-sm text-muted-foreground">{request.employee?.role || 'No role'}</p>
                   </div>
                   <Button
                     variant="outline"
@@ -254,39 +250,43 @@ export function ManageReviewCyclePage() {
                   </Button>
                 </div>
 
-                {request.feedback && request.feedback.length > 0 ? (
-                  <div className="mt-4">
-                    <h3 className="mb-2 text-sm font-medium">Received Feedback</h3>
-                    <div className="space-y-4">
+                {request.feedback?.length ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Feedback Received ({request.feedback.length})</h4>
+                      <Badge variant={request.status === 'completed' ? 'success' : 'secondary'}>
+                        {request.status === 'completed' ? 'Completed' : 'Pending'}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4">
                       {request.feedback.map((feedback) => (
-                        <div key={feedback.id} className="rounded-lg bg-muted/50 p-3">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-sm font-medium">
-                              From: {feedback.relationship}
+                        <div key={feedback.id} className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium capitalize">
+                              {feedback.relationship.replace('_', ' ')}
                             </span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(feedback.submitted_at).toLocaleDateString()}
                             </span>
                           </div>
-                          {renderStars(feedback.overall_rating)}
-                          <div className="mt-2 space-y-2 text-sm">
+                          {feedback.strengths && (
                             <div>
-                              <span className="font-medium">Strengths: </span>
-                              <span className="text-muted-foreground">{feedback.strengths}</span>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Strengths</p>
+                              <p className="text-sm">{feedback.strengths}</p>
                             </div>
+                          )}
+                          {feedback.areas_for_improvement && (
                             <div>
-                              <span className="font-medium">Areas for Improvement: </span>
-                              <span className="text-muted-foreground">{feedback.areas_for_improvement}</span>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Areas for Improvement</p>
+                              <p className="text-sm">{feedback.areas_for_improvement}</p>
                             </div>
-                          </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    No feedback received yet
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-4">No feedback received yet</p>
                 )}
               </div>
             ))

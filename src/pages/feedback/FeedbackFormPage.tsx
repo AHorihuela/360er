@@ -184,6 +184,8 @@ export function FeedbackFormPage() {
 
     setIsSubmitting(true);
     try {
+      console.log('Submitting feedback for request:', feedbackRequest.id);
+      
       // Insert feedback response
       const { error: responseError } = await supabase
         .from('feedback_responses')
@@ -194,7 +196,12 @@ export function FeedbackFormPage() {
           areas_for_improvement: formData.areas_for_improvement
         }]);
 
-      if (responseError) throw responseError;
+      if (responseError) {
+        console.error('Error submitting feedback response:', responseError);
+        throw responseError;
+      }
+
+      console.log('Feedback response submitted successfully');
 
       // Update feedback request status
       const { error: statusError } = await supabase
@@ -202,7 +209,12 @@ export function FeedbackFormPage() {
         .update({ status: 'completed' })
         .eq('id', feedbackRequest.id);
 
-      if (statusError) throw statusError;
+      if (statusError) {
+        console.error('Error updating feedback request status:', statusError);
+        throw statusError;
+      }
+
+      console.log('Feedback request status updated to completed');
 
       toast({
         title: "Success",
