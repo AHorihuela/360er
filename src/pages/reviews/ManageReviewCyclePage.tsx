@@ -2,11 +2,21 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, X, Download, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { generateAIReport } from '@/lib/openai';
 
 export function ManageReviewCyclePage() {
   const { cycleId } = useParams();
@@ -21,6 +31,10 @@ export function ManageReviewCyclePage() {
   const [isAddingEmployees, setIsAddingEmployees] = useState(false);
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const [removingEmployeeId, setRemovingEmployeeId] = useState<string | null>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [aiReport, setAiReport] = useState<string>('');
+  const [selectedRequestForReport, setSelectedRequestForReport] = useState<string | null>(null);
+  const [openDialogs, setOpenDialogs] = useState<Set<string>>(new Set());
 
   // Add role priority mapping
   const rolePriority: { [key: string]: number } = {
@@ -103,6 +117,12 @@ export function ManageReviewCyclePage() {
             strengths,
             areas_for_improvement,
             submitted_at
+          ),
+          ai_reports (
+            id,
+            content,
+            is_final,
+            updated_at
           )
         `)
         .eq('review_cycle_id', cycleId)
@@ -112,6 +132,7 @@ export function ManageReviewCyclePage() {
 
       const typedRequests: FeedbackRequest[] = (requests || []).map(request => {
         const employeeData = Array.isArray(request.employee) ? request.employee[0] : request.employee;
+        const aiReport = request.ai_reports?.length > 0 ? request.ai_reports[0] : null;
         
         return {
           id: request.id,
@@ -127,7 +148,15 @@ export function ManageReviewCyclePage() {
             name: employeeData?.name || '',
             role: employeeData?.role || ''
           },
-          feedback: (request.feedback || []) as FeedbackResponse[]
+          feedback: (request.feedback || []) as FeedbackResponse[],
+          ai_report: aiReport ? {
+            id: aiReport.id,
+            feedback_request_id: request.id,
+            content: aiReport.content,
+            created_at: request.created_at,
+            updated_at: aiReport.updated_at,
+            is_final: aiReport.is_final
+          } : undefined
         };
       });
 
@@ -362,6 +391,217 @@ export function ManageReviewCyclePage() {
     return getCompletionStatus(request) ? 'Completed' : 'Pending';
   }
 
+  async function handleGenerateAIReport(feedbackRequest: FeedbackRequest) {
+    if (!feedbackRequest.feedback?.length) {
+      toast({
+        title: "No Feedback Available",
+        description: "There must be at least one feedback response to generate a report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingReport(true);
+    setSelectedRequestForReport(feedbackRequest.id);
+    setAiReport(''); // Clear any existing report
+    
+    try {
+      // Generate the AI report
+      const report = await generateAIReport(
+        feedbackRequest.employee?.name || 'Unknown Employee',
+        feedbackRequest.employee?.role || 'Unknown Role',
+        feedbackRequest.feedback
+      );
+      
+      // Save the report to Supabase
+      const { data: savedReport, error: saveError } = await supabase
+        .from('ai_reports')
+        .insert([{
+          feedback_request_id: feedbackRequest.id,
+          content: report,
+          is_final: false
+        }])
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+      
+      // Update the report content to use the current employee's name
+      const updatedReport = report.replace(/# [\s\S]*?(?=##)/, `# 360-Degree Feedback Report for ${feedbackRequest.employee?.name}\n\n`);
+      setAiReport(updatedReport);
+      
+      toast({
+        title: "Report Generated",
+        description: "AI report has been generated successfully.",
+      });
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate AI report. Please try again.",
+        variant: "destructive",
+      });
+      setOpenDialogs(prev => new Set([...prev, feedbackRequest.id]));
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }
+
+  async function handleSaveReport(requestId: string) {
+    if (!aiReport.trim()) {
+      toast({
+        title: "Error",
+        description: "Report content cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('ai_reports')
+        .update({ 
+          content: aiReport,
+          is_final: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('feedback_request_id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Report saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleViewReport(request: FeedbackRequest) {
+    if (!request.ai_report) return;
+    
+    try {
+      setIsGeneratingReport(false); // Reset any generating state
+      setSelectedRequestForReport(request.id);
+      setAiReport(request.ai_report.content);
+      setOpenDialogs(prev => new Set([...prev, request.id]));
+    } catch (error) {
+      console.error('Error viewing report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load the report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  function handleCloseDialog(requestId: string) {
+    setOpenDialogs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(requestId);
+      return newSet;
+    });
+    
+    // Reset states when closing dialog
+    if (selectedRequestForReport === requestId) {
+      setSelectedRequestForReport(null);
+      setAiReport('');
+      setIsGeneratingReport(false);
+    }
+  }
+
+  async function handleDeleteReport(requestId: string) {
+    try {
+      const { error } = await supabase
+        .from('ai_reports')
+        .delete()
+        .eq('feedback_request_id', requestId);
+
+      if (error) throw error;
+
+      // Update local state to remove the report
+      setFeedbackRequests(feedbackRequests.map(request => {
+        if (request.id === requestId) {
+          return { ...request, ai_report: undefined };
+        }
+        return request;
+      }));
+
+      // Close the dialog
+      handleCloseDialog(requestId);
+
+      toast({
+        title: "Success",
+        description: "Report deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  function handleExportReport(format: 'pdf' | 'text', content: string, employeeName: string) {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `${employeeName.replace(/\s+/g, '_')}_360_Review_${timestamp}`;
+
+    if (format === 'text') {
+      // Export as text file
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      // Export as PDF
+      // Note: You'll need to implement PDF generation here
+      // For now, we'll use the browser's print functionality
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>${filename}</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  line-height: 1.6;
+                  padding: 2rem;
+                  max-width: 800px;
+                  margin: 0 auto;
+                }
+                h1, h2, h3 { margin-top: 2rem; }
+                pre { white-space: pre-wrap; }
+              </style>
+            </head>
+            <body>
+              ${content}
+              <script>
+                window.onload = () => {
+                  window.print();
+                  window.close();
+                };
+              </script>
+            </body>
+          </html>
+        `);
+      }
+    }
+  }
+
   if (isLoading || !reviewCycle) {
     return <div>Loading...</div>;
   }
@@ -453,6 +693,138 @@ export function ManageReviewCyclePage() {
                       <Copy className="mr-2 h-4 w-4" />
                       Copy Feedback Link
                     </Button>
+                    <Dialog 
+                      open={openDialogs.has(request.id)} 
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleCloseDialog(request.id);
+                        }
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (request.ai_report) {
+                              handleViewReport(request);
+                            } else {
+                              setOpenDialogs(prev => new Set([...prev, request.id]));
+                              handleGenerateAIReport(request);
+                            }
+                          }}
+                          disabled={!request.feedback?.length || isGeneratingReport}
+                        >
+                          {isGeneratingReport && selectedRequestForReport === request.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generating Report...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="mr-2 h-4 w-4" />
+                              {request.ai_report ? 'See AI Report' : 'Generate AI Report'}
+                            </>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0">
+                        <div className="flex flex-col h-full">
+                          <div className="flex items-center justify-between p-6 border-b">
+                            <DialogTitle>
+                              {request.ai_report ? 
+                                `AI-Generated Review Report for ${request.employee?.name}` : 
+                                `Generate AI Review Report for ${request.employee?.name}`
+                              }
+                            </DialogTitle>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleExportReport('text', aiReport, request.employee?.name || 'Unknown')}
+                                  title="Export as Text"
+                                  disabled={isGeneratingReport || !aiReport.trim()}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleExportReport('pdf', aiReport, request.employee?.name || 'Unknown')}
+                                  title="Export as PDF"
+                                  disabled={isGeneratingReport || !aiReport.trim()}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteReport(request.id)}
+                                  className="text-destructive hover:bg-destructive/10"
+                                  title="Delete Report"
+                                  disabled={isGeneratingReport || !aiReport.trim()}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCloseDialog(request.id)}
+                                className="h-6 w-6 rounded-full"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1 overflow-hidden">
+                            <div className="h-full overflow-y-auto px-6 py-4">
+                              {isGeneratingReport && selectedRequestForReport === request.id ? (
+                                <div className="flex flex-col items-center justify-center space-y-4 h-full">
+                                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Analyzing feedback and generating report...
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    This may take a few moments
+                                  </p>
+                                </div>
+                              ) : (
+                                <RichTextEditor
+                                  key={request.id}
+                                  content={aiReport}
+                                  placeholder={request.ai_report ? 'Loading report...' : 'The AI report will appear here...'}
+                                  editable={!isGeneratingReport}
+                                  onChange={(content) => setAiReport(content)}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center p-6 border-t bg-background">
+                            <div className="text-sm text-muted-foreground">
+                              {request.ai_report && (
+                                <span>Last updated: {new Date(request.ai_report.updated_at).toLocaleString()}</span>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              {!isGeneratingReport && (
+                                <Button
+                                  onClick={() => handleSaveReport(request.id)}
+                                  disabled={!aiReport.trim()}
+                                >
+                                  Save Changes
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button
                       variant="ghost"
                       size="sm"

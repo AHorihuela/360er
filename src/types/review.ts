@@ -28,6 +28,7 @@ export interface FeedbackRequest {
     role: string;
   };
   feedback?: FeedbackResponse[];
+  ai_report?: AIReport;
 }
 
 export interface FeedbackResponse {
@@ -45,4 +46,13 @@ export interface CreateReviewCycleInput {
   review_by_date: string;
   user_id: string;
   status?: 'active' | 'completed';
+}
+
+export interface AIReport {
+  id: string;
+  feedback_request_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  is_final: boolean;
 } 
