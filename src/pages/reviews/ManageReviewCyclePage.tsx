@@ -191,7 +191,7 @@ export function ManageReviewCyclePage() {
     
     try {
       setDeletingFeedbackId(feedbackId);
-      console.log('Attempting to delete feedback:', feedbackId);
+      console.log('Starting delete operation for feedback:', feedbackId);
       
       const { error: deleteError } = await supabase
         .from('feedback_responses')
@@ -199,11 +199,22 @@ export function ManageReviewCyclePage() {
         .eq('id', feedbackId);
 
       if (deleteError) {
-        console.error('Error deleting feedback:', deleteError);
-        throw deleteError;
+        console.error('Supabase delete error:', deleteError);
+        throw new Error(`Failed to delete feedback: ${deleteError.message}`);
       }
 
-      console.log('Feedback deleted successfully');
+      // Verify the deletion
+      const { data: checkData, error: checkError } = await supabase
+        .from('feedback_responses')
+        .select('id')
+        .eq('id', feedbackId)
+        .single();
+
+      if (checkError && checkError.code === 'PGRST116') {
+        console.log('Delete verified - feedback no longer exists');
+      } else if (checkData) {
+        throw new Error('Delete operation failed - feedback still exists');
+      }
 
       // Update the local state to reflect the deletion
       setFeedbackRequests(feedbackRequests.map(request => ({
@@ -212,11 +223,11 @@ export function ManageReviewCyclePage() {
       })));
 
       toast({
-        title: "Feedback Deleted",
-        description: "The feedback has been deleted successfully.",
+        title: "Success",
+        description: "Feedback deleted successfully",
       });
     } catch (error) {
-      console.error('Error in handleDeleteFeedback:', error);
+      console.error('Delete operation failed:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete feedback. Please try again.",
