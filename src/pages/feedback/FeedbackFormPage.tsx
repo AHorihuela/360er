@@ -48,32 +48,18 @@ export function FeedbackFormPage() {
   });
 
   useEffect(() => {
-    // Check if this browser has already submitted feedback for this link
-    const checkPreviousSubmission = () => {
-      const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-      if (uniqueLink && submittedFeedbacks[uniqueLink]) {
-        console.log('Previous submission found for this link');
-        navigate('/feedback/thank-you');
-        return true;
+    // Ensure we're using anonymous access
+    const initializeAnonymousSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { error } = await supabase.auth.signOut(); // Clear any existing session
+        if (error) console.error('Error clearing session:', error);
       }
-      return false;
+      fetchFeedbackRequest();
     };
 
-    // Only fetch feedback request if no previous submission
-    if (!checkPreviousSubmission()) {
-      // Ensure we're using anonymous access
-      const initializeAnonymousSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const { error } = await supabase.auth.signOut(); // Clear any existing session
-          if (error) console.error('Error clearing session:', error);
-        }
-        fetchFeedbackRequest();
-      };
-
-      initializeAnonymousSession();
-    }
-  }, [uniqueLink, navigate]);
+    initializeAnonymousSession();
+  }, [uniqueLink]);
 
   async function fetchFeedbackRequest() {
     try {
@@ -87,16 +73,14 @@ export function FeedbackFormPage() {
           review_cycle_id,
           employee_id,
           status,
-          unique_link
+          unique_link,
+          feedback:feedback_responses (
+            id,
+            submitted_at
+          )
         `)
         .eq('unique_link', uniqueLink)
         .maybeSingle();
-
-      console.log('Feedback request query result:', { 
-        data: requestData, 
-        error: requestError,
-        status: await supabase.auth.getSession()
-      });
 
       if (requestError) {
         console.error('Error fetching feedback request:', requestError);
@@ -108,55 +92,44 @@ export function FeedbackFormPage() {
         throw new Error('No feedback request found');
       }
 
+      // Check if this browser has already submitted feedback
+      try {
+        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+        if (uniqueLink && submittedFeedbacks[uniqueLink]) {
+          console.log('Previous submission found in localStorage');
+          navigate('/feedback/thank-you');
+          return;
+        }
+      } catch (e) {
+        console.log('No localStorage submission found');
+      }
+
       // Then get the employee data
-      console.log('Fetching employee with ID:', requestData.employee_id);
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select(`
-          id,
-          name,
-          role
-        `)
+        .select('*')
         .eq('id', requestData.employee_id)
         .maybeSingle();
 
-      console.log('Employee query result:', { data: employeeData, error: employeeError });
-
-      if (employeeError) {
-        console.error('Error fetching employee:', employeeError);
-        throw employeeError;
-      }
-
-      if (!employeeData) {
-        console.error('No employee found for ID:', requestData.employee_id);
-        throw new Error('Employee not found');
-      }
-
-      console.log('Found employee:', employeeData);
+      if (employeeError) throw employeeError;
+      if (!employeeData) throw new Error('Employee not found');
 
       // Then get the review cycle data
-      console.log('Fetching review cycle with ID:', requestData.review_cycle_id);
       const { data: cycleData, error: cycleError } = await supabase
         .from('review_cycles')
-        .select(`
-          id,
-          title,
-          review_by_date,
-          status
-        `)
+        .select('*')
         .eq('id', requestData.review_cycle_id)
         .maybeSingle();
 
-      console.log('Review cycle query result:', { data: cycleData, error: cycleError });
+      if (cycleError) throw cycleError;
+      if (!cycleData) throw new Error('Review cycle not found');
 
-      if (cycleError) {
-        console.error('Error fetching review cycle:', cycleError);
-        throw cycleError;
-      }
-
-      if (!cycleData) {
-        console.error('No review cycle found for ID:', requestData.review_cycle_id);
-        throw new Error('Review cycle not found');
+      // Check if the review cycle is past its review_by_date
+      if (cycleData.review_by_date) {
+        const reviewByDate = new Date(cycleData.review_by_date);
+        if (reviewByDate < new Date()) {
+          throw new Error('This review cycle has ended');
+        }
       }
 
       // Combine the data
@@ -166,37 +139,9 @@ export function FeedbackFormPage() {
         review_cycle: cycleData
       };
 
-      console.log('Combined data:', combinedData);
-
-      // Validate the data structure
-      if (!combinedData.employee) {
-        throw new Error('Employee information not found');
-      }
-
-      if (!combinedData.review_cycle) {
-        throw new Error('Review cycle information not found');
-      }
-
-      // Check if the review cycle is past its review_by_date
-      if (combinedData.review_cycle.review_by_date) {
-        const reviewByDate = new Date(combinedData.review_cycle.review_by_date);
-        if (reviewByDate < new Date()) {
-          console.error('Review cycle has ended:', { reviewByDate, now: new Date() });
-          throw new Error('This review cycle has ended');
-        }
-      }
-
-      // Check if feedback has already been submitted
-      if (combinedData.status === 'completed') {
-        console.error('Feedback already submitted for request:', combinedData.id);
-        throw new Error('Feedback has already been submitted for this request');
-      }
-
       setFeedbackRequest(combinedData);
     } catch (error) {
       console.error('Error in fetchFeedbackRequest:', error);
-      const { data: { session } } = await supabase.auth.getSession();
-      console.error('Current auth status:', session);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Invalid or expired feedback link",
