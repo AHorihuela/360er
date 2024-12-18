@@ -5,6 +5,14 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "routes": [
+    {
+      "src": "/assets/.*\\.js$",
+      "headers": {
+        "Content-Type": "application/javascript",
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "continue": true
+    },
     { 
       "src": "/feedback/(.*)", 
       "dest": "/index.html",
