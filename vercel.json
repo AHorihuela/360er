@@ -4,10 +4,6 @@
   "installCommand": "npm install",
   "framework": "vite",
   "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/feedback/:path*", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
   "headers": [
     {
       "source": "/feedback/(.*)",
@@ -41,22 +37,15 @@
   ],
   "routes": [
     { 
-      "src": "/feedback/.*", 
-      "continue": true,
+      "src": "/feedback/(.*)", 
+      "dest": "/index.html",
       "headers": {
         "Access-Control-Allow-Origin": "*"
       }
     },
     {
-      "src": "/((?!feedback/.*).*)",
-      "has": [
-        {
-          "type": "header",
-          "key": "x-vercel-protection-bypass",
-          "value": "(?!true)"
-        }
-      ],
-      "continue": true
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 } 
