@@ -13,22 +13,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-alert-dialog', '@radix-ui/react-select', '@radix-ui/react-toast'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@radix-ui/react-alert-dialog', '@radix-ui/react-slot'],
         },
       },
     },
-    target: 'esnext',
-    minify: 'esbuild',
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
-  },
-  server: {
-    port: 3000,
   },
 })
