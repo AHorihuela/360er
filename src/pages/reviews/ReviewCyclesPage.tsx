@@ -22,13 +22,11 @@ export function ReviewCyclesPage() {
   const [reviewCycles, setReviewCycles] = useState<ReviewCycle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     // Get the current user's ID
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setUserId(user.id);
         fetchReviewCycles(user.id);
       } else {
         navigate('/login');
@@ -62,7 +60,7 @@ export function ReviewCyclesPage() {
         ...cycle,
         _count: {
           feedback_requests: cycle.feedback_requests?.length || 0,
-          completed_feedback: cycle.feedback_requests?.filter(r => r.status === 'completed').length || 0
+          completed_feedback: cycle.feedback_requests?.filter((r: { status: string }) => r.status === 'completed').length || 0
         }
       })) || [];
 
@@ -125,8 +123,8 @@ export function ReviewCyclesPage() {
 
   function calculateProgress(cycle: ReviewCycle): number {
     if (!cycle._count) return 0;
-    const total = cycle._count.feedback_requests;
-    const completed = cycle._count.completed_feedback;
+    const total = cycle._count.feedback_requests || 0;
+    const completed = cycle._count.completed_feedback || 0;
     return total === 0 ? 0 : Math.round((completed / total) * 100);
   }
 

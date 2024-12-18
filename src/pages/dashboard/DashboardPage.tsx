@@ -7,17 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -205,7 +194,8 @@ export function DashboardPage() {
     };
   }
 
-  async function fetchDashboardStats(currentUserId: string) {
+  async function fetchDashboardStats(currentUserId: string | null) {
+    if (!currentUserId) return;
     try {
       console.log('Fetching review cycles...');
       const { data: cyclesData, error: cyclesError } = await supabase
