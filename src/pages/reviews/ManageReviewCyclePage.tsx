@@ -299,9 +299,10 @@ export function ManageReviewCyclePage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDeleteFeedback(feedback.id)}
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                title="Delete feedback"
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                             <span className="text-xs text-muted-foreground">
