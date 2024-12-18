@@ -104,11 +104,110 @@ BEGIN
 END;
 $$;
 
--- Update feedback request status based on responses
-UPDATE feedback_requests fr
-SET status = 'completed'
-WHERE (
-  SELECT COUNT(*)
-  FROM feedback_responses
-  WHERE feedback_request_id = fr.id
-) > 0; 
+-- Add target_responses column to feedback_requests
+ALTER TABLE feedback_requests 
+ADD COLUMN IF NOT EXISTS target_responses INTEGER DEFAULT 3,
+ADD COLUMN IF NOT EXISTS manually_completed BOOLEAN DEFAULT false;
+
+-- Update the status calculation
+CREATE OR REPLACE FUNCTION update_feedback_request_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the status of the feedback request
+  UPDATE feedback_requests
+  SET status = CASE 
+    WHEN manually_completed THEN 'completed'
+    WHEN (
+      SELECT COUNT(*)
+      FROM feedback_responses
+      WHERE feedback_request_id = NEW.feedback_request_id
+    ) >= target_responses THEN 'completed'
+    ELSE 'pending'
+  END
+  WHERE id = NEW.feedback_request_id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create or replace the trigger
+DROP TRIGGER IF EXISTS update_feedback_request_status_trigger ON feedback_responses;
+CREATE TRIGGER update_feedback_request_status_trigger
+AFTER INSERT OR DELETE ON feedback_responses
+FOR EACH ROW
+EXECUTE FUNCTION update_feedback_request_status(); 
+
+-- Add function to update review cycle status
+CREATE OR REPLACE FUNCTION update_review_cycle_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the review cycle status based on all its feedback requests
+  UPDATE review_cycles rc
+  SET status = CASE 
+    WHEN NOT EXISTS (
+      SELECT 1 
+      FROM feedback_requests fr 
+      WHERE fr.review_cycle_id = rc.id 
+      AND fr.status = 'pending'
+    ) THEN 'completed'
+    ELSE 'active'
+  END
+  WHERE id = (
+    SELECT review_cycle_id 
+    FROM feedback_requests 
+    WHERE id = NEW.feedback_request_id
+  );
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to update review cycle status when feedback request status changes
+DROP TRIGGER IF EXISTS update_review_cycle_status_trigger ON feedback_requests;
+CREATE TRIGGER update_review_cycle_status_trigger
+AFTER UPDATE OF status ON feedback_requests
+FOR EACH ROW
+EXECUTE FUNCTION update_review_cycle_status();
+
+-- Update existing review cycles status
+UPDATE review_cycles rc
+SET status = CASE 
+  WHEN NOT EXISTS (
+    SELECT 1 
+    FROM feedback_requests fr 
+    WHERE fr.review_cycle_id = rc.id 
+    AND fr.status = 'pending'
+  ) THEN 'completed'
+  ELSE 'active'
+END;
+
+-- Add RLS policies for feedback_requests table
+ALTER TABLE feedback_requests ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to delete their own feedback requests
+CREATE POLICY "Users can delete their feedback requests"
+ON feedback_requests
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM review_cycles rc
+    WHERE rc.id = feedback_requests.review_cycle_id
+    AND rc.user_id = auth.uid()
+  )
+);
+
+-- Add RLS policies for feedback_responses table
+ALTER TABLE feedback_responses ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to delete feedback responses for their feedback requests
+CREATE POLICY "Users can delete feedback responses for their requests"
+ON feedback_responses
+FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM feedback_requests fr
+    JOIN review_cycles rc ON rc.id = fr.review_cycle_id
+    WHERE fr.id = feedback_responses.feedback_request_id
+    AND rc.user_id = auth.uid()
+  )
+);

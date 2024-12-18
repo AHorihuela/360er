@@ -43,6 +43,10 @@ export function ReviewCyclesPage() {
           feedback_requests!inner (
             id,
             status,
+            target_responses,
+            feedback:feedback_responses (
+              id
+            ),
             employee:employees!inner (
               id,
               user_id
@@ -58,6 +62,10 @@ export function ReviewCyclesPage() {
       // Process the data to get the counts
       const processedCycles = reviewCyclesData?.map(cycle => ({
         ...cycle,
+        feedback_requests: cycle.feedback_requests.map(req => ({
+          ...req,
+          feedback: req.feedback || []
+        })),
         _count: {
           feedback_requests: cycle.feedback_requests?.length || 0,
           completed_feedback: cycle.feedback_requests?.filter((r: { status: string }) => r.status === 'completed').length || 0
@@ -106,11 +114,20 @@ export function ReviewCyclesPage() {
     }
   }
 
-  function getStatusColor(status: string, dueDate: string) {
+  function getStatusColor(status: string, dueDate: string, cycle: ReviewCycle): string {
     const isOverdue = new Date(dueDate) < new Date();
+    const progress = calculateProgress(cycle);
     
-    if (isOverdue && status !== 'completed') return 'destructive';
-    return status === 'completed' ? 'default' : 'secondary';
+    if (isOverdue && progress < 100) return 'destructive';
+    return progress === 100 ? 'default' : 'secondary';
+  }
+
+  function getStatusText(status: string, dueDate: string, cycle: ReviewCycle): string {
+    const isOverdue = new Date(dueDate) < new Date();
+    const progress = calculateProgress(cycle);
+    
+    if (isOverdue && progress < 100) return 'Overdue';
+    return progress === 100 ? 'Completed' : 'In Progress';
   }
 
   function formatDate(dateString: string) {
@@ -122,10 +139,12 @@ export function ReviewCyclesPage() {
   }
 
   function calculateProgress(cycle: ReviewCycle): number {
-    if (!cycle._count) return 0;
-    const total = cycle._count.feedback_requests || 0;
-    const completed = cycle._count.completed_feedback || 0;
-    return total === 0 ? 0 : Math.round((completed / total) * 100);
+    if (!cycle.feedback_requests?.length) return 0;
+    
+    const totalTargetResponses = cycle.feedback_requests.reduce((acc, req) => acc + (req.target_responses || 3), 0);
+    const totalReceivedResponses = cycle.feedback_requests.reduce((acc, req) => acc + (req.feedback?.length || 0), 0);
+    
+    return totalTargetResponses === 0 ? 0 : Math.round((totalReceivedResponses / totalTargetResponses) * 100);
   }
 
   return (
@@ -158,7 +177,11 @@ export function ReviewCyclesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {reviewCycles.map((cycle) => (
-            <Card key={cycle.id} className="relative">
+            <Card 
+              key={cycle.id} 
+              className="relative cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => navigate(`/reviews/${cycle.id}/manage`)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -174,8 +197,8 @@ export function ReviewCyclesPage() {
                       </div>
                     </CardDescription>
                   </div>
-                  <Badge variant={getStatusColor(cycle.status, cycle.review_by_date)}>
-                    {cycle.status === 'completed' ? 'Completed' : 'In Progress'}
+                  <Badge variant={getStatusColor(cycle.status, cycle.review_by_date, cycle)}>
+                    {getStatusText(cycle.status, cycle.review_by_date, cycle)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -192,7 +215,10 @@ export function ReviewCyclesPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(cycle.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(cycle.id);
+                  }}
                   disabled={isDeletingId === cycle.id}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -200,7 +226,10 @@ export function ReviewCyclesPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => navigate(`/reviews/${cycle.id}/manage`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/reviews/${cycle.id}/manage`);
+                  }}
                 >
                   Manage
                   <ChevronRight className="ml-2 h-4 w-4" />

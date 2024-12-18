@@ -20,6 +20,8 @@ export interface FeedbackRequest {
   unique_link: string;
   status: 'pending' | 'completed';
   created_at: string;
+  target_responses: number;
+  manually_completed: boolean;
   employee?: {
     id: string;
     name: string;
