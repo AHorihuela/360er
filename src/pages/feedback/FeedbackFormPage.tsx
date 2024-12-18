@@ -33,6 +33,10 @@ interface FeedbackFormData {
   areas_for_improvement: string;
 }
 
+function generateSessionId() {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
 export function FeedbackFormPage() {
   const { toast } = useToast();
   const { uniqueLink } = useParams();
@@ -46,6 +50,7 @@ export function FeedbackFormPage() {
     strengths: '',
     areas_for_improvement: ''
   });
+  const [sessionId] = useState(() => generateSessionId());
 
   useEffect(() => {
     // Ensure we're using anonymous access
@@ -60,6 +65,40 @@ export function FeedbackFormPage() {
 
     initializeAnonymousSession();
   }, [uniqueLink]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    const trackPageView = async () => {
+      if (!feedbackRequest) return;
+
+      try {
+        const { error } = await supabase
+          .from('page_views')
+          .insert([{
+            feedback_request_id: feedbackRequest.id,
+            session_id: sessionId,
+            page_url: window.location.href
+          }]);
+
+        if (error) {
+          console.error('Error tracking page view:', error);
+        }
+      } catch (error) {
+        console.error('Error tracking page view:', error);
+      }
+    };
+
+    // Track initial page view
+    trackPageView();
+
+    // Update page view every minute to show active session
+    interval = setInterval(trackPageView, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [feedbackRequest, sessionId]);
 
   async function fetchFeedbackRequest() {
     try {

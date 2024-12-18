@@ -2,10 +2,21 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Clock, CheckCircle, LogOut, Trash2, Inbox } from 'lucide-react';
+import { Clock, CheckCircle, LogOut, Trash2, Inbox, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,19 +47,37 @@ interface FeedbackResponse {
   };
 }
 
+interface MetricData {
+  timestamp: string;
+  value: number;
+}
+
 interface DashboardStats {
-  activeReviews: number;
   pendingFeedback: number;
   completedReviews: number;
   recentFeedback: FeedbackResponse[];
+  realTimeMetrics: {
+    activeVisitors: number;
+    last24Hours: MetricData[];
+  };
+  pendingTrend: MetricData[];
+  completedTrend: MetricData[];
 }
 
-function StatsCard({ icon: Icon, title, value, description, color }: {
+function StatsCard({ 
+  icon: Icon, 
+  title, 
+  value, 
+  description, 
+  color,
+  trend
+}: {
   icon: any;
   title: string;
   value: number;
   description?: string;
   color: string;
+  trend?: MetricData[];
 }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
@@ -71,6 +100,29 @@ function StatsCard({ icon: Icon, title, value, description, color }: {
             )}
           </div>
         </CardHeader>
+        {trend && trend.length > 0 && (
+          <CardContent className="h-32">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  tick={false}
+                />
+                <YAxis hide />
+                <Tooltip
+                  labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                  formatter={(value: any) => [value, 'Count']}
+                />
+                <Bar 
+                  dataKey="value" 
+                  fill={color.replace('bg-', 'rgb(var(--'))
+                  className="fill-current"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
@@ -125,10 +177,15 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
-    activeReviews: 0,
     pendingFeedback: 0,
     completedReviews: 0,
-    recentFeedback: []
+    recentFeedback: [],
+    realTimeMetrics: {
+      activeVisitors: 0,
+      last24Hours: []
+    },
+    pendingTrend: [],
+    completedTrend: []
   });
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -138,11 +195,40 @@ export function DashboardPage() {
       if (user) {
         setUserId(user.id);
         fetchDashboardStats(user.id);
+        startRealtimeSubscription(user.id);
       } else {
         navigate('/login');
       }
     });
+
+    return () => {
+      // Cleanup realtime subscription
+    };
   }, [navigate]);
+
+  async function startRealtimeSubscription(userId: string) {
+    // Subscribe to feedback_requests table for real-time updates
+    const channel = supabase
+      .channel('public:feedback_requests')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'feedback_requests',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('Change received!', payload);
+          fetchDashboardStats(userId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
 
   async function fetchDashboardStats(currentUserId: string) {
     try {
@@ -183,12 +269,119 @@ export function DashboardPage() {
           }
         };
       }));
+
+      // Get active sessions in the last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: activeSessions, error: activeError } = await supabase
+        .from('page_views')
+        .select('session_id')
+        .gt('updated_at', fiveMinutesAgo)
+        .eq('user_id', currentUserId);
+
+      if (activeError) {
+        console.error('Error fetching active sessions:', activeError);
+      }
+
+      // Get session counts for the last 24 hours
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: hourlyData, error: hourlyError } = await supabase
+        .from('page_views')
+        .select('created_at, session_id')
+        .gt('created_at', twentyFourHoursAgo)
+        .eq('user_id', currentUserId);
+
+      if (hourlyError) {
+        console.error('Error fetching hourly data:', hourlyError);
+      }
+
+      // Process hourly data
+      const hourlyMetrics = Array.from({ length: 24 }, (_, i) => {
+        const hour = new Date(Date.now() - (23 - i) * 60 * 60 * 1000);
+        const hourStart = new Date(hour).setMinutes(0, 0, 0);
+        const hourEnd = new Date(hour).setMinutes(59, 59, 999);
+        
+        const sessions = hourlyData?.filter(view => {
+          const viewTime = new Date(view.created_at).getTime();
+          return viewTime >= hourStart && viewTime <= hourEnd;
+        }) || [];
+
+        const uniqueSessions = new Set(sessions.map(s => s.session_id));
+
+        return {
+          timestamp: new Date(hourStart).toISOString(),
+          value: uniqueSessions.size
+        };
+      });
+
+      // Get pending feedback trend
+      const { data: pendingTrendData, error: pendingError } = await supabase
+        .from('feedback_requests')
+        .select('created_at, status')
+        .eq('status', 'pending')
+        .gt('created_at', twentyFourHoursAgo)
+        .eq('user_id', currentUserId);
+
+      if (pendingError) {
+        console.error('Error fetching pending trend:', pendingError);
+      }
+
+      // Process pending trend data
+      const pendingTrend = Array.from({ length: 12 }, (_, i) => {
+        const hour = new Date(Date.now() - (11 - i) * 60 * 60 * 1000);
+        const hourStart = new Date(hour).setMinutes(0, 0, 0);
+        const hourEnd = new Date(hour).setMinutes(59, 59, 999);
+        
+        const requests = pendingTrendData?.filter(req => {
+          const reqTime = new Date(req.created_at).getTime();
+          return reqTime >= hourStart && reqTime <= hourEnd;
+        }) || [];
+
+        return {
+          timestamp: new Date(hourStart).toISOString(),
+          value: requests.length
+        };
+      });
+
+      // Get completed reviews trend
+      const { data: completedTrendData, error: completedError } = await supabase
+        .from('feedback_requests')
+        .select('created_at, status')
+        .eq('status', 'completed')
+        .gt('created_at', twentyFourHoursAgo)
+        .eq('user_id', currentUserId);
+
+      if (completedError) {
+        console.error('Error fetching completed trend:', completedError);
+      }
+
+      // Process completed trend data
+      const completedTrend = Array.from({ length: 12 }, (_, i) => {
+        const hour = new Date(Date.now() - (11 - i) * 60 * 60 * 1000);
+        const hourStart = new Date(hour).setMinutes(0, 0, 0);
+        const hourEnd = new Date(hour).setMinutes(59, 59, 999);
+        
+        const requests = completedTrendData?.filter(req => {
+          const reqTime = new Date(req.created_at).getTime();
+          return reqTime >= hourStart && reqTime <= hourEnd;
+        }) || [];
+
+        return {
+          timestamp: new Date(hourStart).toISOString(),
+          value: requests.length
+        };
+      });
       
-      // Update stats with active reviews count
+      // Update stats with all metrics
       setStats(prev => ({
         ...prev,
-        activeReviews: cyclesWithCounts.filter(c => c.status === 'active').length,
-        pendingFeedback: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.pending_feedback || 0), 0)
+        pendingFeedback: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.pending_feedback || 0), 0),
+        completedReviews: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.completed_feedback || 0), 0),
+        realTimeMetrics: {
+          activeVisitors: new Set(activeSessions?.map(s => s.session_id) || []).size,
+          last24Hours: hourlyMetrics
+        },
+        pendingTrend,
+        completedTrend
       }));
 
       // Get recent feedback
@@ -369,10 +562,11 @@ export function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatsCard
           icon={Activity}
-          title="Active Reviews"
-          value={stats.activeReviews}
-          description="Currently ongoing review cycles"
+          title="Real-time Reviews"
+          value={stats.realTimeMetrics.activeVisitors}
+          description="Currently active feedback sessions"
           color="bg-blue-500"
+          trend={stats.realTimeMetrics.last24Hours}
         />
         <StatsCard
           icon={Clock}
@@ -380,6 +574,7 @@ export function DashboardPage() {
           value={stats.pendingFeedback}
           description="Awaiting responses"
           color="bg-yellow-500"
+          trend={stats.pendingTrend}
         />
         <StatsCard
           icon={CheckCircle}
@@ -387,6 +582,7 @@ export function DashboardPage() {
           value={stats.completedReviews}
           description="Successfully finished"
           color="bg-green-500"
+          trend={stats.completedTrend}
         />
       </div>
 
