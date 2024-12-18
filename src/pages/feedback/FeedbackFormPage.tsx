@@ -48,18 +48,32 @@ export function FeedbackFormPage() {
   });
 
   useEffect(() => {
-    // Ensure we're using anonymous access
-    const initializeAnonymousSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { error } = await supabase.auth.signOut(); // Clear any existing session
-        if (error) console.error('Error clearing session:', error);
+    // Check if this browser has already submitted feedback for this link
+    const checkPreviousSubmission = () => {
+      const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+      if (uniqueLink && submittedFeedbacks[uniqueLink]) {
+        console.log('Previous submission found for this link');
+        navigate('/feedback/thank-you');
+        return true;
       }
-      fetchFeedbackRequest();
+      return false;
     };
 
-    initializeAnonymousSession();
-  }, [uniqueLink]);
+    // Only fetch feedback request if no previous submission
+    if (!checkPreviousSubmission()) {
+      // Ensure we're using anonymous access
+      const initializeAnonymousSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const { error } = await supabase.auth.signOut(); // Clear any existing session
+          if (error) console.error('Error clearing session:', error);
+        }
+        fetchFeedbackRequest();
+      };
+
+      initializeAnonymousSession();
+    }
+  }, [uniqueLink, navigate]);
 
   async function fetchFeedbackRequest() {
     try {
@@ -196,7 +210,7 @@ export function FeedbackFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!feedbackRequest) return;
+    if (!feedbackRequest || !uniqueLink) return;
 
     setIsSubmitting(true);
     try {
@@ -217,20 +231,15 @@ export function FeedbackFormPage() {
         throw responseError;
       }
 
+      // Store submission in localStorage
+      const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+      submittedFeedbacks[uniqueLink] = {
+        submittedAt: new Date().toISOString(),
+        employeeName: feedbackRequest.employee.name
+      };
+      localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+
       console.log('Feedback response submitted successfully');
-
-      // Update feedback request status
-      const { error: statusError } = await supabase
-        .from('feedback_requests')
-        .update({ status: 'completed' })
-        .eq('id', feedbackRequest.id);
-
-      if (statusError) {
-        console.error('Error updating feedback request status:', statusError);
-        throw statusError;
-      }
-
-      console.log('Feedback request status updated to completed');
 
       toast({
         title: "Success",
