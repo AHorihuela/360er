@@ -130,17 +130,27 @@ export function DashboardPage() {
     completedReviews: 0,
     recentFeedback: []
   });
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    // Get the current user's ID
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        fetchDashboardStats(user.id);
+      } else {
+        navigate('/login');
+      }
+    });
+  }, [navigate]);
 
-  async function fetchDashboardStats() {
+  async function fetchDashboardStats(currentUserId: string) {
     try {
       console.log('Fetching review cycles...');
       const { data: cyclesData, error: cyclesError } = await supabase
         .from('review_cycles')
         .select('*')
+        .eq('user_id', currentUserId)
         .order('created_at', { ascending: false });
 
       if (cyclesError) {
@@ -203,10 +213,12 @@ export function DashboardPage() {
               ),
               review_cycles!review_cycle_id (
                 id,
-                title
+                title,
+                user_id
               )
             )
           `)
+          .eq('feedback_requests.review_cycles.user_id', currentUserId)
           .order('submitted_at', { ascending: false })
           .limit(5);
 
@@ -302,7 +314,7 @@ export function DashboardPage() {
       });
 
       // Refresh the dashboard stats
-      fetchDashboardStats();
+      fetchDashboardStats(userId);
     } catch (error) {
       console.error('Error deleting feedback:', error);
       toast({

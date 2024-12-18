@@ -1,12 +1,16 @@
 export interface ReviewCycle {
   id: string;
   title: string;
-  description: string | null;
-  start_date: string;
-  end_date: string;
-  status: 'draft' | 'active' | 'completed';
+  review_by_date: string;
+  status: 'active' | 'completed';
   created_at: string;
-  created_by: string;
+  user_id: string;
+  _count?: {
+    feedback_requests?: number;
+    completed_feedback?: number;
+    total_feedback?: number;
+    pending_feedback?: number;
+  }
 }
 
 export interface FeedbackRequest {
@@ -16,22 +20,27 @@ export interface FeedbackRequest {
   unique_link: string;
   status: 'pending' | 'completed';
   created_at: string;
+  employee?: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  feedback?: FeedbackResponse[];
 }
 
 export interface FeedbackResponse {
   id: string;
-  feedback_request_id: string;
-  relationship: 'peer' | 'manager' | 'direct_report';
+  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
   strengths: string | null;
   areas_for_improvement: string | null;
   overall_rating: number;
   submitted_at: string;
+  feedback_request_id: string;
 }
 
 export interface CreateReviewCycleInput {
   title: string;
-  description?: string;
-  start_date: string;
-  end_date: string;
-  employees: string[]; // Array of employee IDs
+  review_by_date: string;
+  user_id: string;
+  status?: 'active' | 'completed';
 } 

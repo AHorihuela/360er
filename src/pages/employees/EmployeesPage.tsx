@@ -18,6 +18,7 @@ interface Employee {
   name: string;
   role: string;
   created_at: string;
+  user_id: string;
 }
 
 export function EmployeesPage() {
@@ -39,9 +40,16 @@ export function EmployeesPage() {
 
   async function fetchEmployees() {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('employees')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -56,11 +64,18 @@ export function EmployeesPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       if (isEditing) {
         const { error } = await supabase
           .from('employees')
-          .update({ name: currentEmployee.name, role: currentEmployee.role })
-          .eq('id', currentEmployee.id);
+          .update({ 
+            name: currentEmployee.name, 
+            role: currentEmployee.role 
+          })
+          .eq('id', currentEmployee.id)
+          .eq('user_id', user.id);
 
         if (error) throw error;
 
@@ -72,7 +87,11 @@ export function EmployeesPage() {
       } else {
         const { data, error } = await supabase
           .from('employees')
-          .insert([{ name: currentEmployee.name, role: currentEmployee.role }])
+          .insert([{ 
+            name: currentEmployee.name, 
+            role: currentEmployee.role,
+            user_id: user.id
+          }])
           .select()
           .single();
 
@@ -90,10 +109,14 @@ export function EmployeesPage() {
 
   async function handleDelete(id: string) {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { error } = await supabase
         .from('employees')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 

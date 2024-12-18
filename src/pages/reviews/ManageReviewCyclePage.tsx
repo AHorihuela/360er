@@ -5,39 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Copy, Plus, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-}
-
-interface FeedbackResponse {
-  id: string;
-  relationship: string;
-  overall_rating: number;
-  strengths: string | null;
-  areas_for_improvement: string | null;
-  submitted_at: string;
-}
-
-interface FeedbackRequest {
-  id: string;
-  review_cycle_id: string;
-  employee_id: string;
-  unique_link: string;
-  status: 'pending' | 'completed';
-  created_at: string;
-  employee?: Employee;
-  feedback?: FeedbackResponse[];
-}
-
-interface ReviewCycle {
-  id: string;
-  title: string;
-  review_by_date: string;
-  status: string;
-}
+import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
 
 export function ManageReviewCyclePage() {
   const { cycleId } = useParams();
@@ -45,7 +13,7 @@ export function ManageReviewCyclePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string; role: string; }[]>([]);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
@@ -56,36 +24,35 @@ export function ManageReviewCyclePage() {
 
   async function fetchData() {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        navigate('/login');
+        return;
+      }
+
       // Fetch review cycle details
       const { data: cycleData, error: cycleError } = await supabase
         .from('review_cycles')
         .select('*')
         .eq('id', cycleId)
+        .eq('user_id', user.id)
         .single();
 
       if (cycleError) throw cycleError;
       setReviewCycle(cycleData);
 
-      // Fetch all employees
+      // Fetch all employees for the current user
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (employeesError) throw employeesError;
       setEmployees(employeesData);
 
       // Fetch existing feedback requests with feedback
-      await fetchFeedbackRequests();
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function fetchFeedbackRequests() {
-    try {
       const { data: requests, error } = await supabase
         .from('feedback_requests')
         .select(`
@@ -109,7 +76,8 @@ export function ManageReviewCyclePage() {
             submitted_at
           )
         `)
-        .eq('review_cycle_id', cycleId);
+        .eq('review_cycle_id', cycleId)
+        .eq('employee.user_id', user.id);
 
       if (error) throw error;
 
@@ -134,12 +102,9 @@ export function ManageReviewCyclePage() {
 
       setFeedbackRequests(typedRequests);
     } catch (error) {
-      console.error('Error fetching feedback requests:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch feedback requests",
-        variant: "destructive",
-      });
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -147,6 +112,21 @@ export function ManageReviewCyclePage() {
     if (!selectedEmployeeId) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      // Verify the employee belongs to the current user
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('id', selectedEmployeeId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (employeeError || !employeeData) {
+        throw new Error('Invalid employee selection');
+      }
+
       const uniqueLink = crypto.randomUUID();
       const { data, error } = await supabase
         .from('feedback_requests')

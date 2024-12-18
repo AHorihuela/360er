@@ -4,6 +4,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { EmployeesPage } from './pages/employees/EmployeesPage';
 import { ReviewCyclesPage } from './pages/reviews/ReviewCyclesPage';
+import { NewReviewCyclePage } from './pages/reviews/NewReviewCyclePage';
 import { ManageReviewCyclePage } from './pages/reviews/ManageReviewCyclePage';
 import { FeedbackFormPage } from './pages/feedback/FeedbackFormPage';
 import { ThankYouPage } from './pages/feedback/ThankYouPage';
@@ -124,6 +125,16 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <ReviewCyclesPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reviews/new-cycle"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <NewReviewCyclePage />
                 </MainLayout>
               </ProtectedRoute>
             }
