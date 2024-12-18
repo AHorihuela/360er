@@ -7,5 +7,56 @@
   "rewrites": [
     { "source": "/feedback/:path*", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/feedback/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    { 
+      "src": "/feedback/.*", 
+      "continue": true,
+      "headers": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "src": "/((?!feedback/.*).*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "x-vercel-protection-bypass",
+          "value": "(?!true)"
+        }
+      ],
+      "continue": true
+    }
   ]
 } 

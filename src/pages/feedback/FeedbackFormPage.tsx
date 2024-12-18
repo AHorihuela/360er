@@ -48,12 +48,22 @@ export function FeedbackFormPage() {
   });
 
   useEffect(() => {
-    fetchFeedbackRequest();
+    // Ensure we're using anonymous access
+    const initializeAnonymousSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { error } = await supabase.auth.signOut(); // Clear any existing session
+        if (error) console.error('Error clearing session:', error);
+      }
+      fetchFeedbackRequest();
+    };
+
+    initializeAnonymousSession();
   }, [uniqueLink]);
 
   async function fetchFeedbackRequest() {
     try {
-      console.log('Fetching feedback request for link:', uniqueLink);
+      console.log('Starting fetchFeedbackRequest for link:', uniqueLink);
       
       // First, get the feedback request
       const { data: requestData, error: requestError } = await supabase
@@ -68,7 +78,11 @@ export function FeedbackFormPage() {
         .eq('unique_link', uniqueLink)
         .maybeSingle();
 
-      console.log('Feedback request query result:', { data: requestData, error: requestError });
+      console.log('Feedback request query result:', { 
+        data: requestData, 
+        error: requestError,
+        status: await supabase.auth.getSession()
+      });
 
       if (requestError) {
         console.error('Error fetching feedback request:', requestError);
@@ -167,6 +181,8 @@ export function FeedbackFormPage() {
       setFeedbackRequest(combinedData);
     } catch (error) {
       console.error('Error in fetchFeedbackRequest:', error);
+      const { data: { session } } = await supabase.auth.getSession();
+      console.error('Current auth status:', session);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Invalid or expired feedback link",
