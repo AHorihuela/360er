@@ -5,6 +5,7 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/feedback/:path*", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 } 
