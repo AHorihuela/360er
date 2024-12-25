@@ -8,6 +8,11 @@ DROP POLICY IF EXISTS "Anyone can view review cycles" ON review_cycles;
 DROP POLICY IF EXISTS "Public can insert page views for feedback requests" ON page_views;
 DROP POLICY IF EXISTS "Users can insert their own page views" ON page_views;
 DROP POLICY IF EXISTS "Users can view their own page views" ON page_views;
+DROP POLICY IF EXISTS "anon_submit_feedback" ON feedback_responses;
+DROP POLICY IF EXISTS "anon_view_feedback_requests" ON feedback_requests;
+DROP POLICY IF EXISTS "anon_view_employees" ON employees;
+DROP POLICY IF EXISTS "anon_view_review_cycles" ON review_cycles;
+DROP POLICY IF EXISTS "anon_create_page_views" ON page_views;
 
 -- Revoke all permissions to start fresh
 REVOKE ALL ON feedback_responses FROM anon;
@@ -17,6 +22,7 @@ REVOKE ALL ON employees FROM anon;
 REVOKE ALL ON review_cycles FROM anon;
 
 -- Create clean policies for anonymous access
+DO $$ BEGIN
 CREATE POLICY "anon_submit_feedback"
 ON feedback_responses
 FOR INSERT
@@ -28,40 +34,44 @@ WITH CHECK (
         AND fr.status != 'completed'
     )
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
+DO $$ BEGIN
 CREATE POLICY "anon_view_feedback_requests"
 ON feedback_requests
 FOR SELECT
 TO anon
 USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
+DO $$ BEGIN
 CREATE POLICY "anon_view_employees"
 ON employees
 FOR SELECT
 TO anon
-USING (
-    EXISTS (
-        SELECT 1 FROM feedback_requests fr
-        WHERE fr.employee_id = id
-    )
-);
+USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
+DO $$ BEGIN
 CREATE POLICY "anon_view_review_cycles"
 ON review_cycles
 FOR SELECT
 TO anon
-USING (
-    EXISTS (
-        SELECT 1 FROM feedback_requests fr
-        WHERE fr.review_cycle_id = id
-    )
-);
+USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
+DO $$ BEGIN
 CREATE POLICY "anon_create_page_views"
 ON page_views
 FOR INSERT
 TO anon
 WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Grant minimal necessary permissions
 GRANT USAGE ON SCHEMA public TO anon;
