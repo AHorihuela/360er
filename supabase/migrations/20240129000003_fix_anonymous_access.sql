@@ -21,6 +21,7 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM feedback_requests fr
         WHERE fr.id = feedback_request_id
+        AND fr.status IN ('pending', 'in_progress')
         AND EXISTS (
             SELECT 1 FROM review_cycles rc
             WHERE rc.id = fr.review_cycle_id
