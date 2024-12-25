@@ -14,7 +14,35 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ReviewCycle } from '@/types/review';
+import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
+
+function determineRequestStatus(
+  currentStatus: RequestStatus,
+  responseCount: number,
+  targetResponses: number,
+  manuallyCompleted: boolean
+): RequestStatus {
+  if (manuallyCompleted) return REQUEST_STATUS.COMPLETED;
+  if (responseCount === 0) return REQUEST_STATUS.PENDING;
+  if (responseCount < targetResponses) return REQUEST_STATUS.IN_PROGRESS;
+  if (responseCount === targetResponses) return REQUEST_STATUS.COMPLETED;
+  return REQUEST_STATUS.EXCEEDED;
+}
+
+async function updateRequestStatus(
+  requestId: string,
+  newStatus: RequestStatus
+): Promise<void> {
+  const { error } = await supabase
+    .from('feedback_requests')
+    .update({ status: newStatus })
+    .eq('id', requestId);
+
+  if (error) {
+    console.error('Error updating request status:', error);
+    throw error;
+  }
+}
 
 export function ReviewCyclesPage() {
   const navigate = useNavigate();
@@ -24,7 +52,6 @@ export function ReviewCyclesPage() {
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get the current user's ID
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         fetchReviewCycles(user.id);
@@ -39,45 +66,156 @@ export function ReviewCyclesPage() {
       const { data: reviewCyclesData, error: reviewCyclesError } = await supabase
         .from('review_cycles')
         .select(`
-          *,
-          feedback_requests!inner (
+          id,
+          title,
+          status,
+          review_by_date,
+          created_at,
+          updated_at,
+          user_id,
+          feedback_requests!review_cycles_id_fkey (
             id,
             status,
             target_responses,
-            feedback:feedback_responses (
-              id
-            ),
-            employee:employees!inner (
+            created_at,
+            updated_at,
+            manually_completed,
+            review_cycle_id,
+            employee_id,
+            unique_link,
+            page_views (
               id,
-              user_id
+              created_at,
+              user_id,
+              session_id,
+              feedback_request_id,
+              page_url
+            ),
+            ai_reports!ai_reports_feedback_request_id_fkey (
+              id,
+              status,
+              is_final,
+              created_at,
+              updated_at,
+              error,
+              content,
+              feedback_request_id
+            ),
+            feedback_responses!feedback_responses_feedback_request_id_fkey (
+              id,
+              status,
+              created_at,
+              submitted_at,
+              relationship,
+              strengths,
+              areas_for_improvement,
+              overall_rating,
+              feedback_request_id
             )
           )
         `)
         .eq('user_id', currentUserId)
-        .eq('feedback_requests.employee.user_id', currentUserId)
         .order('created_at', { ascending: false });
 
-      if (reviewCyclesError) throw reviewCyclesError;
+      if (reviewCyclesError) {
+        console.error('Supabase error details:', reviewCyclesError);
+        throw reviewCyclesError;
+      }
 
-      // Process the data to get the counts
-      const processedCycles = reviewCyclesData?.map(cycle => ({
-        ...cycle,
-        feedback_requests: cycle.feedback_requests.map(req => ({
-          ...req,
-          feedback: req.feedback || []
-        })),
-        _count: {
-          feedback_requests: cycle.feedback_requests?.length || 0,
-          completed_feedback: cycle.feedback_requests?.filter((r: { status: string }) => r.status === 'completed').length || 0
-        }
-      })) || [];
+      if (!reviewCyclesData) {
+        console.error('No data returned from Supabase');
+        return;
+      }
+
+      const processedCycles: ReviewCycle[] = reviewCyclesData
+        .map(cycle => {
+          const validFeedbackRequests = (cycle.feedback_requests || [])
+            .filter(request => {
+              if (new Date(request.created_at) < new Date(cycle.created_at)) {
+                console.error(`Invalid timestamp for request ${request.id}: created before cycle`);
+                return false;
+              }
+
+              // Process responses and validate status
+              const validResponses = (request.feedback_responses || [])
+                .filter(response => {
+                  const isValid = 
+                    new Date(response.created_at) >= new Date(request.created_at) &&
+                    new Date(response.submitted_at) >= new Date(response.created_at);
+                  
+                  if (!isValid) {
+                    console.error(`Invalid timestamp for response ${response.id}: timestamp mismatch`);
+                  }
+                  return isValid;
+                })
+                .map(response => ({
+                  ...response,
+                  relationship: response.relationship || 'equal_colleague',
+                  strengths: response.strengths || null,
+                  areas_for_improvement: response.areas_for_improvement || null,
+                  overall_rating: response.overall_rating || 0
+                }));
+
+              // Calculate response counts and determine status
+              const responseCount = validResponses.length;
+              const correctStatus = determineRequestStatus(
+                request.status as RequestStatus,
+                responseCount,
+                request.target_responses,
+                request.manually_completed
+              );
+
+              // Update status if it's incorrect
+              if (correctStatus !== request.status) {
+                updateRequestStatus(request.id, correctStatus).catch(console.error);
+              }
+
+              // Process page views
+              const pageViews = (request.page_views || []).map(view => ({
+                ...view,
+                feedback_request_id: request.id,
+                page_url: view.page_url || `${window.location.origin}/feedback/${request.unique_link}`
+              }));
+              const uniqueViewers = new Set(pageViews.map(view => view.session_id)).size;
+
+              return {
+                ...request,
+                status: correctStatus,
+                feedback_responses: validResponses,
+                page_views: pageViews,
+                _count: {
+                  page_views: pageViews.length,
+                  unique_viewers: uniqueViewers,
+                  responses: responseCount
+                }
+              } as FeedbackRequest;
+            });
+
+          return {
+            id: cycle.id,
+            title: cycle.title,
+            status: cycle.status as 'active' | 'completed',
+            review_by_date: cycle.review_by_date,
+            created_at: cycle.created_at,
+            updated_at: cycle.updated_at,
+            user_id: cycle.user_id,
+            feedback_requests: validFeedbackRequests,
+            _count: {
+              feedback_requests: validFeedbackRequests.length,
+              completed_feedback: validFeedbackRequests.filter(req => 
+                req.status === REQUEST_STATUS.COMPLETED || 
+                req.status === REQUEST_STATUS.EXCEEDED
+              ).length
+            }
+          } as ReviewCycle;
+        });
 
       setReviewCycles(processedCycles);
     } catch (error) {
       console.error('Error fetching review cycles:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch review cycles",
+        description: "Failed to fetch review cycles. Please check console for details.",
         variant: "destructive",
       });
     } finally {
@@ -114,16 +252,16 @@ export function ReviewCyclesPage() {
     }
   }
 
-  function getStatusColor(status: string, dueDate: string, cycle: ReviewCycle): string {
-    const isOverdue = new Date(dueDate) < new Date();
+  function getStatusColor(cycle: ReviewCycle): "default" | "destructive" | "secondary" {
+    const isOverdue = new Date(cycle.review_by_date) < new Date();
     const progress = calculateProgress(cycle);
     
     if (isOverdue && progress < 100) return 'destructive';
     return progress === 100 ? 'default' : 'secondary';
   }
 
-  function getStatusText(status: string, dueDate: string, cycle: ReviewCycle): string {
-    const isOverdue = new Date(dueDate) < new Date();
+  function getStatusText(cycle: ReviewCycle): string {
+    const isOverdue = new Date(cycle.review_by_date) < new Date();
     const progress = calculateProgress(cycle);
     
     if (isOverdue && progress < 100) return 'Overdue';
@@ -139,12 +277,10 @@ export function ReviewCyclesPage() {
   }
 
   function calculateProgress(cycle: ReviewCycle): number {
-    if (!cycle.feedback_requests?.length) return 0;
-    
-    const totalTargetResponses = cycle.feedback_requests.reduce((acc, req) => acc + (req.target_responses || 3), 0);
-    const totalReceivedResponses = cycle.feedback_requests.reduce((acc, req) => acc + (req.feedback?.length || 0), 0);
-    
-    return totalTargetResponses === 0 ? 0 : Math.round((totalReceivedResponses / totalTargetResponses) * 100);
+    if (!cycle._count?.feedback_requests) return 0;
+    const totalRequests = cycle._count.feedback_requests;
+    const completedRequests = cycle._count.completed_feedback;
+    return Math.round((completedRequests / totalRequests) * 100);
   }
 
   return (
@@ -186,19 +322,19 @@ export function ReviewCyclesPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-xl">{cycle.title}</CardTitle>
-                    <CardDescription className="mt-2">
-                      <div className="flex items-center text-sm text-muted-foreground">
+                    <div className="mt-2 space-y-1">
+                      <span className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="mr-2 h-4 w-4" />
                         Due {formatDate(cycle.review_by_date)}
-                      </div>
-                      <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                      </span>
+                      <span className="flex items-center text-sm text-muted-foreground">
                         <Users className="mr-2 h-4 w-4" />
                         {cycle._count?.feedback_requests || 0} reviewees
-                      </div>
-                    </CardDescription>
+                      </span>
+                    </div>
                   </div>
-                  <Badge variant={getStatusColor(cycle.status, cycle.review_by_date, cycle)}>
-                    {getStatusText(cycle.status, cycle.review_by_date, cycle)}
+                  <Badge variant={getStatusColor(cycle)}>
+                    {getStatusText(cycle)}
                   </Badge>
                 </div>
               </CardHeader>

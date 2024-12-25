@@ -892,7 +892,11 @@ export function ManageReviewCyclePage() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium capitalize">
-                                  {feedback.relationship.replace('_', ' ')}
+                                  {feedback.relationship === 'senior_colleague'
+                                    ? `Senior Colleague (I am more senior than ${request.employee?.role})`
+                                    : feedback.relationship === 'equal_colleague'
+                                    ? `Equal Colleague (I am ${request.employee?.role} or equivalent)`
+                                    : `Junior Colleague (I am less senior than ${request.employee?.role})`}
                                 </span>
                                 <Button
                                   variant="ghost"

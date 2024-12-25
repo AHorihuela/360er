@@ -538,10 +538,10 @@ export function DashboardPage() {
                     <span className="font-medium">From: </span>
                     <span className="text-muted-foreground">
                       {feedback.relationship === 'senior_colleague'
-                        ? `Senior Colleague (More senior than ${feedback.feedback_request.employee.role})`
+                        ? `Senior Colleague (I am more senior than ${feedback.feedback_request.employee.role})`
                         : feedback.relationship === 'equal_colleague'
-                        ? `Equal Colleague (${feedback.feedback_request.employee.role} or equivalent)`
-                        : `Junior Colleague (Less senior than ${feedback.feedback_request.employee.role})`}
+                        ? `Equal Colleague (I am ${feedback.feedback_request.employee.role} or equivalent)`
+                        : `Junior Colleague (I am less senior than ${feedback.feedback_request.employee.role})`}
                     </span>
                   </div>
                   <div>

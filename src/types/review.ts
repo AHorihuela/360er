@@ -1,44 +1,72 @@
-export interface ReviewCycle {
-  id: string;
-  title: string;
-  review_by_date: string;
-  status: 'active' | 'completed';
+export interface TimestampValidation {
   created_at: string;
-  user_id: string;
-  _count?: {
-    feedback_requests?: number;
-    completed_feedback?: number;
-    total_feedback?: number;
-    pending_feedback?: number;
-  }
+  updated_at?: string;
+  submitted_at?: string;
 }
 
-export interface FeedbackRequest {
+export interface ReviewCycle extends TimestampValidation {
   id: string;
+  title: string;
+  status: 'active' | 'completed';
+  review_by_date: string;
+  user_id: string;
+  _count?: {
+    feedback_requests: number;
+    completed_feedback: number;
+  };
+  feedback_requests?: FeedbackRequest[];
+}
+
+export interface PageView extends TimestampValidation {
+  id: string;
+  feedback_request_id: string;
+  user_id?: string;
+  session_id: string;
+  page_url: string;
+}
+
+export const REQUEST_STATUS = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  EXCEEDED: 'exceeded'
+} as const;
+
+export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
+
+export interface RequestValidation {
+  target_responses: number;
+  actual_responses: number;
+  manually_completed: boolean;
+  status: RequestStatus;
+  review_by_date: string;
+}
+
+export interface FeedbackRequest extends TimestampValidation {
+  id: string;
+  status: RequestStatus;
+  target_responses: number;
   review_cycle_id: string;
   employee_id: string;
   unique_link: string;
-  status: 'pending' | 'completed';
-  created_at: string;
-  target_responses: number;
   manually_completed: boolean;
-  employee?: {
-    id: string;
-    name: string;
-    role: string;
+  feedback_responses?: FeedbackResponse[];
+  page_views?: PageView[];
+  _count?: {
+    page_views: number;
+    unique_viewers: number;
+    responses: number;
   };
-  feedback?: FeedbackResponse[];
-  ai_report?: AIReport;
 }
 
-export interface FeedbackResponse {
+export interface FeedbackResponse extends TimestampValidation {
   id: string;
   relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
   strengths: string | null;
   areas_for_improvement: string | null;
   overall_rating: number;
-  submitted_at: string;
   feedback_request_id: string;
+  submitted_at: string;
 }
 
 export interface CreateReviewCycleInput {
@@ -48,11 +76,11 @@ export interface CreateReviewCycleInput {
   status?: 'active' | 'completed';
 }
 
-export interface AIReport {
+export interface AIReport extends TimestampValidation {
   id: string;
   feedback_request_id: string;
   content: string;
-  created_at: string;
-  updated_at: string;
   is_final: boolean;
+  error?: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
 } 

@@ -198,47 +198,54 @@ export function FeedbackFormPage() {
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting feedback for request:', feedbackRequest.id);
-      
-      // Insert feedback response
-      const { error: responseError } = await supabase
-        .from('feedback_responses')
-        .insert([{
-          feedback_request_id: feedbackRequest.id,
-          relationship: formData.relationship,
-          strengths: formData.strengths,
-          areas_for_improvement: formData.areas_for_improvement
-        }]);
+        console.log('Submitting feedback with:', {
+            feedback_request_id: feedbackRequest.id,
+            relationship: formData.relationship,
+            strengths: formData.strengths,
+            areas_for_improvement: formData.areas_for_improvement
+        });
 
-      if (responseError) {
-        console.error('Error submitting feedback response:', responseError);
-        throw responseError;
-      }
+        // Try inserting without array wrapper
+        const { data, error: responseError } = await supabase
+            .from('feedback_responses')
+            .insert({
+                feedback_request_id: feedbackRequest.id,
+                relationship: formData.relationship,
+                strengths: formData.strengths,
+                areas_for_improvement: formData.areas_for_improvement
+            })
+            .select('*')
+            .single();
 
-      // Store submission in localStorage
-      const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-      submittedFeedbacks[uniqueLink] = {
-        submittedAt: new Date().toISOString(),
-        employeeName: feedbackRequest.employee.name
-      };
-      localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+        if (responseError) {
+            console.error('Error submitting feedback:', responseError);
+            throw responseError;
+        }
 
-      console.log('Feedback response submitted successfully');
+        console.log('Feedback submitted successfully:', data);
 
-      toast({
-        title: "Success",
-        description: "Thank you for your feedback!",
-      });
-      navigate('/feedback/thank-you');
+        // Store submission in localStorage
+        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+        submittedFeedbacks[uniqueLink] = {
+            submittedAt: new Date().toISOString(),
+            employeeName: feedbackRequest.employee.name
+        };
+        localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+
+        toast({
+            title: "Success",
+            description: "Thank you for your feedback!",
+        });
+        navigate('/feedback/thank-you');
     } catch (error) {
-      console.error('Error submitting feedback:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit feedback. Please try again.",
-        variant: "destructive",
-      });
+        console.error('Error submitting feedback:', error);
+        toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to submit feedback. Please try again.",
+            variant: "destructive",
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   }
 
@@ -290,13 +297,13 @@ export function FeedbackFormPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="senior_colleague">
-                Senior Colleague (More senior than {feedbackRequest.employee.role})
+                Senior Colleague (I am more senior than {feedbackRequest.employee.role})
               </SelectItem>
               <SelectItem value="equal_colleague">
-                Equal Colleague ({feedbackRequest.employee.role} or equivalent)
+                Equal Colleague (I am {feedbackRequest.employee.role} or equivalent)
               </SelectItem>
               <SelectItem value="junior_colleague">
-                Junior Colleague (Less senior than {feedbackRequest.employee.role})
+                Junior Colleague (I am less senior than {feedbackRequest.employee.role})
               </SelectItem>
             </SelectContent>
           </Select>
