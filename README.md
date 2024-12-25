@@ -10,6 +10,9 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
 - **Anonymous Feedback**: Generate unique, anonymous feedback links for reviewers
 - **Progress Tracking**: Visual progress tracking of feedback collection
 - **Feedback Management**: View, manage, and analyze collected feedback
+- **AI Report Generation**: Generate comprehensive AI-powered feedback reports
+- **Export Options**: Export reports in PDF or text format with professional formatting
+- **Keyboard Shortcuts**: Convenient shortcuts like Command+S for saving reports
 - **Responsive Design**: Modern UI that works across devices
 
 ## Tech Stack
@@ -20,11 +23,15 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
   - Shadcn UI components
   - React Router for navigation
   - Lucide React for icons
+  - jsPDF for PDF generation
+  - html2canvas for PDF rendering
+  - marked for markdown parsing
 
 - **Backend**:
   - Supabase for database and authentication
   - Row Level Security (RLS) policies
   - Real-time data synchronization
+  - OpenAI GPT-4 for report generation
 
 ## Getting Started
 
@@ -33,15 +40,17 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
 - Node.js (v16 or higher)
 - npm or yarn
 - Supabase account
+- OpenAI API key
 
 ### Environment Setup
 
 1. Clone the repository
 2. Copy `.env.example` to `.env`
-3. Fill in your Supabase credentials:
+3. Fill in your credentials:
    ```
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_OPENAI_API_KEY=your_openai_api_key
    ```
 
 ### Installation
@@ -67,6 +76,7 @@ npm run dev
    - `fix_feedback_relationships.sql`
    - `add_feedback_delete_policy.sql`
    - `add_delete_policy.sql`
+   - `create_ai_reports_table.sql`
 
 ## Usage
 
@@ -91,7 +101,9 @@ npm run dev
 5. **Review Management**:
    - Track feedback collection progress
    - View and manage submitted feedback
-   - Delete feedback or review cycles if needed
+   - Generate AI-powered feedback reports
+   - Export reports in PDF or text format
+   - Use Command+S to quickly save report changes
 
 ## Security Features
 
@@ -99,6 +111,7 @@ npm run dev
 - Anonymous feedback submission
 - Secure authentication flow
 - Protected API endpoints
+- Secure report storage and access control
 
 ## Project Structure
 

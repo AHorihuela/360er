@@ -36,6 +36,15 @@ export function ManageReviewCyclePage() {
   const [aiReport, setAiReport] = useState<string>('');
   const [selectedRequestForReport, setSelectedRequestForReport] = useState<string | null>(null);
   const [openDialogs, setOpenDialogs] = useState<Set<string>>(new Set());
+  const [generationStep, setGenerationStep] = useState<number>(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+
+  const generationSteps = [
+    "Analyzing feedback responses...",
+    "Identifying key themes and patterns...",
+    "Generating comprehensive insights...",
+    "Preparing final report..."
+  ];
 
   // Add role priority mapping
   const rolePriority: { [key: string]: number } = {
@@ -411,6 +420,16 @@ export function ManageReviewCyclePage() {
     setIsGeneratingReport(true);
     setSelectedRequestForReport(feedbackRequest.id);
     setAiReport(''); // Clear any existing report
+    setGenerationStep(0);
+    setStartTime(Date.now());
+    
+    // Start step progression
+    const stepInterval = setInterval(() => {
+      setGenerationStep(prev => {
+        if (prev < generationSteps.length - 1) return prev + 1;
+        return prev;
+      });
+    }, 8000); // Change step every 8 seconds
     
     try {
       // Generate the AI report
@@ -419,6 +438,8 @@ export function ManageReviewCyclePage() {
         feedbackRequest.employee?.role || 'Unknown Role',
         feedbackRequest.feedback
       );
+      
+      clearInterval(stepInterval);
       
       // Save the report to Supabase
       const { data: savedReport, error: saveError } = await supabase
@@ -461,6 +482,7 @@ export function ManageReviewCyclePage() {
         description: "AI report has been generated successfully.",
       });
     } catch (error) {
+      clearInterval(stepInterval);
       console.error('Error generating AI report:', error);
       toast({
         title: "Error",
@@ -469,7 +491,10 @@ export function ManageReviewCyclePage() {
       });
       setOpenDialogs(prev => new Set([...prev, feedbackRequest.id]));
     } finally {
+      clearInterval(stepInterval);
       setIsGeneratingReport(false);
+      setGenerationStep(0);
+      setStartTime(null);
     }
   }
 
@@ -773,6 +798,12 @@ export function ManageReviewCyclePage() {
     }
   }
 
+  function getElapsedTime(): string {
+    if (!startTime) return '';
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    return `${elapsed} seconds`;
+  }
+
   if (isLoading || !reviewCycle) {
     return <div>Loading...</div>;
   }
@@ -904,65 +935,76 @@ export function ManageReviewCyclePage() {
                       <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0">
                         <div className="flex flex-col h-full">
                           <div className="flex items-center justify-between p-6 border-b">
-                            <DialogTitle>
+                            <DialogTitle className="text-xl font-semibold">
                               {request.ai_report ? 
                                 `AI-Generated Review Report for ${request.employee?.name}` : 
                                 `Generate AI Review Report for ${request.employee?.name}`
                               }
                             </DialogTitle>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-1.5 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-1 rounded-md border">
                                 <Button
-                                  variant="outline"
-                                  size="sm"
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={() => handleExportReport('text', aiReport, request.employee?.name || 'Unknown')}
                                   title="Export as Text"
                                   disabled={isGeneratingReport || !aiReport.trim()}
+                                  className="h-8 w-8"
                                 >
                                   <FileText className="h-4 w-4" />
                                 </Button>
                                 <Button
-                                  variant="outline"
-                                  size="sm"
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={() => handleExportReport('pdf', aiReport, request.employee?.name || 'Unknown')}
                                   title="Export as PDF"
                                   disabled={isGeneratingReport || !aiReport.trim()}
+                                  className="h-8 w-8"
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => handleDeleteReport(request.id)}
-                                  className="text-destructive hover:bg-destructive/10"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                   title="Delete Report"
                                   disabled={isGeneratingReport || !aiReport.trim()}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCloseDialog(request.id)}
-                                className="h-6 w-6 rounded-full"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
                             </div>
                           </div>
                           
                           <div className="flex-1 overflow-hidden">
                             <div className="h-full overflow-y-auto px-6 py-4">
                               {isGeneratingReport && selectedRequestForReport === request.id ? (
-                                <div className="flex flex-col items-center justify-center space-y-4 h-full">
-                                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                  <p className="text-sm text-muted-foreground">
-                                    Analyzing feedback and generating report...
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    This may take a few moments
-                                  </p>
+                                <div className="flex flex-col items-center justify-center space-y-6 h-full">
+                                  <div className="w-full max-w-md space-y-4">
+                                    <div className="flex flex-col items-center">
+                                      <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                      <p className="text-lg font-medium text-primary">
+                                        {generationSteps[generationStep]}
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="w-full space-y-2">
+                                      <Progress 
+                                        value={((generationStep + 1) / generationSteps.length) * 100} 
+                                        className="h-2"
+                                      />
+                                      <div className="flex justify-between text-sm text-muted-foreground">
+                                        <span>Step {generationStep + 1} of {generationSteps.length}</span>
+                                        <span>Time elapsed: {getElapsedTime()}</span>
+                                      </div>
+                                    </div>
+
+                                    <p className="text-sm text-muted-foreground text-center mt-4">
+                                      This process typically takes 30-45 seconds to complete.
+                                      We're using AI to carefully analyze all feedback and generate comprehensive insights.
+                                    </p>
+                                  </div>
                                 </div>
                               ) : (
                                 <RichTextEditor
