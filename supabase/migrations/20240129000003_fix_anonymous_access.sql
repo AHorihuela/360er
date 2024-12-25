@@ -17,31 +17,60 @@ CREATE POLICY "Anyone can submit feedback responses"
 ON feedback_responses
 FOR INSERT
 TO anon
-WITH CHECK (true);
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.id = feedback_request_id
+        AND fr.status != 'completed'
+        AND EXISTS (
+            SELECT 1 FROM review_cycles rc
+            WHERE rc.id = fr.review_cycle_id
+            AND rc.review_by_date > CURRENT_DATE
+        )
+    )
+);
 
 CREATE POLICY "Anyone can create page views"
 ON page_views
 FOR INSERT
 TO anon
-WITH CHECK (true);
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.id = feedback_request_id
+        AND fr.status != 'completed'
+    )
+);
 
 CREATE POLICY "Anyone can view feedback requests by unique_link"
 ON feedback_requests
 FOR SELECT
 TO anon
-USING (true);
+USING (status != 'completed');
 
 CREATE POLICY "Anyone can view employees"
 ON employees
 FOR SELECT
 TO anon
-USING (true);
+USING (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.employee_id = employees.id
+        AND fr.status != 'completed'
+    )
+);
 
 CREATE POLICY "Anyone can view review cycles"
 ON review_cycles
 FOR SELECT
 TO anon
-USING (true);
+USING (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.review_cycle_id = review_cycles.id
+        AND fr.status != 'completed'
+    )
+);
 
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon;
