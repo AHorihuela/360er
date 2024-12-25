@@ -39,13 +39,23 @@ CREATE POLICY "anon_view_employees"
 ON employees
 FOR SELECT
 TO anon
-USING (true);
+USING (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.employee_id = id
+    )
+);
 
 CREATE POLICY "anon_view_review_cycles"
 ON review_cycles
 FOR SELECT
 TO anon
-USING (true);
+USING (
+    EXISTS (
+        SELECT 1 FROM feedback_requests fr
+        WHERE fr.review_cycle_id = id
+    )
+);
 
 CREATE POLICY "anon_create_page_views"
 ON page_views
