@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, X, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, Download, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { ReviewCycle, FeedbackRequest, FeedbackResponse, REQUEST_STATUS } from '@/types/review';
