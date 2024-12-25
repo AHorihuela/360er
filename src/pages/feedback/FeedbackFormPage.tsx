@@ -52,6 +52,32 @@ export function FeedbackFormPage() {
   });
   const [sessionId] = useState(() => generateSessionId());
 
+  // Load saved form data from localStorage
+  useEffect(() => {
+    if (uniqueLink) {
+      const savedData = localStorage.getItem(`feedback_draft_${uniqueLink}`);
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          setFormData(parsedData);
+          toast({
+            title: "Draft Restored",
+            description: "Your previous progress has been restored.",
+          });
+        } catch (e) {
+          console.error('Error parsing saved form data:', e);
+        }
+      }
+    }
+  }, [uniqueLink]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (uniqueLink && (formData.strengths || formData.areas_for_improvement)) {
+      localStorage.setItem(`feedback_draft_${uniqueLink}`, JSON.stringify(formData));
+    }
+  }, [formData, uniqueLink]);
+
   useEffect(() => {
     // Ensure we're using anonymous access
     const initializeAnonymousSession = async () => {
@@ -205,7 +231,6 @@ export function FeedbackFormPage() {
             areas_for_improvement: formData.areas_for_improvement
         });
 
-        // Try inserting without array wrapper
         const { data, error: responseError } = await supabase
             .from('feedback_responses')
             .insert({
@@ -231,6 +256,9 @@ export function FeedbackFormPage() {
             employeeName: feedbackRequest.employee.name
         };
         localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+
+        // Clear the draft after successful submission
+        localStorage.removeItem(`feedback_draft_${uniqueLink}`);
 
         toast({
             title: "Success",
@@ -279,6 +307,11 @@ export function FeedbackFormPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Review cycle: {feedbackRequest.review_cycle.title}
         </p>
+        {(formData.strengths || formData.areas_for_improvement) && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Draft saved automatically
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
