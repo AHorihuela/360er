@@ -82,10 +82,12 @@ export function FeedbackFormPage() {
     // Ensure we're using anonymous access
     const initializeAnonymousSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { error } = await supabase.auth.signOut(); // Clear any existing session
-        if (error) console.error('Error clearing session:', error);
+      if (session) {
+        // If there's a session, sign out to ensure anonymous access
+        await supabase.auth.signOut();
       }
+      // Wait a bit for the signout to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
       fetchFeedbackRequest();
     };
 
