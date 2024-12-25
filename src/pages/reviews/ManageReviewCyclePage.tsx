@@ -690,60 +690,78 @@ export function ManageReviewCyclePage() {
         // Initialize PDF with better settings
         const pdf = new jsPDF({
           orientation: 'portrait',
-          unit: 'px',
+          unit: 'pt', // Use points for more precise measurements
           format: 'a4',
           hotfixes: ['px_scaling']
         });
 
-        // Calculate dimensions to maintain aspect ratio
+        // Get PDF dimensions in points
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
-        // Set image width to page width with some margins
-        const margins = 40;
-        const imageWidth = pageWidth - (margins * 2);
+        // Calculate margins and content area (in points)
+        const margins = {
+          top: 50,
+          bottom: 50,
+          left: 50,
+          right: 50
+        };
         
-        // Calculate total height and number of pages needed
-        const totalHeight = canvas.height;
-        const pageHeightInPx = (pageHeight - (margins * 2));
-        const numberOfPages = Math.ceil(totalHeight / pageHeightInPx);
-
+        const contentWidth = pageWidth - (margins.left + margins.right);
+        const contentHeight = pageHeight - (margins.top + margins.bottom);
+        
+        // Calculate scale factor to fit content width
+        const scale = contentWidth / canvas.width;
+        const scaledHeight = canvas.height * scale;
+        
+        // Calculate number of pages needed
+        const totalPages = Math.ceil(scaledHeight / contentHeight);
+        
         // For each page
-        for (let page = 0; page < numberOfPages; page++) {
+        for (let page = 0; page < totalPages; page++) {
           if (page > 0) {
             pdf.addPage();
           }
 
-          // Calculate the slice of the canvas to use for this page
-          const sourceY = page * pageHeightInPx;
-          const sliceHeight = Math.min(pageHeightInPx, totalHeight - sourceY);
+          // Calculate source and destination dimensions
+          const sourceY = (contentHeight / scale) * page;
+          const sourceHeight = Math.min(
+            (contentHeight / scale),
+            canvas.height - sourceY
+          );
           
           // Create a temporary canvas for this slice
           const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = canvas.width;
-          tempCanvas.height = sliceHeight;
+          const tempCtx = tempCanvas.getContext('2d');
           
-          // Draw the slice of the original canvas onto the temporary canvas
-          const ctx = tempCanvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(
+          if (tempCtx) {
+            // Set dimensions for temp canvas
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = sourceHeight;
+            
+            // Clear the temporary canvas
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Draw the slice
+            tempCtx.drawImage(
               canvas,
-              0, sourceY, canvas.width, sliceHeight, // Source rectangle
-              0, 0, canvas.width, sliceHeight        // Destination rectangle
+              0, sourceY, canvas.width, sourceHeight,
+              0, 0, canvas.width, sourceHeight
+            );
+
+            // Add to PDF with proper positioning
+            pdf.addImage(
+              tempCanvas.toDataURL('image/png'),
+              'PNG',
+              margins.left,
+              margins.top,
+              contentWidth,
+              (sourceHeight * scale),
+              '',
+              'FAST'
             );
           }
-
-          // Add this slice to the PDF
-          pdf.addImage(
-            tempCanvas.toDataURL('image/png'),
-            'PNG',
-            margins,
-            margins,
-            imageWidth,
-            (sliceHeight * imageWidth) / canvas.width,
-            '',
-            'FAST'
-          );
         }
 
         // Save PDF
