@@ -243,7 +243,12 @@ export function FeedbackFormPage() {
             .single();
 
         if (responseError) {
-            console.error('Error submitting feedback:', responseError);
+            console.error('Error submitting feedback:', {
+                code: responseError.code,
+                message: responseError.message,
+                details: responseError.details,
+                hint: responseError.hint
+            });
             throw responseError;
         }
 
@@ -267,6 +272,14 @@ export function FeedbackFormPage() {
         navigate('/feedback/thank-you');
     } catch (error) {
         console.error('Error submitting feedback:', error);
+        console.error('Feedback request details:', {
+            id: feedbackRequest.id,
+            status: feedbackRequest.status,
+            review_cycle: {
+                id: feedbackRequest.review_cycle_id,
+                review_by_date: feedbackRequest.review_cycle.review_by_date
+            }
+        });
         toast({
             title: "Error",
             description: error instanceof Error ? error.message : "Failed to submit feedback. Please try again.",
