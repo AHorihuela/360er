@@ -17,7 +17,6 @@ import { Progress } from "@/components/ui/progress";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
 
 function determineRequestStatus(
-  currentStatus: RequestStatus,
   responseCount: number,
   targetResponses: number,
   manuallyCompleted: boolean
@@ -159,7 +158,6 @@ export function ReviewCyclesPage() {
               // Calculate response counts and determine status
               const responseCount = validResponses.length;
               const correctStatus = determineRequestStatus(
-                request.status as RequestStatus,
                 responseCount,
                 request.target_responses,
                 request.manually_completed

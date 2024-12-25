@@ -2,16 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, X, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, X, Download, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
+import { ReviewCycle, FeedbackRequest, FeedbackResponse, REQUEST_STATUS } from '@/types/review';
 import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -383,8 +381,14 @@ export function ManageReviewCyclePage() {
     return (request.feedback?.length || 0) >= (request.target_responses || 3);
   }
 
-  function getStatusBadgeVariant(request: FeedbackRequest): string {
-    return getCompletionStatus(request) ? 'default' : 'secondary';
+  function getStatusBadgeVariant(request: FeedbackRequest): "default" | "destructive" | "outline" | "secondary" {
+    if (request.status === REQUEST_STATUS.COMPLETED || request.status === REQUEST_STATUS.EXCEEDED) {
+      return "default";
+    }
+    if (request.status === REQUEST_STATUS.PENDING) {
+      return "secondary";
+    }
+    return "outline";
   }
 
   function getStatusText(request: FeedbackRequest): string {
@@ -414,7 +418,7 @@ export function ManageReviewCyclePage() {
       );
       
       // Save the report to Supabase
-      const { data: savedReport, error: saveError } = await supabase
+      const { error: saveError } = await supabase
         .from('ai_reports')
         .insert([{
           feedback_request_id: feedbackRequest.id,
@@ -808,7 +812,7 @@ export function ManageReviewCyclePage() {
                           <div className="flex justify-between items-center p-6 border-t bg-background">
                             <div className="text-sm text-muted-foreground">
                               {request.ai_report && (
-                                <span>Last updated: {new Date(request.ai_report.updated_at).toLocaleString()}</span>
+                                <span>Last updated: {request.ai_report?.updated_at ? new Date(request.ai_report.updated_at).toLocaleString() : 'Never'}</span>
                               )}
                             </div>
                             <div className="flex gap-2">

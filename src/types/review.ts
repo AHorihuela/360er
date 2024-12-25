@@ -44,13 +44,19 @@ export interface RequestValidation {
 
 export interface FeedbackRequest extends TimestampValidation {
   id: string;
-  status: RequestStatus;
-  target_responses: number;
   review_cycle_id: string;
   employee_id: string;
   unique_link: string;
+  status: RequestStatus;
+  target_responses: number;
   manually_completed: boolean;
-  feedback_responses?: FeedbackResponse[];
+  employee?: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  feedback?: FeedbackResponse[];
+  ai_report?: AIReport;
   page_views?: PageView[];
   _count?: {
     page_views: number;
@@ -82,5 +88,5 @@ export interface AIReport extends TimestampValidation {
   content: string;
   is_final: boolean;
   error?: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status?: 'pending' | 'processing' | 'completed' | 'error';
 } 

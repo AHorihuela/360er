@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import { FeedbackResponse } from '@/types/review';
-import { marked } from 'marked';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,

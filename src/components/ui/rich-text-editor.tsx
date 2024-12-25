@@ -1,12 +1,13 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { marked } from 'marked'
+import { useEffect } from 'react'
+import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Highlight from '@tiptap/extension-highlight'
+import { EditorContent } from '@tiptap/react'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
-import { marked } from 'marked'
+import Highlight from '@tiptap/extension-highlight'
 import { cn } from '@/lib/utils'
-import { useEffect } from 'react'
 
 interface RichTextEditorProps {
   content: string
@@ -123,6 +124,13 @@ const globalStyles = `
   }
 `
 
+// Fix marked options
+const markedOptions = {
+  gfm: true,
+  breaks: true,
+  mangle: false
+} as Parameters<typeof marked>[1];
+
 export function RichTextEditor({
   content,
   onChange,
@@ -130,7 +138,7 @@ export function RichTextEditor({
   placeholder = 'Start typing...',
   editable = true,
 }: RichTextEditorProps) {
-  const initialContent = content ? marked(content, { headerIds: false, mangle: false }) : ''
+  const initialContent = content ? marked(content, markedOptions) : ''
 
   const editor = useEditor({
     extensions: [
@@ -157,7 +165,7 @@ export function RichTextEditor({
 
   useEffect(() => {
     if (editor && content) {
-      const newContent = marked(content, { headerIds: false, mangle: false })
+      const newContent = marked(content, markedOptions)
       if (newContent !== editor.getHTML()) {
         editor.commands.setContent(newContent)
       }
