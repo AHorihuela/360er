@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { generateAIReport } from '@/lib/openai';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import { marked } from 'marked';
 
 export function ManageReviewCyclePage() {
   const { cycleId } = useParams();
@@ -418,7 +421,7 @@ export function ManageReviewCyclePage() {
       );
       
       // Save the report to Supabase
-      const { error: saveError } = await supabase
+      const { data: savedReport, error: saveError } = await supabase
         .from('ai_reports')
         .insert([{
           feedback_request_id: feedbackRequest.id,
@@ -433,6 +436,25 @@ export function ManageReviewCyclePage() {
       // Update the report content to use the current employee's name
       const updatedReport = report.replace(/# [\s\S]*?(?=##)/, `# 360-Degree Feedback Report for ${feedbackRequest.employee?.name}\n\n`);
       setAiReport(updatedReport);
+      
+      // Update local state to reflect the new report
+      setFeedbackRequests(prevRequests => 
+        prevRequests.map(req => 
+          req.id === feedbackRequest.id
+            ? {
+                ...req,
+                ai_report: {
+                  id: savedReport.id,
+                  feedback_request_id: feedbackRequest.id,
+                  content: updatedReport,
+                  created_at: savedReport.created_at,
+                  updated_at: savedReport.updated_at,
+                  is_final: false
+                }
+              }
+            : req
+        )
+      );
       
       toast({
         title: "Report Generated",
@@ -554,7 +576,20 @@ export function ManageReviewCyclePage() {
     }
   }
 
-  function handleExportReport(format: 'pdf' | 'text', content: string, employeeName: string) {
+  // Add keyboard shortcut handler
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && selectedRequestForReport && aiReport.trim()) {
+        e.preventDefault();
+        handleSaveReport(selectedRequestForReport);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedRequestForReport, aiReport]);
+
+  async function handleExportReport(format: 'pdf' | 'text', content: string, employeeName: string) {
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `${employeeName.replace(/\s+/g, '_')}_360_Review_${timestamp}`;
 
@@ -570,38 +605,152 @@ export function ManageReviewCyclePage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      // Export as PDF
-      // Note: You'll need to implement PDF generation here
-      // For now, we'll use the browser's print functionality
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>${filename}</title>
-              <style>
-                body {
-                  font-family: Arial, sans-serif;
-                  line-height: 1.6;
-                  padding: 2rem;
-                  max-width: 800px;
-                  margin: 0 auto;
-                }
-                h1, h2, h3 { margin-top: 2rem; }
-                pre { white-space: pre-wrap; }
-              </style>
-            </head>
-            <body>
-              ${content}
-              <script>
-                window.onload = () => {
-                  window.print();
-                  window.close();
-                };
-              </script>
-            </body>
-          </html>
-        `);
+      // Create a temporary container for the markdown content
+      const container = document.createElement('div');
+      // Convert markdown to HTML and inject styles
+      container.innerHTML = `
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+          }
+          h1 {
+            font-size: 24px;
+            color: #111;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+          }
+          h2 {
+            font-size: 20px;
+            color: #333;
+            margin-top: 24px;
+            margin-bottom: 16px;
+          }
+          h3 {
+            font-size: 18px;
+            color: #444;
+            margin-top: 20px;
+            margin-bottom: 12px;
+          }
+          p {
+            margin-bottom: 16px;
+            font-size: 14px;
+          }
+          ul, ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+          }
+          li {
+            margin-bottom: 8px;
+            font-size: 14px;
+          }
+          blockquote {
+            border-left: 4px solid #ddd;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #666;
+            font-style: italic;
+          }
+          code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+          }
+          strong {
+            color: #222;
+          }
+        </style>
+        ${marked(content, { breaks: true })}
+      `;
+      container.style.padding = '40px';
+      container.style.width = '800px';
+      container.style.backgroundColor = 'white';
+      document.body.appendChild(container);
+
+      try {
+        // Convert the container to canvas with better quality settings
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 800,
+          onclone: (clonedDoc) => {
+            const clonedContainer = clonedDoc.querySelector('div');
+            if (clonedContainer) {
+              clonedContainer.style.width = '800px';
+              clonedContainer.style.margin = '0 auto';
+            }
+          }
+        });
+
+        // Initialize PDF with better settings
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: 'a4',
+          hotfixes: ['px_scaling']
+        });
+
+        // Calculate dimensions to maintain aspect ratio
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Set image width to page width with some margins
+        const margins = 40;
+        const imageWidth = pageWidth - (margins * 2);
+        
+        // Calculate total height and number of pages needed
+        const totalHeight = canvas.height;
+        const pageHeightInPx = (pageHeight - (margins * 2));
+        const numberOfPages = Math.ceil(totalHeight / pageHeightInPx);
+
+        // For each page
+        for (let page = 0; page < numberOfPages; page++) {
+          if (page > 0) {
+            pdf.addPage();
+          }
+
+          // Calculate the slice of the canvas to use for this page
+          const sourceY = page * pageHeightInPx;
+          const sliceHeight = Math.min(pageHeightInPx, totalHeight - sourceY);
+          
+          // Create a temporary canvas for this slice
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = sliceHeight;
+          
+          // Draw the slice of the original canvas onto the temporary canvas
+          const ctx = tempCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(
+              canvas,
+              0, sourceY, canvas.width, sliceHeight, // Source rectangle
+              0, 0, canvas.width, sliceHeight        // Destination rectangle
+            );
+          }
+
+          // Add this slice to the PDF
+          pdf.addImage(
+            tempCanvas.toDataURL('image/png'),
+            'PNG',
+            margins,
+            margins,
+            imageWidth,
+            (sliceHeight * imageWidth) / canvas.width,
+            '',
+            'FAST'
+          );
+        }
+
+        // Save PDF
+        pdf.save(`${filename}.pdf`);
+      } finally {
+        // Clean up
+        document.body.removeChild(container);
       }
     }
   }
