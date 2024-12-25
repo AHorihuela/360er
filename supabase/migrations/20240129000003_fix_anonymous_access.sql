@@ -21,7 +21,6 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM feedback_requests fr
         WHERE fr.id = feedback_request_id
-        AND fr.status != 'completed'
         AND EXISTS (
             SELECT 1 FROM review_cycles rc
             WHERE rc.id = fr.review_cycle_id
@@ -38,7 +37,6 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM feedback_requests fr
         WHERE fr.id = feedback_request_id
-        AND fr.status != 'completed'
     )
 );
 
@@ -46,7 +44,7 @@ CREATE POLICY "Anyone can view feedback requests by unique_link"
 ON feedback_requests
 FOR SELECT
 TO anon
-USING (status != 'completed');
+USING (true);
 
 CREATE POLICY "Anyone can view employees"
 ON employees
@@ -56,7 +54,6 @@ USING (
     EXISTS (
         SELECT 1 FROM feedback_requests fr
         WHERE fr.employee_id = employees.id
-        AND fr.status != 'completed'
     )
 );
 
@@ -68,7 +65,6 @@ USING (
     EXISTS (
         SELECT 1 FROM feedback_requests fr
         WHERE fr.review_cycle_id = review_cycles.id
-        AND fr.status != 'completed'
     )
 );
 
