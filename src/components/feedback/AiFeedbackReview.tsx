@@ -90,7 +90,7 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
 
   const analyzeFeedback = async () => {
     try {
-      const response = await fetch('/api/analyze-feedback', {
+      const response = await fetch('/server/api/analyze-feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,10 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
         body: JSON.stringify(feedbackData),
       });
       
-      if (!response.ok) throw new Error('Failed to analyze feedback');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to analyze feedback');
+      }
       
       const data = await response.json();
       setAiResponse(data);
