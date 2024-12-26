@@ -69,6 +69,28 @@ interface AnalysisStep {
   status: 'pending' | 'in_progress' | 'completed' | 'error';
 }
 
+// Helper function for fuzzy text matching
+function fuzzyMatch(text: string, pattern: string): boolean {
+  if (!pattern) return false;
+  
+  const cleanText = text.toLowerCase().replace(/\s+/g, ' ');
+  const cleanPattern = pattern.toLowerCase().replace(/\s+/g, ' ');
+  
+  // Try exact match first
+  if (cleanText.includes(cleanPattern)) return true;
+  
+  // Try matching with some flexibility
+  const words = cleanPattern.split(' ');
+  let lastIndex = -1;
+  
+  return words.every(word => {
+    const index = cleanText.indexOf(word, lastIndex + 1);
+    if (index === -1) return false;
+    lastIndex = index;
+    return true;
+  });
+}
+
 export function AiFeedbackReview({ 
   feedbackData, 
   onSubmit, 
@@ -101,20 +123,20 @@ export function AiFeedbackReview({
     // Only start analysis if we don't have a saved response
     if (!aiResponse) {
       stepInterval = setInterval(() => {
-        if (currentStepIndex < steps.length) {
-          setSteps(prevSteps => prevSteps.map((step, index) => ({
-            ...step,
-            status: index === currentStepIndex ? 'in_progress' 
-                   : index < currentStepIndex ? 'completed' 
-                   : 'pending'
-          })));
-          currentStepIndex++;
-        } else {
-          clearInterval(stepInterval);
-        }
+      if (currentStepIndex < steps.length) {
+        setSteps(prevSteps => prevSteps.map((step, index) => ({
+          ...step,
+          status: index === currentStepIndex ? 'in_progress' 
+                 : index < currentStepIndex ? 'completed' 
+                 : 'pending'
+        })));
+        currentStepIndex++;
+      } else {
+        clearInterval(stepInterval);
+      }
       }, 1500);
 
-      // Start the analysis
+    // Start the analysis
       void analyzeFeedback();
     } else {
       // If we have a saved response, mark all steps as completed
@@ -153,7 +175,7 @@ When analyzing feedback, consider:
    - The nature of their working relationship
 4. Maintain objectivity and professionalism in all suggestions
 5. Ensure feedback addresses observable behaviors and outcomes
-6. Align feedback with our company values:
+6. Align feedback with our company values, but don't mention the company values in the suggestions:
    - Operational Excellence and Innovation
    - Taking Initiative and Calculated Risks
    - Urgency and Efficiency in Execution
@@ -206,7 +228,6 @@ ${feedbackData.areas_for_improvement}`
       let analysis: AiFeedbackResponse;
       try {
         const parsedResponse = JSON.parse(completion.choices[0].message.content || '{}');
-        console.log('Raw parsed response:', parsedResponse);
         
         // Validate and normalize the response structure
         analysis = {
@@ -219,48 +240,23 @@ ${feedbackData.areas_for_improvement}`
                     Object.values(parsedResponse.summary).join(' ') : 
                     'Failed to parse summary',
           suggestions: Array.isArray(parsedResponse.suggestions) ? 
-            parsedResponse.suggestions.map((s: { 
-              type?: string;
-              category?: string;
-              suggestion?: string;
-              content?: string;
-              context?: string;
-              highlightStart?: string;
-              highlightEnd?: string;
-            }) => ({
+            parsedResponse.suggestions.map((s: any) => ({
               type: (s.type || 'enhancement').toLowerCase() as 'critical' | 'enhancement',
               category: (s.category || 'actionability').toLowerCase() as 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness',
               suggestion: s.suggestion || s.content || '',
-              context: s.context,
-              highlightStart: s.highlightStart,
-              highlightEnd: s.highlightEnd
+              context: s.context || '',
+              highlightStart: s.context || s.highlightStart || '',
+              highlightEnd: s.context || s.highlightEnd || ''
             })) : []
         };
-
-        // Additional validation
-        if (!['excellent', 'good', 'needs_improvement'].includes(analysis.overallQuality) ||
-            typeof analysis.summary !== 'string' ||
-            !Array.isArray(analysis.suggestions)) {
-          throw new Error('Invalid response structure from OpenAI');
-        }
-
-        console.log('Normalized Analysis:', analysis);
       } catch (parseError) {
-        console.error('Failed to parse OpenAI response:', parseError);
-        console.log('Raw content:', completion.choices[0].message.content);
         throw new Error('Failed to parse AI response');
       }
 
-      // Store the analysis in localStorage for persistence during editing
-      try {
-        localStorage.setItem('last_feedback_analysis', JSON.stringify(analysis));
-      } catch (error) {
-        console.error('Failed to store analysis in localStorage:', error);
-      }
+      localStorage.setItem('last_feedback_analysis', JSON.stringify(analysis));
       
-      // Try to store in Supabase but don't block on failure
       try {
-        const { error: storageError } = await supabase
+        await supabase
           .from('feedback_analyses')
           .insert({
             strengths: feedbackData.strengths,
@@ -269,26 +265,17 @@ ${feedbackData.areas_for_improvement}`
             model_version: 'gpt-4',
             prompt_version: '1.0'
           });
-          
-        if (storageError && storageError.code !== '42501') { // Ignore permission denied
-          console.error('Failed to store analysis:', storageError);
-        }
       } catch (error) {
-        console.error('Failed to store analysis:', error);
+        // Silently handle storage errors
       }
 
       setAiResponse(analysis);
-      
-      // Mark all steps as completed
       setSteps(prevSteps => prevSteps.map(step => ({
         ...step,
         status: 'completed'
       })));
     } catch (error) {
-      console.error('Error analyzing feedback:', error);
       setAnalysisError(error instanceof Error ? error.message : 'Failed to analyze feedback');
-      
-      // Mark all remaining steps as error
       setSteps(prevSteps => prevSteps.map(step => ({
         ...step,
         status: step.status === 'completed' ? 'completed' : 'error'
@@ -353,16 +340,16 @@ ${feedbackData.areas_for_improvement}`
                           aiResponse.overallQuality === 'good' ? 'secondary' : 
                           'default'}>
               {aiResponse.overallQuality.toUpperCase().replace('_', ' ')}
-            </Badge>
+          </Badge>
           )}
         </div>
         {aiResponse && (
           <CardDescription className="text-gray-700 text-base leading-relaxed mt-2">
-            {aiResponse.summary}
-          </CardDescription>
+          {aiResponse.summary}
+        </CardDescription>
         )}
       </CardHeader>
-
+      
       <CardContent>
         {analysisError && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
@@ -394,58 +381,63 @@ ${feedbackData.areas_for_improvement}`
                     <span className="text-xs text-muted-foreground">Click to edit</span>
                   </div>
                   <div className="relative">
-                    <Textarea
+                    <div className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background whitespace-pre-wrap">
+                      <span className="inline">
+                        {(() => {
+                          const text = feedbackData.strengths;
+                          let lastIndex = 0;
+                          const parts: React.ReactNode[] = [];
+
+                          const matches = aiResponse.suggestions
+                            .filter(s => s.context)
+                            .map(s => ({
+                              suggestion: s,
+                              index: text.toLowerCase().indexOf(s.context!.toLowerCase())
+                            }))
+                            .filter(m => m.index !== -1)
+                            .sort((a, b) => a.index - b.index);
+
+                          matches.forEach(({ suggestion, index }) => {
+                            if (index > lastIndex) {
+                              parts.push(<span key={`text-${index}`}>{text.substring(lastIndex, index)}</span>);
+                            }
+
+                            const matchLength = suggestion.context!.length;
+                            parts.push(
+                              <mark 
+                                key={`mark-${index}`}
+                                className={`group relative inline cursor-help ${
+                                  suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                                } hover:bg-opacity-75`}
+                              >
+                                {text.substr(index, matchLength)}
+                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[9999] invisible group-hover:visible">
+                                  <span className="relative flex flex-col items-center">
+                                    <span className="bg-slate-800 text-white text-sm rounded-lg px-4 py-3 whitespace-normal shadow-xl w-[400px]">
+                                      <span className="font-semibold mb-2 block border-b border-slate-600 pb-1">{categoryLabels[suggestion.category]}</span>
+                                      {suggestion.suggestion}
+                                    </span>
+                                    <span className="border-[8px] border-transparent border-t-slate-800" />
+                                  </span>
+                                </span>
+                              </mark>
+                            );
+                            lastIndex = index + matchLength;
+                          });
+
+                          if (lastIndex < text.length) {
+                            parts.push(<span key="text-end">{text.substring(lastIndex)}</span>);
+                          }
+
+                          return parts;
+                        })()}
+                      </span>
+                    </div>
+                    <textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
-                      placeholder="What are this person's key strengths?"
+                      className="absolute inset-0 min-h-[150px] w-full resize-none opacity-0 pointer-events-none"
                     />
-                    {aiResponse.suggestions
-                      .filter(s => s.highlightStart && s.highlightEnd && 
-                        feedbackData.strengths.includes(s.highlightStart) && 
-                        feedbackData.strengths.includes(s.highlightEnd))
-                      .map((suggestion, index) => {
-                        const startIndex = feedbackData.strengths.indexOf(suggestion.highlightStart!);
-                        const endIndex = feedbackData.strengths.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
-                        const text = feedbackData.strengths.slice(startIndex, endIndex);
-                        const lines = Math.floor(startIndex / 80); // Approximate characters per line
-                        const top = lines * 24 + 12; // Base line height plus padding
-                        
-                        return (
-                          <div 
-                            key={`strength-${index}`}
-                            className="absolute left-3 right-3 pointer-events-auto"
-                            style={{ 
-                              top: `${top}px`,
-                              width: `${text.length * 8}px` // Approximate character width
-                            }}
-                          >
-                            <div className="relative group">
-                              <div className={`absolute -bottom-0.5 w-full border-b ${
-                                suggestion.type === 'critical' 
-                                  ? 'border-red-400 border-b-2 border-dashed' 
-                                  : 'border-blue-400 border-dotted'
-                              }`}>
-                                <div className={`absolute right-0 ${
-                                  suggestion.type === 'critical' ? 'text-red-500' : 'text-blue-500'
-                                } -top-1`}>
-                                  <span className="cursor-help">ℹ️</span>
-                                </div>
-                              </div>
-                              <div className="absolute bottom-full mb-2 invisible group-hover:visible z-50">
-                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg w-64">
-                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {categoryLabels[suggestion.category]}
-                                  </span>
-                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
                   </div>
                 </div>
 
@@ -455,58 +447,63 @@ ${feedbackData.areas_for_improvement}`
                     <span className="text-xs text-muted-foreground">Click to edit</span>
                   </div>
                   <div className="relative">
-                    <Textarea
+                    <div className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background whitespace-pre-wrap">
+                      <span className="inline">
+                        {(() => {
+                          const text = feedbackData.areas_for_improvement;
+                          let lastIndex = 0;
+                          const parts: React.ReactNode[] = [];
+
+                          const matches = aiResponse.suggestions
+                            .filter(s => s.context)
+                            .map(s => ({
+                              suggestion: s,
+                              index: text.toLowerCase().indexOf(s.context!.toLowerCase())
+                            }))
+                            .filter(m => m.index !== -1)
+                            .sort((a, b) => a.index - b.index);
+
+                          matches.forEach(({ suggestion, index }) => {
+                            if (index > lastIndex) {
+                              parts.push(<span key={`text-${index}`}>{text.substring(lastIndex, index)}</span>);
+                            }
+
+                            const matchLength = suggestion.context!.length;
+                            parts.push(
+                              <mark 
+                                key={`mark-${index}`}
+                                className={`group relative inline cursor-help ${
+                                  suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                                } hover:bg-opacity-75`}
+                              >
+                                {text.substr(index, matchLength)}
+                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[9999] invisible group-hover:visible">
+                                  <span className="relative flex flex-col items-center">
+                                    <span className="bg-slate-800 text-white text-sm rounded-lg px-4 py-3 whitespace-normal shadow-xl w-[400px]">
+                                      <span className="font-semibold mb-2 block border-b border-slate-600 pb-1">{categoryLabels[suggestion.category]}</span>
+                                      {suggestion.suggestion}
+                                    </span>
+                                    <span className="border-[8px] border-transparent border-t-slate-800" />
+                                  </span>
+                                </span>
+                              </mark>
+                            );
+                            lastIndex = index + matchLength;
+                          });
+
+                          if (lastIndex < text.length) {
+                            parts.push(<span key="text-end">{text.substring(lastIndex)}</span>);
+                          }
+
+                          return parts;
+                        })()}
+                      </span>
+                    </div>
+                    <textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
-                      placeholder="What could this person improve on?"
+                      className="absolute inset-0 min-h-[150px] w-full resize-none opacity-0 pointer-events-none"
                     />
-                    {aiResponse.suggestions
-                      .filter(s => s.highlightStart && s.highlightEnd && 
-                        feedbackData.areas_for_improvement.includes(s.highlightStart) && 
-                        feedbackData.areas_for_improvement.includes(s.highlightEnd))
-                      .map((suggestion, index) => {
-                        const startIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightStart!);
-                        const endIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
-                        const text = feedbackData.areas_for_improvement.slice(startIndex, endIndex);
-                        const lines = Math.floor(startIndex / 80); // Approximate characters per line
-                        const top = lines * 24 + 12; // Base line height plus padding
-                        
-                        return (
-                          <div 
-                            key={`improvement-${index}`}
-                            className="absolute left-3 right-3 pointer-events-auto"
-                            style={{ 
-                              top: `${top}px`,
-                              width: `${text.length * 8}px` // Approximate character width
-                            }}
-                          >
-                            <div className="relative group">
-                              <div className={`absolute -bottom-0.5 w-full border-b ${
-                                suggestion.type === 'critical' 
-                                  ? 'border-red-400 border-b-2 border-dashed' 
-                                  : 'border-blue-400 border-dotted'
-                              }`}>
-                                <div className={`absolute right-0 ${
-                                  suggestion.type === 'critical' ? 'text-red-500' : 'text-blue-500'
-                                } -top-1`}>
-                                  <span className="cursor-help">ℹ️</span>
-                                </div>
-                              </div>
-                              <div className="absolute bottom-full mb-2 invisible group-hover:visible z-50">
-                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg w-64">
-                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {categoryLabels[suggestion.category]}
-                                  </span>
-                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
                   </div>
                 </div>
               </div>
@@ -523,8 +520,8 @@ ${feedbackData.areas_for_improvement}`
                       <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
                         <div className="flex items-center space-x-2">
                           <Badge variant="destructive">
-                            {categoryLabels[suggestion.category]}
-                          </Badge>
+                    {categoryLabels[suggestion.category]}
+                  </Badge>
                         </div>
                         <p className="text-sm">{suggestion.suggestion}</p>
                         {suggestion.context && (
@@ -547,16 +544,16 @@ ${feedbackData.areas_for_improvement}`
                           <Badge variant="secondary">
                             {categoryLabels[suggestion.category]}
                           </Badge>
-                        </div>
-                        <p className="text-sm">{suggestion.suggestion}</p>
-                        {suggestion.context && (
-                          <p className="text-sm text-muted-foreground italic">
-                            Context: "{suggestion.context}"
-                          </p>
-                        )}
-                      </div>
-                    ))}
                 </div>
+                <p className="text-sm">{suggestion.suggestion}</p>
+                {suggestion.context && (
+                          <p className="text-sm text-muted-foreground italic">
+                    Context: "{suggestion.context}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
               </div>
             </TabsContent>
           </Tabs>
