@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { validateFeedback } from '@/utils/feedbackValidation';
 
 interface FeedbackRequest {
   id: string;
@@ -37,38 +38,12 @@ interface ValidationState {
   strengths: {
     isValid: boolean;
     message: string;
+    warnings?: string[];
   };
   areas_for_improvement: {
     isValid: boolean;
     message: string;
-  };
-}
-
-const MIN_FEEDBACK_LENGTH = 50;
-const MAX_FEEDBACK_LENGTH = 2000;
-
-function validateFeedback(text: string): { isValid: boolean; message: string } {
-  if (text.length < MIN_FEEDBACK_LENGTH) {
-    return {
-      isValid: false,
-      message: `Please provide at least ${MIN_FEEDBACK_LENGTH} characters of feedback (${text.length}/${MIN_FEEDBACK_LENGTH})`
-    };
-  }
-  if (text.length > MAX_FEEDBACK_LENGTH) {
-    return {
-      isValid: false,
-      message: `Feedback exceeds maximum length of ${MAX_FEEDBACK_LENGTH} characters (${text.length}/${MAX_FEEDBACK_LENGTH})`
-    };
-  }
-  if (text.split(' ').length < 10) {
-    return {
-      isValid: false,
-      message: 'Please provide more detailed feedback using complete sentences'
-    };
-  }
-  return {
-    isValid: true,
-    message: `${text.length}/${MAX_FEEDBACK_LENGTH} characters`
+    warnings?: string[];
   };
 }
 
@@ -432,8 +407,8 @@ export function FeedbackFormPage() {
               className={`min-h-[120px] w-full rounded-md border ${
                 !validation.strengths.isValid && formData.strengths.length > 0
                   ? 'border-red-500'
-                  : validation.strengths.isValid && formData.strengths.length >= MIN_FEEDBACK_LENGTH
-                  ? 'border-green-500'
+                  : validation.strengths.isValid && formData.strengths.length > 0
+                  ? validation.strengths.warnings?.length ? 'border-yellow-500' : 'border-green-500'
                   : 'border-input'
               } bg-background px-3 py-2`}
               value={formData.strengths}
@@ -441,15 +416,22 @@ export function FeedbackFormPage() {
               placeholder={`What does ${displayName} do well? What are their key strengths?`}
               required
             />
-            <p className={`text-sm ${
-              !validation.strengths.isValid && formData.strengths.length > 0
-                ? 'text-red-500'
-                : validation.strengths.isValid && formData.strengths.length >= MIN_FEEDBACK_LENGTH
-                ? 'text-green-500'
-                : 'text-muted-foreground'
-            }`}>
-              {validation.strengths.message}
-            </p>
+            <div className="space-y-1">
+              <p className={`text-sm ${
+                !validation.strengths.isValid && formData.strengths.length > 0
+                  ? 'text-red-500'
+                  : validation.strengths.isValid && formData.strengths.length > 0
+                  ? validation.strengths.warnings?.length ? 'text-yellow-500' : 'text-green-500'
+                  : 'text-muted-foreground'
+              }`}>
+                {validation.strengths.message}
+              </p>
+              {validation.strengths.warnings?.map((warning, index) => (
+                <p key={index} className="text-sm text-yellow-500">
+                  ⚠️ {warning}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -460,8 +442,8 @@ export function FeedbackFormPage() {
               className={`min-h-[120px] w-full rounded-md border ${
                 !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
                   ? 'border-red-500'
-                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length >= MIN_FEEDBACK_LENGTH
-                  ? 'border-green-500'
+                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                  ? validation.areas_for_improvement.warnings?.length ? 'border-yellow-500' : 'border-green-500'
                   : 'border-input'
               } bg-background px-3 py-2`}
               value={formData.areas_for_improvement}
@@ -469,22 +451,33 @@ export function FeedbackFormPage() {
               placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
               required
             />
-            <p className={`text-sm ${
-              !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
-                ? 'text-red-500'
-                : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length >= MIN_FEEDBACK_LENGTH
-                ? 'text-green-500'
-                : 'text-muted-foreground'
-            }`}>
-              {validation.areas_for_improvement.message}
-            </p>
+            <div className="space-y-1">
+              <p className={`text-sm ${
+                !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                  ? 'text-red-500'
+                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                  ? validation.areas_for_improvement.warnings?.length ? 'text-yellow-500' : 'text-green-500'
+                  : 'text-muted-foreground'
+              }`}>
+                {validation.areas_for_improvement.message}
+              </p>
+              {validation.areas_for_improvement.warnings?.map((warning, index) => (
+                <p key={index} className="text-sm text-yellow-500">
+                  ⚠️ {warning}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="flex justify-end">
           <Button 
             type="submit" 
-            disabled={isSubmitting || !validation.strengths.isValid || !validation.areas_for_improvement.isValid}
+            disabled={
+              isSubmitting || 
+              !validation.strengths.isValid || 
+              !validation.areas_for_improvement.isValid
+            }
           >
             {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
           </Button>
