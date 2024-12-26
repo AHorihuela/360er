@@ -39,11 +39,13 @@ interface ValidationState {
     isValid: boolean;
     message: string;
     warnings?: string[];
+    showLengthWarning: boolean;
   };
   areas_for_improvement: {
     isValid: boolean;
     message: string;
     warnings?: string[];
+    showLengthWarning: boolean;
   };
 }
 
@@ -66,9 +68,10 @@ export function FeedbackFormPage() {
   });
   const [sessionId] = useState(() => generateSessionId());
   const [validation, setValidation] = useState<ValidationState>({
-    strengths: { isValid: true, message: '' },
-    areas_for_improvement: { isValid: true, message: '' }
+    strengths: { isValid: true, message: '', showLengthWarning: false },
+    areas_for_improvement: { isValid: true, message: '', showLengthWarning: false }
   });
+  const [showLengthRequirements, setShowLengthRequirements] = useState(false);
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -150,13 +153,13 @@ export function FeedbackFormPage() {
     };
   }, [feedbackRequest, sessionId]);
 
-  // Add validation effect
+  // Update validation effect
   useEffect(() => {
     setValidation({
-      strengths: validateFeedback(formData.strengths),
-      areas_for_improvement: validateFeedback(formData.areas_for_improvement)
+      strengths: validateFeedback(formData.strengths, showLengthRequirements),
+      areas_for_improvement: validateFeedback(formData.areas_for_improvement, showLengthRequirements)
     });
-  }, [formData.strengths, formData.areas_for_improvement]);
+  }, [formData.strengths, formData.areas_for_improvement, showLengthRequirements]);
 
   async function fetchFeedbackRequest() {
     try {
@@ -251,6 +254,19 @@ export function FeedbackFormPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!feedbackRequest || !uniqueLink) return;
+
+    // Show length requirements if not already showing
+    if (!showLengthRequirements) {
+      setShowLengthRequirements(true);
+      // Revalidate with length requirements
+      const strengthsValidation = validateFeedback(formData.strengths, true);
+      const improvementValidation = validateFeedback(formData.areas_for_improvement, true);
+      
+      // If either field is invalid, prevent submission
+      if (!strengthsValidation.isValid || !improvementValidation.isValid) {
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -405,7 +421,7 @@ export function FeedbackFormPage() {
           <div className="space-y-1">
             <textarea
               className={`min-h-[120px] w-full rounded-md border ${
-                !validation.strengths.isValid && formData.strengths.length > 0
+                !validation.strengths.isValid && validation.strengths.showLengthWarning
                   ? 'border-red-500'
                   : validation.strengths.isValid && formData.strengths.length > 0
                   ? validation.strengths.warnings?.length ? 'border-yellow-500' : 'border-green-500'
@@ -417,15 +433,13 @@ export function FeedbackFormPage() {
               required
             />
             <div className="space-y-1">
-              <p className={`text-sm ${
-                !validation.strengths.isValid && formData.strengths.length > 0
-                  ? 'text-red-500'
-                  : validation.strengths.isValid && formData.strengths.length > 0
-                  ? validation.strengths.warnings?.length ? 'text-yellow-500' : 'text-green-500'
-                  : 'text-muted-foreground'
-              }`}>
-                {validation.strengths.message}
-              </p>
+              {validation.strengths.showLengthWarning && (
+                <p className={`text-sm ${
+                  !validation.strengths.isValid ? 'text-red-500' : 'text-muted-foreground'
+                }`}>
+                  {validation.strengths.message}
+                </p>
+              )}
               {validation.strengths.warnings?.map((warning, index) => (
                 <p key={index} className="text-sm text-yellow-500">
                   ⚠️ {warning}
@@ -440,7 +454,7 @@ export function FeedbackFormPage() {
           <div className="space-y-1">
             <textarea
               className={`min-h-[120px] w-full rounded-md border ${
-                !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
                   ? 'border-red-500'
                   : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
                   ? validation.areas_for_improvement.warnings?.length ? 'border-yellow-500' : 'border-green-500'
@@ -452,15 +466,13 @@ export function FeedbackFormPage() {
               required
             />
             <div className="space-y-1">
-              <p className={`text-sm ${
-                !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
-                  ? 'text-red-500'
-                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
-                  ? validation.areas_for_improvement.warnings?.length ? 'text-yellow-500' : 'text-green-500'
-                  : 'text-muted-foreground'
-              }`}>
-                {validation.areas_for_improvement.message}
-              </p>
+              {validation.areas_for_improvement.showLengthWarning && (
+                <p className={`text-sm ${
+                  !validation.areas_for_improvement.isValid ? 'text-red-500' : 'text-muted-foreground'
+                }`}>
+                  {validation.areas_for_improvement.message}
+                </p>
+              )}
               {validation.areas_for_improvement.warnings?.map((warning, index) => (
                 <p key={index} className="text-sm text-yellow-500">
                   ⚠️ {warning}
@@ -475,8 +487,7 @@ export function FeedbackFormPage() {
             type="submit" 
             disabled={
               isSubmitting || 
-              !validation.strengths.isValid || 
-              !validation.areas_for_improvement.isValid
+              (showLengthRequirements && (!validation.strengths.isValid || !validation.areas_for_improvement.isValid))
             }
           >
             {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
