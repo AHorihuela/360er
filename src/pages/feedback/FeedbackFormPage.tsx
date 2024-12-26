@@ -81,13 +81,24 @@ export function FeedbackFormPage() {
   useEffect(() => {
     // Ensure we're using anonymous access
     const initializeAnonymousSession = async () => {
+      console.log('Initializing anonymous session...');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session before signout:', session);
+      
       if (session) {
         // If there's a session, sign out to ensure anonymous access
-        await supabase.auth.signOut();
+        console.log('Found existing session, signing out...');
+        const { error } = await supabase.auth.signOut();
+        if (error) console.error('Error signing out:', error);
       }
+      
       // Wait a bit for the signout to complete
       await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check session again after signout
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      console.log('Session after signout:', newSession);
+      
       fetchFeedbackRequest();
     };
 
@@ -301,6 +312,19 @@ export function FeedbackFormPage() {
   }
 
   if (!feedbackRequest) return null;
+
+  if (feedbackRequest.status === 'completed') {
+    return (
+      <div className="mx-auto max-w-3xl space-y-8 p-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">Feedback Form Closed</h1>
+          <p className="mt-4 text-muted-foreground">
+            This feedback request has been completed and is no longer accepting submissions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const displayName = showNames ? feedbackRequest.employee.name : 'Employee';
 
