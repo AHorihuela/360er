@@ -35,7 +35,6 @@ const GENERIC_PHRASES = [
 
 // Potentially non-constructive language
 const NON_CONSTRUCTIVE_PHRASES = [
-  'always',
   'never',
   'terrible',
   'horrible',
