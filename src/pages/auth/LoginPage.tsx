@@ -83,14 +83,12 @@ export function LoginPage() {
       />
       <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/20" />
       <div className="w-full max-w-md p-8 space-y-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl relative">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            Welcome back to FuboLens
+        <div className="flex flex-col space-y-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back to Squad360
           </h1>
-          <p className="text-muted-foreground">
-            {view === 'signIn' ? 'Sign in to your account' : 
-             view === 'signUp' ? 'Create your account' : 
-             'Reset your password'}
+          <p className="text-sm text-muted-foreground">
+            Enter your email to sign in to your account
           </p>
         </div>
 
@@ -140,7 +138,7 @@ export function LoginPage() {
                   Forgot your password?
                 </button>
                 <div className="text-sm text-muted-foreground">
-                  New to FuboLens?{' '}
+                  New to Squad360?{" "}
                   <button 
                     type="button"
                     onClick={() => setView('signUp')}
@@ -152,7 +150,7 @@ export function LoginPage() {
               </>
             ) : view === 'signUp' ? (
               <div className="text-sm text-muted-foreground">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <button 
                   type="button"
                   onClick={() => setView('signIn')}
@@ -163,7 +161,7 @@ export function LoginPage() {
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
-                Remember your password?{' '}
+                Remember your password?{" "}
                 <button 
                   type="button"
                   onClick={() => setView('signIn')}

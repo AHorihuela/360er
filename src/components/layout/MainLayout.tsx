@@ -46,8 +46,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              FuboLens
+            <Link to="/" className="flex items-center gap-2">
+              <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                Squad360
+              </span>
             </Link>
             <nav className="flex items-center gap-4">
               <Link

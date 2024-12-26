@@ -100,7 +100,9 @@ export function DashboardPage() {
       <div className="container mx-auto max-w-4xl py-12">
         <div className="space-y-8">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Welcome to FuboLens! 👋</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome to Squad360! 👋
+            </h1>
             <p className="text-lg text-muted-foreground">Let's get you set up with everything you need.</p>
           </div>
 
@@ -115,7 +117,10 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Step 1: Add Your Team Members</h3>
                     {!hasEmployees && (
-                      <Button onClick={() => navigate('/employees')} className="bg-primary text-white hover:bg-primary/90">
+                      <Button 
+                        onClick={() => navigate('/employees')} 
+                        className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+                      >
                         Get Started <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     )}
@@ -135,7 +140,10 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Step 2: Create a Review Cycle</h3>
                     {hasEmployees && !hasReviewCycles && (
-                      <Button onClick={() => navigate('/reviews/new-cycle')} className="bg-primary text-white hover:bg-primary/90">
+                      <Button 
+                        onClick={() => navigate('/reviews/new-cycle')} 
+                        className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+                      >
                         Start Now <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     )}

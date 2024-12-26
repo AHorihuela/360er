@@ -41,8 +41,15 @@ function HomePage() {
       {/* Navigation */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
         <div className="container mx-auto flex h-14 items-center justify-between">
-          <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">FuboLens</span>
-          <Button variant="ghost" onClick={() => navigate('/login')}>Sign In</Button>
+          <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            Squad360
+          </span>
+          <Button 
+            onClick={() => navigate('/login')} 
+            className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+          >
+            Sign In
+          </Button>
         </div>
       </header>
 
@@ -60,7 +67,7 @@ function HomePage() {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/login')}
-                className="bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transition-all duration-300"
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
               >
                 Get Started
               </Button>
@@ -68,7 +75,7 @@ function HomePage() {
                 size="lg" 
                 variant="outline" 
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-primary text-primary hover:bg-primary/5 hover:text-primary dark:border-primary-light dark:text-primary-light dark:hover:text-primary-light"
+                className="border-primary text-primary hover:bg-primary/10 transition-all duration-300"
               >
                 Learn More
               </Button>
@@ -105,14 +112,11 @@ function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-background dark:bg-gray-950">
-        <div className="container mx-auto py-8 flex justify-between items-center">
-          <div className="text-sm text-muted-foreground dark:text-gray-400">
-            © 2024 FuboLens. All rights reserved.
-          </div>
-          <div className="text-sm text-muted-foreground dark:text-gray-400">
-            {getVersion()}
-          </div>
+      <footer className="py-6 md:px-8 md:py-0">
+        <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
+          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+            © 2024 Squad360. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

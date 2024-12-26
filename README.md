@@ -1,10 +1,11 @@
-# 360er - Professional Feedback Platform
+# Squad360 - Team Feedback Platform
 
-A modern, web-based 360-degree feedback platform that enables managers to collect comprehensive, anonymous feedback for their team members from peers, direct reports, and senior colleagues.
+A modern, web-based 360-degree feedback platform that enables managers to collect comprehensive, anonymous feedback for their team members from peers, direct reports, and senior colleagues. Squad360 helps teams grow together through structured, actionable feedback.
 
 ## Features
 
 - **Secure Authentication**: Email-based authentication using Supabase Auth
+- **Guided Onboarding**: Step-by-step setup process for new users
 - **Employee Management**: Add, edit, and manage employee profiles
 - **Review Cycles**: Create and manage review cycles with customizable deadlines
 - **Anonymous Feedback**: Generate unique, anonymous feedback links for reviewers
@@ -14,6 +15,8 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
 - **Export Options**: Export reports in PDF or text format with professional formatting
 - **Keyboard Shortcuts**: Convenient shortcuts like Command+S for saving reports
 - **Responsive Design**: Modern UI that works across devices
+- **Real-time Updates**: Live feedback collection progress tracking
+- **Version Tracking**: Built-in version display for deployment tracking
 
 ## Tech Stack
 
@@ -84,21 +87,26 @@ npm run dev
    - Sign up/login with your email
    - Verify your email address
 
-2. **Employee Management**:
+2. **Initial Setup**:
+   - Follow the guided onboarding process
+   - Add your first team members
+   - Create your first review cycle
+
+3. **Employee Management**:
    - Add employees with their name and role
    - Edit or remove employees as needed
 
-3. **Review Cycles**:
+4. **Review Cycles**:
    - Create a new review cycle with title and deadline
    - Add employees to the review cycle
    - Generate and share anonymous feedback links
 
-4. **Feedback Collection**:
+5. **Feedback Collection**:
    - Reviewers receive unique links
    - Submit anonymous feedback about strengths and areas for improvement
    - Specify their relationship to the reviewee
 
-5. **Review Management**:
+6. **Review Management**:
    - Track feedback collection progress
    - View and manage submitted feedback
    - Generate AI-powered feedback reports
@@ -118,7 +126,14 @@ npm run dev
 ```
 src/
 ├── components/     # Reusable React components
+│   ├── feedback/  # Feedback-related components
+│   ├── layout/    # Layout components
+│   ├── reviews/   # Review management components
+│   └── ui/        # UI components
 ├── pages/         # Page components
+│   ├── auth/      # Authentication pages
+│   ├── feedback/  # Feedback pages
+│   └── reviews/   # Review management pages
 ├── lib/           # Utilities and configurations
 ├── types/         # TypeScript type definitions
 └── hooks/         # Custom React hooks
