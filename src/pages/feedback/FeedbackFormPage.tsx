@@ -79,30 +79,23 @@ export function FeedbackFormPage() {
   }, [formData, uniqueLink]);
 
   useEffect(() => {
-    // Ensure we're using anonymous access
-    const initializeAnonymousSession = async () => {
-      console.log('Initializing anonymous session...');
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Current session before signout:', session);
-      
-      if (session) {
-        // If there's a session, sign out to ensure anonymous access
-        console.log('Found existing session, signing out...');
-        const { error } = await supabase.auth.signOut();
-        if (error) console.error('Error signing out:', error);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        await fetchFeedbackRequest();
+      } catch (error) {
+        console.error('Error fetching feedback request:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load feedback form. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Wait a bit for the signout to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check session again after signout
-      const { data: { session: newSession } } = await supabase.auth.getSession();
-      console.log('Session after signout:', newSession);
-      
-      fetchFeedbackRequest();
     };
 
-    initializeAnonymousSession();
+    fetchData();
   }, [uniqueLink]);
 
   useEffect(() => {
@@ -226,8 +219,6 @@ export function FeedbackFormPage() {
         variant: "destructive",
       });
       navigate('/');
-    } finally {
-      setIsLoading(false);
     }
   }
 
