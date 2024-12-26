@@ -143,8 +143,17 @@ export function AiFeedbackReview({
 
 When analyzing feedback, consider:
 1. The reviewer's relationship to the employee (senior, peer, or junior) as this affects the context
-2. The difference between inappropriate behavior that should be reported vs feedback that needs rephrasing
-3. The importance of specific examples and actionable suggestions
+2. Focus on professional impact and work performance
+3. Rephrase personal observations into business impact statements
+4. Maintain objectivity and professionalism in all suggestions
+5. Ensure feedback addresses behaviors and outcomes, not personality
+6. Align feedback with our company values:
+   - Operational Excellence and Innovation
+   - Taking Initiative and Calculated Risks
+   - Urgency and Efficiency in Execution
+   - Quality and Simplicity in Delivery
+   - Team Energy and Collaboration
+   - Continuous Improvement Mindset
 
 Return a JSON response with this structure:
 {
@@ -163,9 +172,12 @@ Return a JSON response with this structure:
 }
 
 Guidelines:
-- If feedback mentions inappropriate workplace behavior, suggest documenting it properly rather than removing it
-- Focus on how feedback can be made more specific and actionable
-- Preserve important examples while suggesting better phrasing
+- Rephrase personal observations to focus on work impact and professional outcomes
+- Frame feedback in terms of operational excellence and business goals
+- Emphasize how behaviors affect team dynamics and project execution
+- Highlight opportunities for innovation and calculated risk-taking
+- Suggest specific ways to improve efficiency and quality
+- Connect feedback to our continuous improvement cycle: Execute, Measure, Improve, Repeat
 - Consider the professional relationship context in all suggestions`
           },
           { 
