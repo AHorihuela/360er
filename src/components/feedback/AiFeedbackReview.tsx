@@ -27,6 +27,8 @@ interface AiFeedbackSuggestion {
   category: 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness';
   suggestion: string;
   context?: string;
+  highlightStart?: string;
+  highlightEnd?: string;
 }
 
 interface AiFeedbackResponse {
@@ -39,6 +41,7 @@ interface Props {
   feedbackData: {
     strengths: string;
     areas_for_improvement: string;
+    relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
   };
   onSubmit: () => void;
   onRevise: () => void;
@@ -136,7 +139,14 @@ export function AiFeedbackReview({
         messages: [
           { 
             role: "system", 
-            content: `You are an expert in performance reviews and feedback. Analyze the provided feedback and return a JSON response with the following structure:
+            content: `You are an expert in performance reviews and feedback. You understand workplace dynamics and professional boundaries.
+
+When analyzing feedback, consider:
+1. The reviewer's relationship to the employee (senior, peer, or junior) as this affects the context
+2. The difference between inappropriate behavior that should be reported vs feedback that needs rephrasing
+3. The importance of specific examples and actionable suggestions
+
+Return a JSON response with this structure:
 {
   "overallQuality": "excellent" | "good" | "needs_improvement",
   "summary": "A single paragraph summarizing the overall feedback quality",
@@ -145,21 +155,22 @@ export function AiFeedbackReview({
       "type": "critical" | "enhancement",
       "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
       "suggestion": "The specific suggestion text",
-      "context": "Optional context from the feedback"
+      "context": "The exact quote from the feedback that needs improvement",
+      "highlightStart": "The first few words of the section to highlight",
+      "highlightEnd": "The last few words of the section to highlight"
     }
   ]
 }
 
-Focus on:
-1. Clarity: Is the feedback clear and easy to understand?
-2. Specificity: Does it include specific examples and behaviors?
-3. Actionability: Are there concrete suggestions for improvement?
-4. Tone: Is the feedback constructive and professional?
-5. Completeness: Are all aspects adequately addressed?`
+Guidelines:
+- If feedback mentions inappropriate workplace behavior, suggest documenting it properly rather than removing it
+- Focus on how feedback can be made more specific and actionable
+- Preserve important examples while suggesting better phrasing
+- Consider the professional relationship context in all suggestions`
           },
           { 
             role: "user", 
-            content: `Please analyze this feedback and return a JSON response:
+            content: `Please analyze this feedback. The reviewer's relationship to the employee is: ${feedbackData.relationship}.
 
 Strengths:
 ${feedbackData.strengths}
@@ -196,11 +207,15 @@ ${feedbackData.areas_for_improvement}`
               suggestion?: string;
               content?: string;
               context?: string;
+              highlightStart?: string;
+              highlightEnd?: string;
             }) => ({
               type: (s.type || 'enhancement').toLowerCase() as 'critical' | 'enhancement',
               category: (s.category || 'actionability').toLowerCase() as 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness',
               suggestion: s.suggestion || s.content || '',
-              context: s.context
+              context: s.context,
+              highlightStart: s.highlightStart,
+              highlightEnd: s.highlightEnd
             })) : []
         };
 
@@ -354,46 +369,76 @@ ${feedbackData.areas_for_improvement}`
             <TabsContent value="edit" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-sm mb-2">Strengths</h4>
-                  <div className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm">Strengths</h4>
+                    <span className="text-xs text-muted-foreground">Click to edit</span>
+                  </div>
+                  <div className="relative group">
                     <Textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px]"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary"
                       placeholder="What are this person's key strengths?"
                     />
-                    {aiResponse.suggestions
-                      .filter(s => s.context && s.context.toLowerCase().includes(feedbackData.strengths.toLowerCase()))
-                      .map((suggestion, index) => (
-                        <div 
-                          key={`strength-${index}`}
-                          className={`absolute inset-0 pointer-events-none ${
-                            suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
-                          } opacity-10`}
-                        />
-                      ))}
+                    <div className="absolute inset-0 pointer-events-none">
+                      {aiResponse.suggestions
+                        .filter(s => s.highlightStart && s.highlightEnd && 
+                          feedbackData.strengths.includes(s.highlightStart) && 
+                          feedbackData.strengths.includes(s.highlightEnd))
+                        .map((suggestion, index) => {
+                          const startIndex = feedbackData.strengths.indexOf(suggestion.highlightStart!);
+                          const endIndex = feedbackData.strengths.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
+                          const top = Math.floor(startIndex / 80) * 24; // Approximate line height
+                          
+                          return (
+                            <div 
+                              key={`strength-${index}`}
+                              className={`absolute left-2 right-2 h-6 ${
+                                suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                              } opacity-20 group-hover:opacity-30 transition-opacity rounded`}
+                              style={{ top: `${top}px` }}
+                              title={suggestion.suggestion}
+                            />
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-sm mb-2">Areas for Improvement</h4>
-                  <div className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm">Areas for Improvement</h4>
+                    <span className="text-xs text-muted-foreground">Click to edit</span>
+                  </div>
+                  <div className="relative group">
                     <Textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px]"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary"
                       placeholder="What could this person improve on?"
                     />
-                    {aiResponse.suggestions
-                      .filter(s => s.context && s.context.toLowerCase().includes(feedbackData.areas_for_improvement.toLowerCase()))
-                      .map((suggestion, index) => (
-                        <div 
-                          key={`improvement-${index}`}
-                          className={`absolute inset-0 pointer-events-none ${
-                            suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
-                          } opacity-10`}
-                        />
-                      ))}
+                    <div className="absolute inset-0 pointer-events-none">
+                      {aiResponse.suggestions
+                        .filter(s => s.highlightStart && s.highlightEnd && 
+                          feedbackData.areas_for_improvement.includes(s.highlightStart) && 
+                          feedbackData.areas_for_improvement.includes(s.highlightEnd))
+                        .map((suggestion, index) => {
+                          const startIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightStart!);
+                          const endIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
+                          const top = Math.floor(startIndex / 80) * 24; // Approximate line height
+                          
+                          return (
+                            <div 
+                              key={`improvement-${index}`}
+                              className={`absolute left-2 right-2 h-6 ${
+                                suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                              } opacity-20 group-hover:opacity-30 transition-opacity rounded`}
+                              style={{ top: `${top}px` }}
+                              title={suggestion.suggestion}
+                            />
+                          );
+                        })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -455,8 +500,13 @@ ${feedbackData.areas_for_improvement}`
       <CardFooter className="flex justify-end space-x-2">
         <Button 
           variant="outline" 
-          onClick={onRevise}
-          disabled={isLoading || !aiResponse}>
+          onClick={() => {
+            setAiResponse(null);
+            setAnalysisError(null);
+            setSteps(prevSteps => prevSteps.map(step => ({ ...step, status: 'pending' })));
+            void analyzeFeedback();
+          }}
+          disabled={isLoading}>
           Analyze Again
         </Button>
         <Button 
