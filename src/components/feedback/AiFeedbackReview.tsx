@@ -397,47 +397,55 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none relative z-10"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
                       placeholder="What are this person's key strengths?"
                     />
-                    <div className="absolute inset-0 pointer-events-none z-0">
-                      {aiResponse.suggestions
-                        .filter(s => s.highlightStart && s.highlightEnd && 
-                          feedbackData.strengths.includes(s.highlightStart) && 
-                          feedbackData.strengths.includes(s.highlightEnd))
-                        .map((suggestion, index) => {
-                          const startIndex = feedbackData.strengths.indexOf(suggestion.highlightStart!);
-                          const endIndex = feedbackData.strengths.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
-                          const top = Math.floor(startIndex / 80) * 24; // Approximate line height
-                          
-                          return (
-                            <div 
-                              key={`strength-${index}`}
-                              className="absolute left-2 right-2"
-                              style={{ top: `${top}px` }}
-                            >
-                              <div
-                                className={`h-6 ${
-                                  suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-20 group cursor-pointer`}
-                              >
-                                <div 
-                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2 pointer-events-none"
-                                >
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
-                                    <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                      suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {categoryLabels[suggestion.category]}
-                                    </span>
-                                    <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
-                                  </div>
+                    {aiResponse.suggestions
+                      .filter(s => s.highlightStart && s.highlightEnd && 
+                        feedbackData.strengths.includes(s.highlightStart) && 
+                        feedbackData.strengths.includes(s.highlightEnd))
+                      .map((suggestion, index) => {
+                        const startIndex = feedbackData.strengths.indexOf(suggestion.highlightStart!);
+                        const endIndex = feedbackData.strengths.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
+                        const text = feedbackData.strengths.slice(startIndex, endIndex);
+                        const lines = Math.floor(startIndex / 80); // Approximate characters per line
+                        const top = lines * 24 + 12; // Base line height plus padding
+                        
+                        return (
+                          <div 
+                            key={`strength-${index}`}
+                            className="absolute left-3 right-3 pointer-events-auto"
+                            style={{ 
+                              top: `${top}px`,
+                              width: `${text.length * 8}px` // Approximate character width
+                            }}
+                          >
+                            <div className="relative group">
+                              <div className={`absolute -bottom-0.5 w-full border-b ${
+                                suggestion.type === 'critical' 
+                                  ? 'border-red-400 border-b-2 border-dashed' 
+                                  : 'border-blue-400 border-dotted'
+                              }`}>
+                                <div className={`absolute right-0 ${
+                                  suggestion.type === 'critical' ? 'text-red-500' : 'text-blue-500'
+                                } -top-1`}>
+                                  <span className="cursor-help">ℹ️</span>
+                                </div>
+                              </div>
+                              <div className="absolute bottom-full mb-2 invisible group-hover:visible z-50">
+                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg w-64">
+                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {categoryLabels[suggestion.category]}
+                                  </span>
+                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
                                 </div>
                               </div>
                             </div>
-                          );
-                        })}
-                    </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
 
@@ -450,47 +458,55 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none relative z-10"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
                       placeholder="What could this person improve on?"
                     />
-                    <div className="absolute inset-0 pointer-events-none z-0">
-                      {aiResponse.suggestions
-                        .filter(s => s.highlightStart && s.highlightEnd && 
-                          feedbackData.areas_for_improvement.includes(s.highlightStart) && 
-                          feedbackData.areas_for_improvement.includes(s.highlightEnd))
-                        .map((suggestion, index) => {
-                          const startIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightStart!);
-                          const endIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
-                          const top = Math.floor(startIndex / 80) * 24; // Approximate line height
-                          
-                          return (
-                            <div 
-                              key={`improvement-${index}`}
-                              className="absolute left-2 right-2"
-                              style={{ top: `${top}px` }}
-                            >
-                              <div
-                                className={`h-6 ${
-                                  suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-20 group cursor-pointer`}
-                              >
-                                <div 
-                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2 pointer-events-none"
-                                >
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
-                                    <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                      suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {categoryLabels[suggestion.category]}
-                                    </span>
-                                    <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
-                                  </div>
+                    {aiResponse.suggestions
+                      .filter(s => s.highlightStart && s.highlightEnd && 
+                        feedbackData.areas_for_improvement.includes(s.highlightStart) && 
+                        feedbackData.areas_for_improvement.includes(s.highlightEnd))
+                      .map((suggestion, index) => {
+                        const startIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightStart!);
+                        const endIndex = feedbackData.areas_for_improvement.indexOf(suggestion.highlightEnd!) + suggestion.highlightEnd!.length;
+                        const text = feedbackData.areas_for_improvement.slice(startIndex, endIndex);
+                        const lines = Math.floor(startIndex / 80); // Approximate characters per line
+                        const top = lines * 24 + 12; // Base line height plus padding
+                        
+                        return (
+                          <div 
+                            key={`improvement-${index}`}
+                            className="absolute left-3 right-3 pointer-events-auto"
+                            style={{ 
+                              top: `${top}px`,
+                              width: `${text.length * 8}px` // Approximate character width
+                            }}
+                          >
+                            <div className="relative group">
+                              <div className={`absolute -bottom-0.5 w-full border-b ${
+                                suggestion.type === 'critical' 
+                                  ? 'border-red-400 border-b-2 border-dashed' 
+                                  : 'border-blue-400 border-dotted'
+                              }`}>
+                                <div className={`absolute right-0 ${
+                                  suggestion.type === 'critical' ? 'text-red-500' : 'text-blue-500'
+                                } -top-1`}>
+                                  <span className="cursor-help">ℹ️</span>
+                                </div>
+                              </div>
+                              <div className="absolute bottom-full mb-2 invisible group-hover:visible z-50">
+                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg w-64">
+                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {categoryLabels[suggestion.category]}
+                                  </span>
+                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
                                 </div>
                               </div>
                             </div>
-                          );
-                        })}
-                    </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               </div>
