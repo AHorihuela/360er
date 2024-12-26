@@ -391,7 +391,7 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary relative z-10"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
                       placeholder="What are this person's key strengths?"
                     />
                     <div className="absolute inset-0 pointer-events-none">
@@ -407,18 +407,26 @@ ${feedbackData.areas_for_improvement}`
                           return (
                             <div 
                               key={`strength-${index}`}
-                              className={`absolute left-2 right-2 h-6 ${
-                                suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                              } opacity-30 group-hover:opacity-40 transition-opacity rounded cursor-help`}
-                              style={{ top: `${top}px` }}
+                              className="relative"
                             >
-                              <div className="absolute invisible group-hover:visible bg-white border border-gray-200 rounded-lg p-3 shadow-lg -mt-16 z-20 w-64">
-                                <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                  suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {categoryLabels[suggestion.category]}
-                                </span>
-                                <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                              <div
+                                className={`absolute left-2 right-2 h-6 ${
+                                  suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
+                                } opacity-40 group-hover:opacity-50 transition-opacity rounded`}
+                                style={{ top: `${top}px` }}
+                              />
+                              <div 
+                                className="absolute left-2 z-50 invisible group-hover:visible"
+                                style={{ top: `${top - 4}px` }}
+                              >
+                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg mb-2 w-64">
+                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {categoryLabels[suggestion.category]}
+                                  </span>
+                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                </div>
                               </div>
                             </div>
                           );
@@ -436,7 +444,7 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary relative z-10"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
                       placeholder="What could this person improve on?"
                     />
                     <div className="absolute inset-0 pointer-events-none">
@@ -452,18 +460,26 @@ ${feedbackData.areas_for_improvement}`
                           return (
                             <div 
                               key={`improvement-${index}`}
-                              className={`absolute left-2 right-2 h-6 ${
-                                suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                              } opacity-30 group-hover:opacity-40 transition-opacity rounded cursor-help`}
-                              style={{ top: `${top}px` }}
+                              className="relative"
                             >
-                              <div className="absolute invisible group-hover:visible bg-white border border-gray-200 rounded-lg p-3 shadow-lg -mt-16 z-20 w-64">
-                                <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                  suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {categoryLabels[suggestion.category]}
-                                </span>
-                                <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                              <div
+                                className={`absolute left-2 right-2 h-6 ${
+                                  suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
+                                } opacity-40 group-hover:opacity-50 transition-opacity rounded`}
+                                style={{ top: `${top}px` }}
+                              />
+                              <div 
+                                className="absolute left-2 z-50 invisible group-hover:visible"
+                                style={{ top: `${top - 4}px` }}
+                              >
+                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg mb-2 w-64">
+                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {categoryLabels[suggestion.category]}
+                                  </span>
+                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                </div>
                               </div>
                             </div>
                           );
@@ -475,53 +491,51 @@ ${feedbackData.areas_for_improvement}`
             </TabsContent>
 
             <TabsContent value="suggestions" className="mt-4">
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-6">
-                  {/* Critical Suggestions */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
-                    {aiResponse.suggestions
-                      .filter(s => s.type === 'critical')
-                      .map((suggestion, index) => (
-                        <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="destructive">
-                              {categoryLabels[suggestion.category]}
-                            </Badge>
-                          </div>
-                          <p className="text-sm">{suggestion.suggestion}</p>
-                          {suggestion.context && (
-                            <p className="text-sm text-muted-foreground italic">
-                              Context: "{suggestion.context}"
-                            </p>
-                          )}
+              <div className="space-y-6">
+                {/* Critical Suggestions */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
+                  {aiResponse.suggestions
+                    .filter(s => s.type === 'critical')
+                    .map((suggestion, index) => (
+                      <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="destructive">
+                            {categoryLabels[suggestion.category]}
+                          </Badge>
                         </div>
-                      ))}
-                  </div>
-
-                  {/* Enhancement Suggestions */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm">Suggested Enhancements</h4>
-                    {aiResponse.suggestions
-                      .filter(s => s.type === 'enhancement')
-                      .map((suggestion, index) => (
-                        <div key={index} className="rounded-lg border bg-blue-50 p-4 space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="secondary">
-                              {categoryLabels[suggestion.category]}
-                            </Badge>
-                          </div>
-                          <p className="text-sm">{suggestion.suggestion}</p>
-                          {suggestion.context && (
-                            <p className="text-sm text-muted-foreground italic">
-                              Context: "{suggestion.context}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                  </div>
+                        <p className="text-sm">{suggestion.suggestion}</p>
+                        {suggestion.context && (
+                          <p className="text-sm text-muted-foreground italic">
+                            Context: "{suggestion.context}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
                 </div>
-              </ScrollArea>
+
+                {/* Enhancement Suggestions */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Suggested Enhancements</h4>
+                  {aiResponse.suggestions
+                    .filter(s => s.type === 'enhancement')
+                    .map((suggestion, index) => (
+                      <div key={index} className="rounded-lg border bg-blue-50 p-4 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary">
+                            {categoryLabels[suggestion.category]}
+                          </Badge>
+                        </div>
+                        <p className="text-sm">{suggestion.suggestion}</p>
+                        {suggestion.context && (
+                          <p className="text-sm text-muted-foreground italic">
+                            Context: "{suggestion.context}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         )}
