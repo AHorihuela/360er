@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { validateFeedback } from '@/utils/feedbackValidation';
+import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
 
 interface FeedbackRequest {
   id: string;
@@ -49,6 +50,11 @@ interface ValidationState {
   };
 }
 
+interface FeedbackFormState {
+  step: 'editing' | 'ai_review' | 'submitting';
+  aiAnalysisAttempted: boolean;
+}
+
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -72,6 +78,10 @@ export function FeedbackFormPage() {
     areas_for_improvement: { isValid: true, message: '', showLengthWarning: false }
   });
   const [showLengthRequirements, setShowLengthRequirements] = useState(false);
+  const [formState, setFormState] = useState<FeedbackFormState>({
+    step: 'editing',
+    aiAnalysisAttempted: false
+  });
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -268,7 +278,25 @@ export function FeedbackFormPage() {
       }
     }
 
+    // If we haven't tried AI analysis yet, show the AI review step
+    if (!formState.aiAnalysisAttempted) {
+      setFormState({
+        step: 'ai_review',
+        aiAnalysisAttempted: true
+      });
+      return;
+    }
+
+    // If we're here, either AI analysis was attempted or skipped
+    await submitFeedback();
+  }
+
+  async function submitFeedback() {
+    if (!feedbackRequest || !uniqueLink) return;
+    
+    setFormState(prev => ({ ...prev, step: 'submitting' }));
     setIsSubmitting(true);
+    
     try {
         console.log('Starting feedback submission...', {
             feedback_request_id: feedbackRequest.id,
@@ -320,14 +348,16 @@ export function FeedbackFormPage() {
         navigate('/feedback/thank-you');
     } catch (error) {
         console.error('Error submitting feedback:', error);
-        console.error('Feedback request details:', {
-            id: feedbackRequest.id,
-            status: feedbackRequest.status,
-            review_cycle: {
-                id: feedbackRequest.review_cycle_id,
-                review_by_date: feedbackRequest.review_cycle.review_by_date
-            }
-        });
+        if (feedbackRequest) {
+          console.error('Feedback request details:', {
+              id: feedbackRequest.id,
+              status: feedbackRequest.status,
+              review_cycle: {
+                  id: feedbackRequest.review_cycle_id,
+                  review_by_date: feedbackRequest.review_cycle.review_by_date
+              }
+          });
+        }
         toast({
             title: "Error",
             description: error instanceof Error ? error.message : "Failed to submit feedback. Please try again.",
@@ -335,7 +365,12 @@ export function FeedbackFormPage() {
         });
     } finally {
         setIsSubmitting(false);
+        setFormState(prev => ({ ...prev, step: 'editing' }));
     }
+  }
+
+  function handleRevise() {
+    setFormState(prev => ({ ...prev, step: 'editing' }));
   }
 
   if (isLoading) {
@@ -388,112 +423,121 @@ export function FeedbackFormPage() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Your Relationship to {displayName}
-          </label>
-          <Select
-            value={formData.relationship}
-            onValueChange={(value: FeedbackFormData['relationship']) => 
-              setFormData({ ...formData, relationship: value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select your relationship" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="senior_colleague">
-                Senior Colleague (I am more senior than {feedbackRequest.employee.role})
-              </SelectItem>
-              <SelectItem value="equal_colleague">
-                Equal Colleague (I am {feedbackRequest.employee.role} or equivalent)
-              </SelectItem>
-              <SelectItem value="junior_colleague">
-                Junior Colleague (I am less senior than {feedbackRequest.employee.role})
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {formState.step === 'ai_review' ? (
+        <AiFeedbackReview
+          feedbackData={formData}
+          onSubmit={submitFeedback}
+          onRevise={handleRevise}
+          isLoading={isSubmitting}
+        />
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Your Relationship to {displayName}
+            </label>
+            <Select
+              value={formData.relationship}
+              onValueChange={(value: FeedbackFormData['relationship']) => 
+                setFormData({ ...formData, relationship: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your relationship" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="senior_colleague">
+                  Senior Colleague (I am more senior than {feedbackRequest.employee.role})
+                </SelectItem>
+                <SelectItem value="equal_colleague">
+                  Equal Colleague (I am {feedbackRequest.employee.role} or equivalent)
+                </SelectItem>
+                <SelectItem value="junior_colleague">
+                  Junior Colleague (I am less senior than {feedbackRequest.employee.role})
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Strengths</label>
-          <div className="space-y-1">
-            <textarea
-              className={`min-h-[120px] w-full rounded-md border ${
-                !validation.strengths.isValid && validation.strengths.showLengthWarning
-                  ? 'border-red-500'
-                  : validation.strengths.isValid && formData.strengths.length > 0
-                  ? validation.strengths.warnings?.length ? 'border-yellow-500' : 'border-green-500'
-                  : 'border-input'
-              } bg-background px-3 py-2`}
-              value={formData.strengths}
-              onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
-              placeholder={`What does ${displayName} do well? What are their key strengths?`}
-              required
-            />
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Strengths</label>
             <div className="space-y-1">
-              {validation.strengths.showLengthWarning && (
-                <p className={`text-sm ${
-                  !validation.strengths.isValid ? 'text-red-500' : 'text-muted-foreground'
-                }`}>
-                  {validation.strengths.message}
-                </p>
-              )}
-              {validation.strengths.warnings?.map((warning, index) => (
-                <p key={index} className="text-sm text-yellow-500">
-                  ⚠️ {warning}
-                </p>
-              ))}
+              <textarea
+                className={`min-h-[120px] w-full rounded-md border ${
+                  !validation.strengths.isValid && validation.strengths.showLengthWarning
+                    ? 'border-red-500'
+                    : validation.strengths.isValid && formData.strengths.length > 0
+                    ? validation.strengths.warnings?.length ? 'border-yellow-500' : 'border-green-500'
+                    : 'border-input'
+                } bg-background px-3 py-2`}
+                value={formData.strengths}
+                onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
+                placeholder={`What does ${displayName} do well? What are their key strengths?`}
+                required
+              />
+              <div className="space-y-1">
+                {validation.strengths.showLengthWarning && (
+                  <p className={`text-sm ${
+                    !validation.strengths.isValid ? 'text-red-500' : 'text-muted-foreground'
+                  }`}>
+                    {validation.strengths.message}
+                  </p>
+                )}
+                {validation.strengths.warnings?.map((warning, index) => (
+                  <p key={index} className="text-sm text-yellow-500">
+                    ⚠️ {warning}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Areas for Improvement</label>
-          <div className="space-y-1">
-            <textarea
-              className={`min-h-[120px] w-full rounded-md border ${
-                !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
-                  ? 'border-red-500'
-                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
-                  ? validation.areas_for_improvement.warnings?.length ? 'border-yellow-500' : 'border-green-500'
-                  : 'border-input'
-              } bg-background px-3 py-2`}
-              value={formData.areas_for_improvement}
-              onChange={(e) => setFormData({ ...formData, areas_for_improvement: e.target.value })}
-              placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
-              required
-            />
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Areas for Improvement</label>
             <div className="space-y-1">
-              {validation.areas_for_improvement.showLengthWarning && (
-                <p className={`text-sm ${
-                  !validation.areas_for_improvement.isValid ? 'text-red-500' : 'text-muted-foreground'
-                }`}>
-                  {validation.areas_for_improvement.message}
-                </p>
-              )}
-              {validation.areas_for_improvement.warnings?.map((warning, index) => (
-                <p key={index} className="text-sm text-yellow-500">
-                  ⚠️ {warning}
-                </p>
-              ))}
+              <textarea
+                className={`min-h-[120px] w-full rounded-md border ${
+                  !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
+                    ? 'border-red-500'
+                    : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                    ? validation.areas_for_improvement.warnings?.length ? 'border-yellow-500' : 'border-green-500'
+                    : 'border-input'
+                } bg-background px-3 py-2`}
+                value={formData.areas_for_improvement}
+                onChange={(e) => setFormData({ ...formData, areas_for_improvement: e.target.value })}
+                placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
+                required
+              />
+              <div className="space-y-1">
+                {validation.areas_for_improvement.showLengthWarning && (
+                  <p className={`text-sm ${
+                    !validation.areas_for_improvement.isValid ? 'text-red-500' : 'text-muted-foreground'
+                  }`}>
+                    {validation.areas_for_improvement.message}
+                  </p>
+                )}
+                {validation.areas_for_improvement.warnings?.map((warning, index) => (
+                  <p key={index} className="text-sm text-yellow-500">
+                    ⚠️ {warning}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex justify-end">
-          <Button 
-            type="submit" 
-            disabled={
-              isSubmitting || 
-              (showLengthRequirements && (!validation.strengths.isValid || !validation.areas_for_improvement.isValid))
-            }
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              disabled={
+                isSubmitting || 
+                (showLengthRequirements && (!validation.strengths.isValid || !validation.areas_for_improvement.isValid))
+              }
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 } 
