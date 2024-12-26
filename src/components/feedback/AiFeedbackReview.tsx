@@ -16,6 +16,7 @@ import OpenAI from 'openai';
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RichTextEditor } from './RichTextEditor';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -172,7 +173,7 @@ When analyzing feedback, consider:
 3. Understand that specific improvement suggestions are optional and depend on:
    - The reviewer's role relative to the reviewee
    - The reviewer's area of expertise
-   - The nature of their working relationship
+//    - The nature of their working relationship
 4. Maintain objectivity and professionalism in all suggestions
 5. Ensure feedback addresses observable behaviors and outcomes
 6. Align feedback with our company values, but don't mention the company values in the suggestions:
@@ -369,142 +370,38 @@ ${feedbackData.areas_for_improvement}`
         {aiResponse && (
           <Tabs defaultValue="edit" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="edit">Edit Feedback</TabsTrigger>
+              <TabsTrigger value="edit">Edit & Preview</TabsTrigger>
               <TabsTrigger value="suggestions">AI Suggestions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="edit" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm">Strengths</h4>
-                    <span className="text-xs text-muted-foreground">Click to edit</span>
-                  </div>
-                  <div className="relative">
-                    <div className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background whitespace-pre-wrap">
-                      <span className="inline">
-                        {(() => {
-                          const text = feedbackData.strengths;
-                          let lastIndex = 0;
-                          const parts: React.ReactNode[] = [];
-
-                          const matches = aiResponse.suggestions
-                            .filter(s => s.context)
-                            .map(s => ({
-                              suggestion: s,
-                              index: text.toLowerCase().indexOf(s.context!.toLowerCase())
-                            }))
-                            .filter(m => m.index !== -1)
-                            .sort((a, b) => a.index - b.index);
-
-                          matches.forEach(({ suggestion, index }) => {
-                            if (index > lastIndex) {
-                              parts.push(<span key={`text-${index}`}>{text.substring(lastIndex, index)}</span>);
-                            }
-
-                            const matchLength = suggestion.context!.length;
-                            parts.push(
-                              <mark 
-                                key={`mark-${index}`}
-                                className={`group relative inline cursor-help ${
-                                  suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
-                                } hover:bg-opacity-75`}
-                              >
-                                {text.substr(index, matchLength)}
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[9999] invisible group-hover:visible">
-                                  <span className="relative flex flex-col items-center">
-                                    <span className="bg-slate-800 text-white text-sm rounded-lg px-4 py-3 whitespace-normal shadow-xl w-[400px]">
-                                      <span className="font-semibold mb-2 block border-b border-slate-600 pb-1">{categoryLabels[suggestion.category]}</span>
-                                      {suggestion.suggestion}
-                                    </span>
-                                    <span className="border-[8px] border-transparent border-t-slate-800" />
-                                  </span>
-                                </span>
-                              </mark>
-                            );
-                            lastIndex = index + matchLength;
-                          });
-
-                          if (lastIndex < text.length) {
-                            parts.push(<span key="text-end">{text.substring(lastIndex)}</span>);
-                          }
-
-                          return parts;
-                        })()}
-                      </span>
-                    </div>
-                    <textarea
-                      value={feedbackData.strengths}
-                      onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="absolute inset-0 min-h-[150px] w-full resize-none opacity-0 pointer-events-none"
-                    />
-                  </div>
+                  <h4 className="font-medium text-sm mb-2">Strengths</h4>
+                  <RichTextEditor
+                    value={feedbackData.strengths}
+                    onChange={(value) => onFeedbackChange?.('strengths', value)}
+                    highlights={aiResponse.suggestions
+                      .filter((s): s is AiFeedbackSuggestion & { context: string } => 
+                        typeof s.context === 'string' && 
+                        feedbackData.strengths.toLowerCase().includes(s.context.toLowerCase())
+                      )
+                    }
+                  />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm">Areas for Improvement</h4>
-                    <span className="text-xs text-muted-foreground">Click to edit</span>
-                  </div>
-                  <div className="relative">
-                    <div className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background whitespace-pre-wrap">
-                      <span className="inline">
-                        {(() => {
-                          const text = feedbackData.areas_for_improvement;
-                          let lastIndex = 0;
-                          const parts: React.ReactNode[] = [];
-
-                          const matches = aiResponse.suggestions
-                            .filter(s => s.context)
-                            .map(s => ({
-                              suggestion: s,
-                              index: text.toLowerCase().indexOf(s.context!.toLowerCase())
-                            }))
-                            .filter(m => m.index !== -1)
-                            .sort((a, b) => a.index - b.index);
-
-                          matches.forEach(({ suggestion, index }) => {
-                            if (index > lastIndex) {
-                              parts.push(<span key={`text-${index}`}>{text.substring(lastIndex, index)}</span>);
-                            }
-
-                            const matchLength = suggestion.context!.length;
-                            parts.push(
-                              <mark 
-                                key={`mark-${index}`}
-                                className={`group relative inline cursor-help ${
-                                  suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
-                                } hover:bg-opacity-75`}
-                              >
-                                {text.substr(index, matchLength)}
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[9999] invisible group-hover:visible">
-                                  <span className="relative flex flex-col items-center">
-                                    <span className="bg-slate-800 text-white text-sm rounded-lg px-4 py-3 whitespace-normal shadow-xl w-[400px]">
-                                      <span className="font-semibold mb-2 block border-b border-slate-600 pb-1">{categoryLabels[suggestion.category]}</span>
-                                      {suggestion.suggestion}
-                                    </span>
-                                    <span className="border-[8px] border-transparent border-t-slate-800" />
-                                  </span>
-                                </span>
-                              </mark>
-                            );
-                            lastIndex = index + matchLength;
-                          });
-
-                          if (lastIndex < text.length) {
-                            parts.push(<span key="text-end">{text.substring(lastIndex)}</span>);
-                          }
-
-                          return parts;
-                        })()}
-                      </span>
-                    </div>
-                    <textarea
-                      value={feedbackData.areas_for_improvement}
-                      onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="absolute inset-0 min-h-[150px] w-full resize-none opacity-0 pointer-events-none"
-                    />
-                  </div>
+                  <h4 className="font-medium text-sm mb-2">Areas for Improvement</h4>
+                  <RichTextEditor
+                    value={feedbackData.areas_for_improvement}
+                    onChange={(value) => onFeedbackChange?.('areas_for_improvement', value)}
+                    highlights={aiResponse.suggestions
+                      .filter((s): s is AiFeedbackSuggestion & { context: string } => 
+                        typeof s.context === 'string' && 
+                        feedbackData.areas_for_improvement.toLowerCase().includes(s.context.toLowerCase())
+                      )
+                    }
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -512,7 +409,7 @@ ${feedbackData.areas_for_improvement}`
             <TabsContent value="suggestions" className="mt-4">
               <div className="space-y-6">
                 {/* Critical Suggestions */}
-                <div className="space-y-3">
+          <div className="space-y-3">
                   <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
                   {aiResponse.suggestions
                     .filter(s => s.type === 'critical')
@@ -543,7 +440,7 @@ ${feedbackData.areas_for_improvement}`
                         <div className="flex items-center space-x-2">
                           <Badge variant="secondary">
                             {categoryLabels[suggestion.category]}
-                          </Badge>
+                    </Badge>
                 </div>
                 <p className="text-sm">{suggestion.suggestion}</p>
                 {suggestion.context && (

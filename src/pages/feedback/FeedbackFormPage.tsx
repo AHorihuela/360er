@@ -482,6 +482,19 @@ export function FeedbackFormPage() {
           onSubmit={submitFeedback}
           onRevise={handleRevise}
           isLoading={isSubmitting}
+          onFeedbackChange={(field, value) => {
+            setFormData(prev => ({
+              ...prev,
+              [field]: value
+            }));
+            // Save to localStorage
+            if (uniqueLink) {
+              localStorage.setItem(`feedback_draft_${uniqueLink}`, JSON.stringify({
+                ...formData,
+                [field]: value
+              }));
+            }
+          }}
         />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
