@@ -179,7 +179,7 @@ Return a JSON response with this structure:
 
 Guidelines:
 - Focus on the quality of observations and impact descriptions rather than expecting specific solutions
-- Recognize that improvement suggestions are more appropriate from senior reviewers
+- Recognize that improvement suggestions are more appropriate from senior reviewers, however if a peer or junior reviewer has a good suggestion, don't reject it
 - For peer/junior reviews, focus on clarity of impact description rather than prescriptive solutions
 - Frame feedback in terms of observed business impact and team dynamics
 - Consider the professional relationship context in all suggestions
@@ -393,14 +393,14 @@ ${feedbackData.areas_for_improvement}`
                     <h4 className="font-medium text-sm">Strengths</h4>
                     <span className="text-xs text-muted-foreground">Click to edit</span>
                   </div>
-                  <div className="relative group">
+                  <div className="relative">
                     <Textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none bg-transparent"
                       placeholder="What are this person's key strengths?"
                     />
-                    <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-0">
                       {aiResponse.suggestions
                         .filter(s => s.highlightStart && s.highlightEnd && 
                           feedbackData.strengths.includes(s.highlightStart) && 
@@ -413,25 +413,25 @@ ${feedbackData.areas_for_improvement}`
                           return (
                             <div 
                               key={`strength-${index}`}
-                              className="relative"
+                              className="absolute left-2 right-2"
+                              style={{ top: `${top}px` }}
                             >
                               <div
-                                className={`absolute left-2 right-2 h-6 ${
+                                className={`h-6 ${
                                   suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-40 group-hover:opacity-50 transition-opacity rounded`}
-                                style={{ top: `${top}px` }}
-                              />
-                              <div 
-                                className="absolute left-2 z-50 invisible group-hover:visible"
-                                style={{ top: `${top - 4}px` }}
+                                } opacity-30 hover:opacity-50 transition-opacity rounded group`}
                               >
-                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg mb-2 w-64">
-                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {categoryLabels[suggestion.category]}
-                                  </span>
-                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                <div 
+                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2"
+                                >
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                                    <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                      suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {categoryLabels[suggestion.category]}
+                                    </span>
+                                    <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -446,14 +446,14 @@ ${feedbackData.areas_for_improvement}`
                     <h4 className="font-medium text-sm">Areas for Improvement</h4>
                     <span className="text-xs text-muted-foreground">Click to edit</span>
                   </div>
-                  <div className="relative group">
+                  <div className="relative">
                     <Textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none bg-transparent"
                       placeholder="What could this person improve on?"
                     />
-                    <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-0">
                       {aiResponse.suggestions
                         .filter(s => s.highlightStart && s.highlightEnd && 
                           feedbackData.areas_for_improvement.includes(s.highlightStart) && 
@@ -466,25 +466,25 @@ ${feedbackData.areas_for_improvement}`
                           return (
                             <div 
                               key={`improvement-${index}`}
-                              className="relative"
+                              className="absolute left-2 right-2"
+                              style={{ top: `${top}px` }}
                             >
                               <div
-                                className={`absolute left-2 right-2 h-6 ${
+                                className={`h-6 ${
                                   suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-40 group-hover:opacity-50 transition-opacity rounded`}
-                                style={{ top: `${top}px` }}
-                              />
-                              <div 
-                                className="absolute left-2 z-50 invisible group-hover:visible"
-                                style={{ top: `${top - 4}px` }}
+                                } opacity-30 hover:opacity-50 transition-opacity rounded group`}
                               >
-                                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg mb-2 w-64">
-                                  <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
-                                    suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {categoryLabels[suggestion.category]}
-                                  </span>
-                                  <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                <div 
+                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2"
+                                >
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                                    <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
+                                      suggestion.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {categoryLabels[suggestion.category]}
+                                    </span>
+                                    <p className="text-sm font-medium text-gray-800">{suggestion.suggestion}</p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
