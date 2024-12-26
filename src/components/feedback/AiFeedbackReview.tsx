@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Brain } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
 
 interface AiFeedbackSuggestion {
   type: 'critical' | 'enhancement';
@@ -48,10 +49,45 @@ const qualityColors = {
   needs_improvement: 'bg-yellow-100 text-yellow-800'
 };
 
+interface AnalysisStep {
+  id: string;
+  label: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'error';
+}
+
 export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }: Props) {
   const [aiResponse, setAiResponse] = useState<AiFeedbackResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [steps, setSteps] = useState<AnalysisStep[]>([
+    { id: 'init', label: 'Initializing analysis...', status: 'pending' },
+    { id: 'review', label: 'Reviewing feedback content...', status: 'pending' },
+    { id: 'evaluate', label: 'Evaluating quality and actionability...', status: 'pending' },
+    { id: 'suggest', label: 'Generating improvement suggestions...', status: 'pending' },
+    { id: 'finalize', label: 'Finalizing analysis...', status: 'pending' }
+  ]);
 
-  // This would be called automatically when the component mounts
+  useEffect(() => {
+    let currentStepIndex = 0;
+    const stepInterval = setInterval(() => {
+      if (currentStepIndex < steps.length) {
+        setSteps(prevSteps => prevSteps.map((step, index) => ({
+          ...step,
+          status: index === currentStepIndex ? 'in_progress' 
+                 : index < currentStepIndex ? 'completed' 
+                 : 'pending'
+        })));
+        currentStepIndex++;
+      } else {
+        clearInterval(stepInterval);
+      }
+    }, 1500); // Update every 1.5 seconds
+
+    // Start the analysis
+    analyzeFeedback();
+
+    return () => clearInterval(stepInterval);
+  }, []);
+
   const analyzeFeedback = async () => {
     try {
       const response = await fetch('/api/analyze-feedback', {
@@ -66,24 +102,71 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
       
       const data = await response.json();
       setAiResponse(data);
+      
+      // Mark all steps as completed
+      setSteps(prevSteps => prevSteps.map(step => ({
+        ...step,
+        status: 'completed'
+      })));
     } catch (error) {
       console.error('Error analyzing feedback:', error);
+      setAnalysisError(error instanceof Error ? error.message : 'Failed to analyze feedback');
+      
+      // Mark remaining steps as error
+      setSteps(prevSteps => prevSteps.map(step => ({
+        ...step,
+        status: step.status === 'pending' ? 'error' : step.status
+      })));
+
       // If AI analysis fails, we should still allow submission
-      onSubmit();
+      setTimeout(() => {
+        onSubmit();
+      }, 2000);
     }
   };
 
   if (isLoading || !aiResponse) {
+    const progress = (steps.filter(s => s.status === 'completed').length / steps.length) * 100;
+
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Analyzing Your Feedback</CardTitle>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary animate-pulse" />
+            <CardTitle>Analyzing Your Feedback</CardTitle>
+          </div>
           <CardDescription>
-            Our AI is reviewing your feedback to ensure it's as helpful as possible...
+            {analysisError ? 
+              'There was an issue analyzing your feedback. Proceeding with submission...' :
+              'Our AI is reviewing your feedback to ensure it\'s as helpful as possible...'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardContent className="space-y-6">
+          <Progress value={progress} className="w-full" />
+          
+          <div className="space-y-3">
+            {steps.map((step) => (
+              <div key={step.id} className="flex items-center gap-3">
+                {step.status === 'completed' ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : step.status === 'in_progress' ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : step.status === 'error' ? (
+                  <div className="h-4 w-4 rounded-full bg-red-100" />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-gray-100" />
+                )}
+                <span className={`text-sm ${
+                  step.status === 'completed' ? 'text-green-600' :
+                  step.status === 'in_progress' ? 'text-primary' :
+                  step.status === 'error' ? 'text-red-500' :
+                  'text-muted-foreground'
+                }`}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
