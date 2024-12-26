@@ -33,6 +33,45 @@ interface FeedbackFormData {
   areas_for_improvement: string;
 }
 
+interface ValidationState {
+  strengths: {
+    isValid: boolean;
+    message: string;
+  };
+  areas_for_improvement: {
+    isValid: boolean;
+    message: string;
+  };
+}
+
+const MIN_FEEDBACK_LENGTH = 50;
+const MAX_FEEDBACK_LENGTH = 2000;
+
+function validateFeedback(text: string): { isValid: boolean; message: string } {
+  if (text.length < MIN_FEEDBACK_LENGTH) {
+    return {
+      isValid: false,
+      message: `Please provide at least ${MIN_FEEDBACK_LENGTH} characters of feedback (${text.length}/${MIN_FEEDBACK_LENGTH})`
+    };
+  }
+  if (text.length > MAX_FEEDBACK_LENGTH) {
+    return {
+      isValid: false,
+      message: `Feedback exceeds maximum length of ${MAX_FEEDBACK_LENGTH} characters (${text.length}/${MAX_FEEDBACK_LENGTH})`
+    };
+  }
+  if (text.split(' ').length < 10) {
+    return {
+      isValid: false,
+      message: 'Please provide more detailed feedback using complete sentences'
+    };
+  }
+  return {
+    isValid: true,
+    message: `${text.length}/${MAX_FEEDBACK_LENGTH} characters`
+  };
+}
+
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -51,6 +90,10 @@ export function FeedbackFormPage() {
     areas_for_improvement: ''
   });
   const [sessionId] = useState(() => generateSessionId());
+  const [validation, setValidation] = useState<ValidationState>({
+    strengths: { isValid: true, message: '' },
+    areas_for_improvement: { isValid: true, message: '' }
+  });
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -131,6 +174,14 @@ export function FeedbackFormPage() {
       clearInterval(interval);
     };
   }, [feedbackRequest, sessionId]);
+
+  // Add validation effect
+  useEffect(() => {
+    setValidation({
+      strengths: validateFeedback(formData.strengths),
+      areas_for_improvement: validateFeedback(formData.areas_for_improvement)
+    });
+  }, [formData.strengths, formData.areas_for_improvement]);
 
   async function fetchFeedbackRequest() {
     try {
@@ -376,28 +427,65 @@ export function FeedbackFormPage() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Strengths</label>
-          <textarea
-            className="min-h-[120px] w-full rounded-md border bg-background px-3 py-2"
-            value={formData.strengths}
-            onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
-            placeholder={`What does ${displayName} do well? What are their key strengths?`}
-            required
-          />
+          <div className="space-y-1">
+            <textarea
+              className={`min-h-[120px] w-full rounded-md border ${
+                !validation.strengths.isValid && formData.strengths.length > 0
+                  ? 'border-red-500'
+                  : validation.strengths.isValid && formData.strengths.length >= MIN_FEEDBACK_LENGTH
+                  ? 'border-green-500'
+                  : 'border-input'
+              } bg-background px-3 py-2`}
+              value={formData.strengths}
+              onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
+              placeholder={`What does ${displayName} do well? What are their key strengths?`}
+              required
+            />
+            <p className={`text-sm ${
+              !validation.strengths.isValid && formData.strengths.length > 0
+                ? 'text-red-500'
+                : validation.strengths.isValid && formData.strengths.length >= MIN_FEEDBACK_LENGTH
+                ? 'text-green-500'
+                : 'text-muted-foreground'
+            }`}>
+              {validation.strengths.message}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Areas for Improvement</label>
-          <textarea
-            className="min-h-[120px] w-full rounded-md border bg-background px-3 py-2"
-            value={formData.areas_for_improvement}
-            onChange={(e) => setFormData({ ...formData, areas_for_improvement: e.target.value })}
-            placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
-            required
-          />
+          <div className="space-y-1">
+            <textarea
+              className={`min-h-[120px] w-full rounded-md border ${
+                !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                  ? 'border-red-500'
+                  : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length >= MIN_FEEDBACK_LENGTH
+                  ? 'border-green-500'
+                  : 'border-input'
+              } bg-background px-3 py-2`}
+              value={formData.areas_for_improvement}
+              onChange={(e) => setFormData({ ...formData, areas_for_improvement: e.target.value })}
+              placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
+              required
+            />
+            <p className={`text-sm ${
+              !validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
+                ? 'text-red-500'
+                : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length >= MIN_FEEDBACK_LENGTH
+                ? 'text-green-500'
+                : 'text-muted-foreground'
+            }`}>
+              {validation.areas_for_improvement.message}
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || !validation.strengths.isValid || !validation.areas_for_improvement.isValid}
+          >
             {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
           </Button>
         </div>
