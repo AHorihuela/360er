@@ -13,6 +13,9 @@ import { Loader2, CheckCircle2, Brain } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/supabase';
 import OpenAI from 'openai';
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -40,6 +43,7 @@ interface Props {
   onSubmit: () => void;
   onRevise: () => void;
   isLoading: boolean;
+  onFeedbackChange?: (field: 'strengths' | 'areas_for_improvement', value: string) => void;
 }
 
 const categoryLabels = {
@@ -62,7 +66,13 @@ interface AnalysisStep {
   status: 'pending' | 'in_progress' | 'completed' | 'error';
 }
 
-export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }: Props) {
+export function AiFeedbackReview({ 
+  feedbackData, 
+  onSubmit, 
+  onRevise, 
+  isLoading,
+  onFeedbackChange 
+}: Props) {
   const [aiResponse, setAiResponse] = useState<AiFeedbackResponse | null>(() => {
     try {
       const savedAnalysis = localStorage.getItem('last_feedback_analysis');
@@ -319,32 +329,6 @@ ${feedbackData.areas_for_improvement}`
       </CardHeader>
 
       <CardContent>
-        {!aiResponse && !analysisError && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-5 w-5 text-muted-foreground animate-pulse" />
-              <span className="text-sm text-muted-foreground">Analyzing feedback...</span>
-            </div>
-            {steps.map((step) => (
-              <div key={step.id} className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  {step.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                  {step.status === 'in_progress' && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {step.status === 'pending' && <div className="h-4 w-4 rounded-full border" />}
-                  <span className={`text-sm ${step.status === 'completed' ? 'text-muted-foreground line-through' : 
-                                           step.status === 'in_progress' ? 'text-foreground' : 
-                                           'text-muted-foreground'}`}>
-                    {step.label}
-                  </span>
-                </div>
-                {step.status === 'in_progress' && (
-                  <Progress value={100} className="h-1" />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
         {analysisError && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
             <div className="flex items-center space-x-2">
@@ -361,51 +345,110 @@ ${feedbackData.areas_for_improvement}`
         )}
 
         {aiResponse && (
-          <div className="space-y-6">
-            {/* Critical Suggestions */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
-              {aiResponse.suggestions
-                .filter(s => s.type === 'critical')
-                .map((suggestion, index) => (
-                  <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="destructive">
-                        {categoryLabels[suggestion.category]}
-                      </Badge>
-                    </div>
-                    <p className="text-sm">{suggestion.suggestion}</p>
-                    {suggestion.context && (
-                      <p className="text-sm text-muted-foreground italic">
-                        Context: {suggestion.context}
-                      </p>
-                    )}
-                  </div>
-                ))}
-            </div>
+          <Tabs defaultValue="edit" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="edit">Edit Feedback</TabsTrigger>
+              <TabsTrigger value="suggestions">AI Suggestions</TabsTrigger>
+            </TabsList>
 
-            {/* Enhancement Suggestions */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Suggested Enhancements</h4>
-              {aiResponse.suggestions
-                .filter(s => s.type === 'enhancement')
-                .map((suggestion, index) => (
-                  <div key={index} className="rounded-lg border bg-blue-50 p-4 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="secondary">
-                        {categoryLabels[suggestion.category]}
-                      </Badge>
-                    </div>
-                    <p className="text-sm">{suggestion.suggestion}</p>
-                    {suggestion.context && (
-                      <p className="text-sm text-muted-foreground italic">
-                        Context: {suggestion.context}
-                      </p>
-                    )}
+            <TabsContent value="edit" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Strengths</h4>
+                  <div className="relative">
+                    <Textarea
+                      value={feedbackData.strengths}
+                      onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
+                      className="min-h-[150px]"
+                      placeholder="What are this person's key strengths?"
+                    />
+                    {aiResponse.suggestions
+                      .filter(s => s.context && s.context.toLowerCase().includes(feedbackData.strengths.toLowerCase()))
+                      .map((suggestion, index) => (
+                        <div 
+                          key={`strength-${index}`}
+                          className={`absolute inset-0 pointer-events-none ${
+                            suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                          } opacity-10`}
+                        />
+                      ))}
                   </div>
-                ))}
-            </div>
-          </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Areas for Improvement</h4>
+                  <div className="relative">
+                    <Textarea
+                      value={feedbackData.areas_for_improvement}
+                      onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
+                      className="min-h-[150px]"
+                      placeholder="What could this person improve on?"
+                    />
+                    {aiResponse.suggestions
+                      .filter(s => s.context && s.context.toLowerCase().includes(feedbackData.areas_for_improvement.toLowerCase()))
+                      .map((suggestion, index) => (
+                        <div 
+                          key={`improvement-${index}`}
+                          className={`absolute inset-0 pointer-events-none ${
+                            suggestion.type === 'critical' ? 'bg-red-100' : 'bg-blue-100'
+                          } opacity-10`}
+                        />
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="suggestions" className="mt-4">
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-6">
+                  {/* Critical Suggestions */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
+                    {aiResponse.suggestions
+                      .filter(s => s.type === 'critical')
+                      .map((suggestion, index) => (
+                        <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="destructive">
+                              {categoryLabels[suggestion.category]}
+                            </Badge>
+                          </div>
+                          <p className="text-sm">{suggestion.suggestion}</p>
+                          {suggestion.context && (
+                            <p className="text-sm text-muted-foreground italic">
+                              Context: "{suggestion.context}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Enhancement Suggestions */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm">Suggested Enhancements</h4>
+                    {aiResponse.suggestions
+                      .filter(s => s.type === 'enhancement')
+                      .map((suggestion, index) => (
+                        <div key={index} className="rounded-lg border bg-blue-50 p-4 space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="secondary">
+                              {categoryLabels[suggestion.category]}
+                            </Badge>
+                          </div>
+                          <p className="text-sm">{suggestion.suggestion}</p>
+                          {suggestion.context && (
+                            <p className="text-sm text-muted-foreground italic">
+                              Context: "{suggestion.context}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
 
@@ -414,12 +457,12 @@ ${feedbackData.areas_for_improvement}`
           variant="outline" 
           onClick={onRevise}
           disabled={isLoading || !aiResponse}>
-          Revise Feedback
+          Analyze Again
         </Button>
         <Button 
           onClick={onSubmit}
           disabled={isLoading || !aiResponse}>
-          Submit As Is
+          Submit Feedback
         </Button>
       </CardFooter>
     </Card>

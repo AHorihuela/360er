@@ -175,6 +175,10 @@ export function FeedbackFormPage() {
     try {
       console.log('Starting fetchFeedbackRequest for link:', uniqueLink);
       
+      if (!uniqueLink) {
+        throw new Error('No feedback link provided');
+      }
+
       // First, get the feedback request
       const { data: requestData, error: requestError } = await supabase
         .from('feedback_requests')
@@ -190,7 +194,7 @@ export function FeedbackFormPage() {
           )
         `)
         .eq('unique_link', uniqueLink)
-        .maybeSingle();
+        .single();
 
       if (requestError) {
         console.error('Error fetching feedback request:', requestError);
@@ -201,6 +205,12 @@ export function FeedbackFormPage() {
         console.error('No feedback request found for link:', uniqueLink);
         throw new Error('No feedback request found');
       }
+
+      console.log('Feedback request data:', {
+        id: requestData.id,
+        status: requestData.status,
+        feedback_count: requestData.feedback?.length
+      });
 
       // Check if this browser has already submitted feedback
       try {
@@ -219,7 +229,7 @@ export function FeedbackFormPage() {
         .from('employees')
         .select('*')
         .eq('id', requestData.employee_id)
-        .maybeSingle();
+        .single();
 
       if (employeeError) throw employeeError;
       if (!employeeData) throw new Error('Employee not found');
@@ -229,15 +239,32 @@ export function FeedbackFormPage() {
         .from('review_cycles')
         .select('*')
         .eq('id', requestData.review_cycle_id)
-        .maybeSingle();
+        .single();
 
       if (cycleError) throw cycleError;
       if (!cycleData) throw new Error('Review cycle not found');
 
+      console.log('Review cycle data:', {
+        id: cycleData.id,
+        title: cycleData.title,
+        review_by_date: cycleData.review_by_date,
+        current_date: new Date().toISOString()
+      });
+
       // Check if the review cycle is past its review_by_date
       if (cycleData.review_by_date) {
         const reviewByDate = new Date(cycleData.review_by_date);
-        if (reviewByDate < new Date()) {
+        const currentDate = new Date();
+        
+        // Set times to midnight for consistent comparison
+        reviewByDate.setHours(23, 59, 59, 999);
+        currentDate.setHours(0, 0, 0, 0);
+
+        if (reviewByDate < currentDate) {
+          console.log('Review cycle ended:', {
+            review_by_date: reviewByDate.toISOString(),
+            current_date: currentDate.toISOString()
+          });
           throw new Error('This review cycle has ended');
         }
       }
@@ -307,19 +334,25 @@ export function FeedbackFormPage() {
             unique_link: uniqueLink
         });
 
-        const { data, error: responseError } = await supabase
+        const { error: responseError } = await supabase
             .from('feedback_responses')
             .insert({
                 feedback_request_id: feedbackRequest.id,
                 relationship: formData.relationship,
                 strengths: formData.strengths,
                 areas_for_improvement: formData.areas_for_improvement,
-                submitted_at: new Date().toISOString()
-            })
-            .select('*')
-            .single();
+                submitted_at: new Date().toISOString(),
+                session_id: sessionId
+            });
 
         if (responseError) {
+            // If it's a duplicate submission, treat it as a success
+            if (responseError.code === '23505' && responseError.message?.includes('unique_feedback_per_session')) {
+                console.log('Duplicate submission detected, proceeding to thank you page');
+                navigate('/feedback/thank-you');
+                return;
+            }
+            
             console.error('Error submitting feedback:', {
                 code: responseError.code,
                 message: responseError.message,
@@ -328,8 +361,6 @@ export function FeedbackFormPage() {
             });
             throw responseError;
         }
-
-        console.log('Feedback submitted successfully:', data);
 
         // Store submission in localStorage
         const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
@@ -369,12 +400,6 @@ export function FeedbackFormPage() {
             description: errorMessage,
             variant: "destructive",
         });
-
-        // If it's a duplicate submission error, redirect to thank you page
-        if (supabaseError.message?.includes('duplicate key value')) {
-            navigate('/feedback/thank-you');
-            return;
-        }
     } finally {
         setIsSubmitting(false);
         setFormState(prev => ({ ...prev, step: 'editing' }));
@@ -395,13 +420,29 @@ export function FeedbackFormPage() {
 
   if (!feedbackRequest) return null;
 
-  if (feedbackRequest.status === 'completed') {
+  // Only check for review cycle end date, not status
+  const isRequestClosed = feedbackRequest.review_cycle.review_by_date && 
+    new Date(feedbackRequest.review_cycle.review_by_date) < new Date();
+
+  if (isRequestClosed) {
+    console.log('Review cycle has ended:', {
+      id: feedbackRequest.id,
+      review_cycle: {
+        id: feedbackRequest.review_cycle_id,
+        review_by_date: feedbackRequest.review_cycle.review_by_date,
+        current_date: new Date().toISOString()
+      }
+    });
+
     return (
       <div className="mx-auto max-w-3xl space-y-8 p-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold">Feedback Form Closed</h1>
           <p className="mt-4 text-muted-foreground">
-            This feedback request has been completed and is no longer accepting submissions.
+            This review cycle has ended.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Due by: {new Date(feedbackRequest.review_cycle.review_by_date).toLocaleDateString()}
           </p>
         </div>
       </div>

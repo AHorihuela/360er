@@ -390,21 +390,24 @@ export function ManageReviewCyclePage() {
   }
 
   function getCompletionStatus(request: FeedbackRequest): boolean {
-    return (request.feedback?.length || 0) >= (request.target_responses || 3);
+    return request.manually_completed;
   }
 
   function getStatusBadgeVariant(request: FeedbackRequest): "default" | "destructive" | "outline" | "secondary" {
-    if (request.status === REQUEST_STATUS.COMPLETED || request.status === REQUEST_STATUS.EXCEEDED) {
+    if (request.manually_completed) {
       return "default";
     }
-    if (request.status === REQUEST_STATUS.PENDING) {
+    if ((request.feedback?.length || 0) >= (request.target_responses || 3)) {
       return "secondary";
     }
     return "outline";
   }
 
   function getStatusText(request: FeedbackRequest): string {
-    return getCompletionStatus(request) ? 'Completed' : 'Pending';
+    if (request.manually_completed) {
+      return 'Manually Completed';
+    }
+    return `${request.feedback?.length || 0} Responses (Target: ${request.target_responses || 3})`;
   }
 
   async function handleGenerateAIReport(feedbackRequest: FeedbackRequest) {
@@ -1094,8 +1097,13 @@ export function ManageReviewCyclePage() {
                     <div className="mt-2">
                       <Progress 
                         value={(request.feedback.length / (request.target_responses || 3)) * 100} 
-                        className="h-2"
+                        className={`h-2 ${request.feedback.length >= (request.target_responses || 3) ? 'bg-secondary' : ''}`}
                       />
+                      {request.feedback.length >= (request.target_responses || 3) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Target reached! Additional feedback is still welcome.
+                        </p>
+                      )}
                     </div>
                     
                     {expandedRequests.has(request.id) && (
