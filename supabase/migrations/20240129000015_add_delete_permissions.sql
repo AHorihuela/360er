@@ -5,8 +5,10 @@ FOR DELETE
 TO authenticated
 USING (
   feedback_request_id IN (
-    SELECT id FROM feedback_requests
-    WHERE user_id = auth.uid()
+    SELECT fr.id 
+    FROM feedback_requests fr
+    JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+    WHERE rc.created_by = auth.uid()
   )
 );
 
@@ -15,7 +17,12 @@ CREATE POLICY "users_delete_own_feedback_requests"
 ON feedback_requests
 FOR DELETE
 TO authenticated
-USING (user_id = auth.uid());
+USING (
+  review_cycle_id IN (
+    SELECT id FROM review_cycles
+    WHERE created_by = auth.uid()
+  )
+);
 
 -- Add delete permissions for feedback_analyses
 CREATE POLICY "users_delete_own_feedback_analyses"
@@ -23,11 +30,12 @@ ON feedback_analyses
 FOR DELETE
 TO authenticated
 USING (
-  strengths IN (
-    SELECT strengths FROM feedback_responses
-    WHERE feedback_request_id IN (
-      SELECT id FROM feedback_requests
-      WHERE user_id = auth.uid()
-    )
+  id IN (
+    SELECT fa.id
+    FROM feedback_analyses fa
+    JOIN feedback_responses fr ON fa.strengths = fr.strengths
+    JOIN feedback_requests freq ON fr.feedback_request_id = freq.id
+    JOIN review_cycles rc ON freq.review_cycle_id = rc.id
+    WHERE rc.created_by = auth.uid()
   )
 ); 
