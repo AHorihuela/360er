@@ -228,11 +228,13 @@ export function FeedbackFormPage() {
 
     setIsSubmitting(true);
     try {
-        console.log('Submitting feedback with:', {
+        console.log('Starting feedback submission...', {
             feedback_request_id: feedbackRequest.id,
             relationship: formData.relationship,
-            strengths: formData.strengths,
-            areas_for_improvement: formData.areas_for_improvement
+            strengths: formData.strengths?.length,
+            areas_for_improvement: formData.areas_for_improvement?.length,
+            request_status: feedbackRequest.status,
+            unique_link: uniqueLink
         });
 
         const { data, error: responseError } = await supabase
