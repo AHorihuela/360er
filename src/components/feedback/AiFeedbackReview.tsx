@@ -397,10 +397,10 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.strengths}
                       onChange={(e) => onFeedbackChange?.('strengths', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none bg-transparent"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none relative z-10"
                       placeholder="What are this person's key strengths?"
                     />
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 pointer-events-none z-0">
                       {aiResponse.suggestions
                         .filter(s => s.highlightStart && s.highlightEnd && 
                           feedbackData.strengths.includes(s.highlightStart) && 
@@ -419,10 +419,10 @@ ${feedbackData.areas_for_improvement}`
                               <div
                                 className={`h-6 ${
                                   suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-30 hover:opacity-50 transition-opacity rounded group`}
+                                } opacity-20 group cursor-pointer`}
                               >
                                 <div 
-                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2"
+                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2 pointer-events-none"
                                 >
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
                                     <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
@@ -450,10 +450,10 @@ ${feedbackData.areas_for_improvement}`
                     <Textarea
                       value={feedbackData.areas_for_improvement}
                       onChange={(e) => onFeedbackChange?.('areas_for_improvement', e.target.value)}
-                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none bg-transparent"
+                      className="min-h-[150px] focus:ring-2 focus:ring-primary w-full resize-none relative z-10"
                       placeholder="What could this person improve on?"
                     />
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 pointer-events-none z-0">
                       {aiResponse.suggestions
                         .filter(s => s.highlightStart && s.highlightEnd && 
                           feedbackData.areas_for_improvement.includes(s.highlightStart) && 
@@ -472,10 +472,10 @@ ${feedbackData.areas_for_improvement}`
                               <div
                                 className={`h-6 ${
                                   suggestion.type === 'critical' ? 'bg-red-200' : 'bg-blue-200'
-                                } opacity-30 hover:opacity-50 transition-opacity rounded group`}
+                                } opacity-20 group cursor-pointer`}
                               >
                                 <div 
-                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2"
+                                  className="absolute invisible group-hover:visible z-50 w-64 transform -translate-y-full -translate-x-1/4 -mt-2 pointer-events-none"
                                 >
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
                                     <span className={`inline-block px-2 py-1 text-xs rounded mb-2 ${
