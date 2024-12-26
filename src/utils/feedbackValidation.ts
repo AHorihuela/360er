@@ -59,20 +59,6 @@ const NON_CONSTRUCTIVE_PHRASES = [
   'sloppy',
 ];
 
-function checkForRepetition(text: string): boolean {
-  const words = text.toLowerCase().split(/\s+/);
-  const wordFrequency: { [key: string]: number } = {};
-  
-  words.forEach(word => {
-    if (word.length > 3) { // Only check words longer than 3 letters
-      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-    }
-  });
-
-  // Check if any word (except common words) appears too frequently
-  return Object.values(wordFrequency).some(freq => freq > 3);
-}
-
 function containsGenericPhrases(text: string): string[] {
   const lowercaseText = text.toLowerCase();
   return GENERIC_PHRASES.filter(phrase => 
@@ -118,11 +104,6 @@ export function validateFeedback(text: string, showLengthRequirements: boolean =
     };
   }
 
-  // Check for repetitive language
-  if (checkForRepetition(text)) {
-    warnings.push('Consider using more varied language - some words appear frequently');
-  }
-
   // Check for generic phrases
   const genericPhrases = containsGenericPhrases(text);
   if (genericPhrases.length > 0) {
@@ -139,7 +120,10 @@ export function validateFeedback(text: string, showLengthRequirements: boolean =
 
   // Check for sentence structure (rough approximation)
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  if (sentences.length < 2) {
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  
+  // Only add the sentence warning if there's substantial content but not properly structured
+  if (words.length >= 10 && sentences.length < 2) {
     warnings.push('Consider providing feedback in multiple complete sentences');
   }
 
