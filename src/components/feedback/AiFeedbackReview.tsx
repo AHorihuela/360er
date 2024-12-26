@@ -90,7 +90,7 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
 
   const analyzeFeedback = async () => {
     try {
-      const response = await fetch('/server/api/analyze-feedback', {
+      const response = await fetch('/api/analyze-feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,11 +99,23 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ details: 'Failed to parse error response' }));
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
         throw new Error(errorData.details || 'Failed to analyze feedback');
       }
       
-      const data = await response.json();
+      const data = await response.json().catch(() => {
+        throw new Error('Failed to parse API response');
+      });
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid API response format');
+      }
+      
       setAiResponse(data);
       
       // Mark all steps as completed
@@ -121,7 +133,7 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
         status: step.status === 'pending' ? 'error' : step.status
       })));
 
-      // If AI analysis fails, we should still allow submission
+      // If AI analysis fails, we should still allow submission after a delay
       setTimeout(() => {
         onSubmit();
       }, 2000);

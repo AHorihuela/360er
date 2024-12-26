@@ -313,7 +313,8 @@ export function FeedbackFormPage() {
                 feedback_request_id: feedbackRequest.id,
                 relationship: formData.relationship,
                 strengths: formData.strengths,
-                areas_for_improvement: formData.areas_for_improvement
+                areas_for_improvement: formData.areas_for_improvement,
+                submitted_at: new Date().toISOString()
             })
             .select('*')
             .single();
@@ -358,11 +359,22 @@ export function FeedbackFormPage() {
               }
           });
         }
+
+        // Check if it's a Supabase error with a specific message
+        const supabaseError = error as { message?: string; details?: string; hint?: string };
+        const errorMessage = supabaseError.message || supabaseError.details || 'Failed to submit feedback';
+
         toast({
             title: "Error",
-            description: error instanceof Error ? error.message : "Failed to submit feedback. Please try again.",
+            description: errorMessage,
             variant: "destructive",
         });
+
+        // If it's a duplicate submission error, redirect to thank you page
+        if (supabaseError.message?.includes('duplicate key value')) {
+            navigate('/feedback/thank-you');
+            return;
+        }
     } finally {
         setIsSubmitting(false);
         setFormState(prev => ({ ...prev, step: 'editing' }));
