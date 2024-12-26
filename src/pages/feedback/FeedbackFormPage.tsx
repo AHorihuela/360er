@@ -599,7 +599,7 @@ export function FeedbackFormPage() {
                 (showLengthRequirements && (!validation.strengths.isValid || !validation.areas_for_improvement.isValid))
               }
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+              {isSubmitting ? 'Submitting...' : 'Review Feedback'}
             </Button>
           </div>
         </form>

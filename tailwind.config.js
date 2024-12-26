@@ -6,7 +6,7 @@ module.exports = {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
-	],
+  ],
   theme: {
     container: {
       center: true,
@@ -23,12 +23,22 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#FF501C",
+          light: "#FF6B3D",
+          dark: "#E63900",
+          foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#FF8A3D",
+          light: "#FFA164",
+          dark: "#FF7216",
+          foreground: "#FFFFFF",
+        },
+        accent: {
+          DEFAULT: "#FFB03D",
+          light: "#FFC164",
+          dark: "#FF9F16",
+          foreground: "#FFFFFF",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -38,10 +48,6 @@ module.exports = {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -50,6 +56,10 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+      },
+      gradients: {
+        'hero-light': 'linear-gradient(135deg, #FF501C 0%, #FF8A3D 50%, #FFB03D 100%)',
+        'hero-dark': 'linear-gradient(135deg, #1A1A1A 0%, #2A1A15 50%, #1A1A1A 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",

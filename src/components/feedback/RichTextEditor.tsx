@@ -194,7 +194,7 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
       <Slate
         editor={editor}
         initialValue={initialValue}
-        onChange={(newValue) => {
+        onChange={() => {
           const newText = Node.string(editor);
           if (newText !== value) {
             onChange(newText);

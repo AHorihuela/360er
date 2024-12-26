@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Copy, Trash2, Loader2, UserPlus, ChevronDown, ChevronUp, Wand2, Download, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { ReviewCycle, FeedbackRequest, FeedbackResponse, REQUEST_STATUS } from '@/types/review';
+import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
 import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
@@ -387,10 +387,6 @@ export function ManageReviewCyclePage() {
     } finally {
       setRemovingEmployeeId(null);
     }
-  }
-
-  function getCompletionStatus(request: FeedbackRequest): boolean {
-    return request.manually_completed;
   }
 
   function getStatusBadgeVariant(request: FeedbackRequest): "default" | "destructive" | "outline" | "secondary" {

@@ -13,8 +13,6 @@ import { Loader2, CheckCircle2, Brain } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/supabase';
 import OpenAI from 'openai';
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RichTextEditor } from './RichTextEditor';
 
@@ -58,11 +56,12 @@ const categoryLabels = {
   completeness: 'Completeness'
 };
 
+// Add quality colors back with proper usage
 const qualityColors = {
   excellent: 'bg-green-100 text-green-800',
   good: 'bg-blue-100 text-blue-800',
   needs_improvement: 'bg-yellow-100 text-yellow-800'
-};
+} as const;
 
 interface AnalysisStep {
   id: string;
@@ -337,17 +336,19 @@ ${feedbackData.areas_for_improvement}`
         <div className="flex items-center justify-between">
           <CardTitle>AI Feedback Review</CardTitle>
           {aiResponse && (
-            <Badge variant={aiResponse.overallQuality === 'needs_improvement' ? 'destructive' : 
-                          aiResponse.overallQuality === 'good' ? 'secondary' : 
-                          'default'}>
+            <Badge 
+              className={qualityColors[aiResponse.overallQuality]}
+              variant={aiResponse.overallQuality === 'needs_improvement' ? 'destructive' : 
+                      aiResponse.overallQuality === 'good' ? 'secondary' : 
+                      'default'}>
               {aiResponse.overallQuality.toUpperCase().replace('_', ' ')}
-          </Badge>
+            </Badge>
           )}
         </div>
         {aiResponse && (
           <CardDescription className="text-gray-700 text-base leading-relaxed mt-2">
-          {aiResponse.summary}
-        </CardDescription>
+            {aiResponse.summary}
+          </CardDescription>
         )}
       </CardHeader>
       
@@ -384,7 +385,7 @@ ${feedbackData.areas_for_improvement}`
                     highlights={aiResponse.suggestions
                       .filter((s): s is AiFeedbackSuggestion & { context: string } => 
                         typeof s.context === 'string' && 
-                        feedbackData.strengths.toLowerCase().includes(s.context.toLowerCase())
+                        fuzzyMatch(feedbackData.strengths.toLowerCase(), s.context.toLowerCase())
                       )
                     }
                   />
@@ -398,7 +399,7 @@ ${feedbackData.areas_for_improvement}`
                     highlights={aiResponse.suggestions
                       .filter((s): s is AiFeedbackSuggestion & { context: string } => 
                         typeof s.context === 'string' && 
-                        feedbackData.areas_for_improvement.toLowerCase().includes(s.context.toLowerCase())
+                        fuzzyMatch(feedbackData.areas_for_improvement.toLowerCase(), s.context.toLowerCase())
                       )
                     }
                   />
@@ -458,6 +459,12 @@ ${feedbackData.areas_for_improvement}`
       </CardContent>
 
       <CardFooter className="flex justify-end space-x-2">
+        <Button 
+          variant="outline" 
+          onClick={onRevise}
+          disabled={isLoading}>
+          Revise
+        </Button>
         <Button 
           variant="outline" 
           onClick={() => {

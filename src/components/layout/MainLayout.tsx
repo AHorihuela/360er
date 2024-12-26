@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { LayoutDashboard, Users, ClipboardList, LogOut, Menu, X } from 'lucide-react';
+import { getVersion } from '@/lib/version';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -42,51 +43,39 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
-          <div className="mr-4 hidden md:flex">
-            <Link className="mr-6 flex items-center space-x-2" to="/dashboard">
-              <span className="font-bold">360° Feedback</span>
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
+        <div className="container flex h-14 items-center justify-between">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              FuboLens
             </Link>
-            <nav className="flex items-center space-x-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "inline-flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-muted",
-                    isActive(item.path) ? "bg-muted font-medium" : "text-muted-foreground"
-                  )}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </Link>
-              ))}
+            <nav className="flex items-center gap-4">
+              <Link
+                to="/dashboard"
+                className={`text-sm font-medium ${location.pathname === '/dashboard' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <LayoutDashboard className="h-4 w-4 inline-block mr-1" />
+                Dashboard
+              </Link>
+              <Link
+                to="/employees"
+                className={`text-sm font-medium ${location.pathname === '/employees' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <Users className="h-4 w-4 inline-block mr-1" />
+                Employees
+              </Link>
+              <Link
+                to="/reviews"
+                className={`text-sm font-medium ${location.pathname === '/reviews' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <ClipboardList className="h-4 w-4 inline-block mr-1" />
+                Reviews
+              </Link>
             </nav>
           </div>
-
-          <Button
-            variant="ghost"
-            className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </Button>
-
-          <div className="flex flex-1 items-center justify-end space-x-4">
-            {userEmail && (
-              <div className="hidden items-center space-x-4 sm:flex">
-                <span className="text-sm text-muted-foreground">{userEmail}</span>
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </Button>
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
           </div>
         </div>
       </header>
@@ -124,8 +113,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       </main>
 
       <footer className="mt-auto border-t">
-        <div className="container flex h-14 items-center text-sm text-muted-foreground">
-          © 2024 360° Feedback. All rights reserved.
+        <div className="container flex h-14 items-center justify-between text-sm text-muted-foreground">
+          <span>© 2024 360° Feedback. All rights reserved.</span>
+          <span className="text-xs">{getVersion()}</span>
         </div>
       </footer>
     </div>
