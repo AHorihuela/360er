@@ -126,16 +126,26 @@ export function AiFeedbackReview({ feedbackData, onSubmit, onRevise, isLoading }
         messages: [
           { 
             role: "system", 
-            content: `You are an expert in performance reviews and feedback. Analyze the provided feedback and provide structured suggestions for improvement in JSON format. Focus on:
+            content: `You are an expert in performance reviews and feedback. Analyze the provided feedback and return a JSON response with the following structure:
+{
+  "overallQuality": "excellent" | "good" | "needs_improvement",
+  "summary": "A single paragraph summarizing the overall feedback quality",
+  "suggestions": [
+    {
+      "type": "critical" | "enhancement",
+      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
+      "suggestion": "The specific suggestion text",
+      "context": "Optional context from the feedback"
+    }
+  ]
+}
 
+Focus on:
 1. Clarity: Is the feedback clear and easy to understand?
 2. Specificity: Does it include specific examples and behaviors?
 3. Actionability: Are there concrete suggestions for improvement?
 4. Tone: Is the feedback constructive and professional?
-5. Completeness: Are all aspects adequately addressed?
-
-Return your analysis as a JSON object with overallQuality, summary, and suggestions.
-Categorize suggestions as either 'critical' (must be addressed) or 'enhancement' (would improve but not essential).`
+5. Completeness: Are all aspects adequately addressed?`
           },
           { 
             role: "user", 
@@ -162,20 +172,24 @@ ${feedbackData.areas_for_improvement}`
         // Validate and normalize the response structure
         analysis = {
           overallQuality: parsedResponse.overallQuality === 'Moderate' ? 'good' : 
+                         parsedResponse.overallQuality === 'Satisfactory' ? 'good' :
                          parsedResponse.overallQuality.toLowerCase() as 'excellent' | 'good' | 'needs_improvement',
-          summary: typeof parsedResponse.summary === 'object' ? 
-                  Object.values(parsedResponse.summary).join(' ') : 
-                  parsedResponse.summary,
+          summary: typeof parsedResponse.summary === 'string' ? 
+                  parsedResponse.summary : 
+                  typeof parsedResponse.summary === 'object' ? 
+                    Object.values(parsedResponse.summary).join(' ') : 
+                    'Failed to parse summary',
           suggestions: Array.isArray(parsedResponse.suggestions) ? 
             parsedResponse.suggestions.map((s: { 
-              type: string; 
-              category: string; 
-              suggestion: string; 
-              context?: string; 
+              type?: string;
+              category?: string;
+              suggestion?: string;
+              content?: string;
+              context?: string;
             }) => ({
-              type: s.type.toLowerCase() as 'critical' | 'enhancement',
-              category: s.category.toLowerCase() as 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness',
-              suggestion: s.suggestion,
+              type: (s.type || 'enhancement').toLowerCase() as 'critical' | 'enhancement',
+              category: (s.category || 'actionability').toLowerCase() as 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness',
+              suggestion: s.suggestion || s.content || '',
               context: s.context
             })) : []
         };
