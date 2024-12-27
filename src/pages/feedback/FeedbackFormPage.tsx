@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { validateFeedback } from '@/utils/feedbackValidation';
 import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface FeedbackRequest {
   id: string;
@@ -497,39 +498,46 @@ export function FeedbackFormPage() {
           }}
         />
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Your Relationship to {displayName}
-            </label>
-            <Select
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="space-y-3">
+            <label className="text-lg font-medium">Your relationship to {showNames ? feedbackRequest?.employee.name : 'the reviewee'}</label>
+            <ToggleGroup 
+              type="single" 
               value={formData.relationship}
-              onValueChange={(value: FeedbackFormData['relationship']) => 
-                setFormData({ ...formData, relationship: value })
-              }
+              onValueChange={(value: string) => {
+                if (value) setFormData({ ...formData, relationship: value as FeedbackFormData['relationship'] });
+              }}
+              className="grid grid-cols-3 gap-3"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select your relationship" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="senior_colleague">
-                  Senior Colleague (I am more senior than {feedbackRequest.employee.role})
-                </SelectItem>
-                <SelectItem value="equal_colleague">
-                  Equal Colleague (I am {feedbackRequest.employee.role} or equivalent)
-                </SelectItem>
-                <SelectItem value="junior_colleague">
-                  Junior Colleague (I am less senior than {feedbackRequest.employee.role})
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <ToggleGroupItem 
+                value="senior_colleague" 
+                className="group relative flex h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-6 py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
+              >
+                <span className="text-base font-medium">Senior Colleague</span>
+                <span className="mt-1.5 text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am more senior</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="equal_colleague" 
+                className="group relative flex h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-6 py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
+              >
+                <span className="text-base font-medium">Equal Colleague</span>
+                <span className="mt-1.5 text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am at the same level</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="junior_colleague" 
+                className="group relative flex h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-6 py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
+              >
+                <span className="text-base font-medium">Junior Colleague</span>
+                <span className="mt-1.5 text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am less senior</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Strengths</label>
+            <label className="block text-lg font-medium">Strengths</label>
             <div className="space-y-1">
               <textarea
-                className={`min-h-[120px] w-full rounded-md border ${
+                className={`min-h-[120px] w-full rounded-lg border ${
                   !validation.strengths.isValid && validation.strengths.showLengthWarning
                     ? 'border-red-500'
                     : validation.strengths.isValid && formData.strengths.length > 0
@@ -559,10 +567,10 @@ export function FeedbackFormPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Areas for Improvement</label>
+            <label className="block text-lg font-medium">Areas for Improvement</label>
             <div className="space-y-1">
               <textarea
-                className={`min-h-[120px] w-full rounded-md border ${
+                className={`min-h-[120px] w-full rounded-lg border ${
                   !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
                     ? 'border-red-500'
                     : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0

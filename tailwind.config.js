@@ -23,22 +23,22 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#FF501C",
-          light: "#FF6B3D",
-          dark: "#E63900",
-          foreground: "#FFFFFF",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          light: "hsl(14, 100%, 65%)",
+          dark: "hsl(14, 90%, 45%)",
         },
         secondary: {
-          DEFAULT: "#FF8A3D",
-          light: "#FFA164",
-          dark: "#FF7216",
-          foreground: "#FFFFFF",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+          light: "hsl(24, 100%, 72%)",
+          dark: "hsl(24, 90%, 52%)",
         },
         accent: {
-          DEFAULT: "#FFB03D",
-          light: "#FFC164",
-          dark: "#FF9F16",
-          foreground: "#FFFFFF",
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          light: "hsl(35, 100%, 72%)",
+          dark: "hsl(35, 90%, 52%)",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -56,10 +56,6 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-      },
-      gradients: {
-        'hero-light': 'linear-gradient(135deg, #FF501C 0%, #FF8A3D 50%, #FFB03D 100%)',
-        'hero-dark': 'linear-gradient(135deg, #1A1A1A 0%, #2A1A15 50%, #1A1A1A 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -82,6 +78,6 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [require("tailwindcss-animate")],
 }
 

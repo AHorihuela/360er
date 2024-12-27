@@ -2,37 +2,58 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ArrowRight, Users, CalendarRange, Activity, Clock, CheckCircle, AlertCircle, Bell, ChevronRight, Send, PlusCircle, BarChart } from "lucide-react";
+import { 
+  ArrowRight, Users, Activity, Clock, 
+  CheckCircle, AlertCircle, ChevronRight, 
+  PlusCircle, BarChart, ExternalLink 
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface FeedbackResponse {
+  id: string;
+  status: string;
+  submitted_at: string;
+}
+
+interface FeedbackRequest {
+  id: string;
+  status: string;
+  employee_id: string;
+  target_responses: number;
+  feedback_responses: FeedbackResponse[];
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  role: string;
+  completed_reviews: number;
+  total_reviews: number;
+}
 
 interface ReviewCycle {
   id: string;
   title: string;
-  deadline: string;
+  review_by_date: string;
   total_requests: number;
   completed_requests: number;
 }
 
-interface ActionItem {
+interface ReviewCycleWithFeedback {
   id: string;
-  type: 'deadline' | 'response' | 'new_feedback' | 'incomplete';
-  message: string;
-  link: string;
-  priority: 'high' | 'medium' | 'low';
+  title: string;
+  review_by_date: string;
+  feedback_requests: FeedbackRequest[];
 }
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [hasEmployees, setHasEmployees] = useState(false);
-  const [hasReviewCycles, setHasReviewCycles] = useState(false);
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [activeReviewCycles, setActiveReviewCycles] = useState<ReviewCycle[]>([]);
-  const [teamInsights, setTeamInsights] = useState({
-    needsFeedback: 0,
-    activeContributors: 0,
-  });
+  const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycle | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
     async function checkState() {
@@ -40,10 +61,12 @@ export function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Check for employees
-        const { count: employeeCount, error: employeesError } = await supabase
+        console.log('Fetching data for user:', user.id);
+
+        // Fetch employees with their review status
+        const { data: employeesData, error: employeesError } = await supabase
           .from('employees')
-          .select('*', { count: 'exact' })
+          .select('id, name, role')
           .eq('user_id', user.id);
 
         if (employeesError) {
@@ -52,27 +75,37 @@ export function DashboardPage() {
           return;
         }
 
-        console.log('Employee check:', { employeeCount });
-        
-        const hasEmployees = (employeeCount ?? 0) > 0;
+        console.log('Employees data:', employeesData);
+
+        const hasEmployees = (employeesData?.length ?? 0) > 0;
         setHasEmployees(hasEmployees);
 
         // Only fetch review cycles if we have employees
         if (hasEmployees) {
-          // Check for review cycles
+          // Get most recent active review cycle with feedback requests
           const { data: reviewCycles, error: cyclesError } = await supabase
             .from('review_cycles')
             .select(`
               id,
               title,
-              due_date,
+              review_by_date,
               feedback_requests (
                 id,
-                status
+                status,
+                employee_id,
+                target_responses,
+                feedback_responses (
+                  id,
+                  status,
+                  submitted_at
+                )
               )
             `)
             .eq('user_id', user.id)
-            .order('due_date', { ascending: true });
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          console.log('Review cycles query result:', { reviewCycles, cyclesError });
 
           if (cyclesError) {
             console.error('Error fetching review cycles:', cyclesError);
@@ -80,70 +113,38 @@ export function DashboardPage() {
             return;
           }
 
-          const hasReviewCycles = (reviewCycles?.length ?? 0) > 0;
-          setHasReviewCycles(hasReviewCycles);
-
-          console.log('State check:', { 
-            hasEmployees, 
-            employeeCount,
-            hasReviewCycles,
-            reviewCycleCount: reviewCycles?.length
-          });
-
-          if (hasReviewCycles && reviewCycles) {
-            // Process review cycles
-            const activeCycles = reviewCycles.map(cycle => ({
-              id: cycle.id,
-              title: cycle.title,
-              deadline: cycle.due_date,
-              total_requests: cycle.feedback_requests?.length ?? 0,
-              completed_requests: cycle.feedback_requests?.filter(r => r.status === 'completed').length ?? 0
-            }));
-            setActiveReviewCycles(activeCycles);
-
-            // Generate action items
-            const actions: ActionItem[] = [];
+          if (reviewCycles && reviewCycles.length > 0) {
+            const currentCycle = reviewCycles[0] as ReviewCycleWithFeedback;
+            console.log('Current cycle:', currentCycle);
             
-            // Check deadlines
-            const upcomingDeadlines = reviewCycles.filter(cycle => {
-              const deadline = new Date(cycle.due_date);
-              const daysUntilDeadline = Math.ceil((deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-              return daysUntilDeadline <= 7 && daysUntilDeadline > 0;
+            // Calculate total completed requests across all employees
+            const totalRequests = currentCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
+              acc + fr.target_responses, 0);
+            const completedRequests = currentCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
+              acc + (fr.feedback_responses?.length ?? 0), 0);
+
+            setActiveReviewCycle({
+              id: currentCycle.id,
+              title: currentCycle.title,
+              review_by_date: currentCycle.review_by_date,
+              total_requests: totalRequests,
+              completed_requests: completedRequests
             });
 
-            upcomingDeadlines.forEach(cycle => {
-              actions.push({
-                id: `deadline-${cycle.id}`,
-                type: 'deadline',
-                message: `Review cycle "${cycle.title}" ends in ${Math.ceil((new Date(cycle.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`,
-                link: `/reviews/${cycle.id}/manage`,
-                priority: 'high'
-              });
+            // Process employees with their review status
+            const employeesWithStatus = employeesData?.map(employee => {
+              const employeeRequest = currentCycle.feedback_requests.find((fr: FeedbackRequest) => fr.employee_id === employee.id);
+              return {
+                ...employee,
+                completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
+                total_reviews: employeeRequest?.target_responses ?? 0
+              };
             });
 
-            // Check low response rates
-            reviewCycles.forEach(cycle => {
-              const responseRate = cycle.feedback_requests?.filter(r => r.status === 'completed').length ?? 0 / (cycle.feedback_requests?.length ?? 1);
-              if (responseRate < 0.5) {
-                actions.push({
-                  id: `response-${cycle.id}`,
-                  type: 'response',
-                  message: `Low response rate (${Math.round(responseRate * 100)}%) for "${cycle.title}"`,
-                  link: `/reviews/${cycle.id}/manage`,
-                  priority: 'medium'
-                });
-              }
-            });
-
-            setActionItems(actions);
-
-            // Set team insights
-            setTeamInsights({
-              needsFeedback: reviewCycles.reduce((acc, cycle) => 
-                acc + (cycle.feedback_requests?.filter(r => r.status === 'pending').length ?? 0), 0),
-              activeContributors: reviewCycles.reduce((acc, cycle) => 
-                acc + (cycle.feedback_requests?.filter(r => r.status === 'completed').length ?? 0), 0)
-            });
+            console.log('Employees with status:', employeesWithStatus);
+            setEmployees(employeesWithStatus);
+          } else {
+            console.log('No active review cycles found');
           }
         }
       } catch (error) {
@@ -188,7 +189,7 @@ export function DashboardPage() {
                     <h3 className="font-semibold">Add Your Team Members</h3>
                     <Button 
                       onClick={() => navigate('/employees')} 
-                      className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+                      className="bg-black hover:bg-black/90 text-white transition-all duration-300"
                     >
                       Get Started <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -206,17 +207,29 @@ export function DashboardPage() {
   // Show regular dashboard for existing users
   return (
     <div className="container mx-auto py-8 space-y-8">
+      {/* Header with Active Review Cycle */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back! Here's what needs your attention.
+            {activeReviewCycle 
+              ? `Current Review Cycle: ${activeReviewCycle.title}`
+              : 'No active review cycle'}
           </p>
         </div>
         <div className="flex gap-4">
+          {activeReviewCycle && (
+            <Button
+              onClick={() => navigate(`/reviews/${activeReviewCycle.id}/manage`)}
+              variant="outline"
+              className="hover:bg-black hover:text-white transition-all duration-300"
+            >
+              View Current Cycle <ExternalLink className="ml-2 h-4 w-4" />
+            </Button>
+          )}
           <Button
             onClick={() => navigate('/reviews/new-cycle')}
-            className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+            className="bg-black hover:bg-black/90 text-white transition-all duration-300"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             New Review Cycle
@@ -224,127 +237,95 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Action Items Section */}
-      {actionItems.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+      {/* Active Review Cycle Progress */}
+      {activeReviewCycle && (
+        <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10">
           <CardHeader>
-            <CardTitle className="flex items-center text-orange-700">
-              <AlertCircle className="mr-2 h-5 w-5" />
-              Needs Your Attention
+            <CardTitle className="flex items-center justify-between">
+              <span>Current Cycle Progress</span>
+              <span className="text-sm font-normal text-muted-foreground">
+                Due {new Date(activeReviewCycle.review_by_date).toLocaleDateString()}
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {actionItems.map(item => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100"
-              >
-                <div className="flex items-center gap-3">
-                  {item.type === 'deadline' && <Clock className="h-5 w-5 text-orange-500" />}
-                  {item.type === 'response' && <Activity className="h-5 w-5 text-orange-500" />}
-                  <span className="text-sm font-medium">{item.message}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(item.link)}
-                  className="text-orange-700 hover:text-orange-800 hover:bg-orange-100"
-                >
-                  Take Action
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between text-sm">
+                <span>Overall Completion</span>
+                <span className="font-medium">
+                  {Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100)}%
+                </span>
               </div>
-            ))}
+              <Progress 
+                value={(activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100} 
+                className="h-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{activeReviewCycle.completed_requests} reviews completed</span>
+                <span>{activeReviewCycle.total_requests - activeReviewCycle.completed_requests} pending</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Active Review Cycles */}
-      <div className="grid gap-6">
-        <h2 className="text-xl font-semibold">Active Review Cycles</h2>
-        {activeReviewCycles.map(cycle => (
-          <Card key={cycle.id}>
+      {/* Employee Review Status Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {employees.map(employee => (
+          <Card 
+            key={employee.id}
+            className={`group hover:shadow-lg transition-all duration-300 ${
+              employee.completed_reviews === employee.total_reviews 
+                ? 'bg-green-50 border-green-100' 
+                : employee.completed_reviews > 0 
+                  ? 'bg-yellow-50 border-yellow-100'
+                  : 'bg-orange-50 border-orange-100'
+            }`}
+          >
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{cycle.title}</CardTitle>
-                  <CardDescription>
-                    Due {new Date(cycle.deadline).toLocaleDateString()}
-                  </CardDescription>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-lg">{employee.name}</CardTitle>
+                    <CardDescription>{employee.role}</CardDescription>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/reviews/${cycle.id}/manage`)}
-                >
-                  Manage
-                </Button>
+                {employee.completed_reviews === employee.total_reviews ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Activity className="h-5 w-5 text-orange-500" />
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Response Rate</span>
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span>Reviews Submitted</span>
                   <span className="font-medium">
-                    {Math.round((cycle.completed_requests / cycle.total_requests) * 100)}%
+                    {employee.completed_reviews} / {employee.total_reviews}
                   </span>
                 </div>
                 <Progress 
-                  value={(cycle.completed_requests / cycle.total_requests) * 100} 
-                  className="h-2"
+                  value={(employee.completed_reviews / employee.total_reviews) * 100} 
+                  className={`h-2 ${
+                    employee.completed_reviews === employee.total_reviews 
+                      ? 'bg-green-100' 
+                      : employee.completed_reviews > 0 
+                        ? 'bg-yellow-100'
+                        : 'bg-orange-100'
+                  }`}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{cycle.completed_requests} completed</span>
-                  <span>{cycle.total_requests - cycle.completed_requests} pending</span>
+                  <span>{employee.completed_reviews} completed</span>
+                  <span>{employee.total_reviews - employee.completed_reviews} pending</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Team Overview</span>
-              <Users className="h-4 w-4 text-purple-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Needs Feedback</span>
-                <span className="font-medium">{teamInsights.needsFeedback}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Active Contributors</span>
-                <span className="font-medium">{teamInsights.activeContributors}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Analytics</span>
-              <BarChart className="h-4 w-4 text-green-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              View detailed feedback analytics and trends.
-            </p>
-            <Button 
-              className="w-full" 
-              variant="outline"
-              onClick={() => navigate('/reviews/analytics')}
-            >
-              View Reports
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

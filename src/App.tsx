@@ -14,6 +14,7 @@ import { Toaster } from './components/ui/toaster';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { getVersion } from './lib/version';
+import { Trophy, Target, LineChart } from 'lucide-react';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -46,7 +47,8 @@ function HomePage() {
           </span>
           <Button 
             onClick={() => navigate('/login')} 
-            className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary/10"
           >
             Sign In
           </Button>
@@ -91,21 +93,47 @@ function HomePage() {
       {/* Features Section */}
       <section id="features" className="border-t bg-muted/50 dark:bg-gray-900">
         <div className="container mx-auto py-24 space-y-16">
-          <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            Built for Fubo Teams
+          <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
+            Built for High-Performance Teams
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="space-y-4 p-6 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <h3 className="text-xl font-semibold text-primary dark:text-primary-light">AI-Enhanced Reviews</h3>
-              <p className="text-muted-foreground dark:text-gray-400">Get AI-powered insights on your performance across Fubo's core competencies and values.</p>
+          <div className="grid gap-12 md:grid-cols-3">
+            {/* AI-Enhanced Reviews */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <LineChart className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-primary">Game-Changing AI Analysis</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Get AI-powered insights on your performance across key competencies, just like pro sports analytics.
+              </p>
             </div>
-            <div className="space-y-4 p-6 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <h3 className="text-xl font-semibold text-secondary dark:text-secondary-light">Team-First Feedback</h3>
-              <p className="text-muted-foreground dark:text-gray-400">Collect anonymous feedback from your Fubo teammates to foster honest communication and growth.</p>
+
+            {/* Team-First Feedback */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-full bg-secondary/10">
+                  <Trophy className="h-6 w-6 text-secondary" />
+                </div>
+                <h3 className="text-xl font-semibold text-secondary">Squad-First Feedback</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Foster honest communication through anonymous feedback from your squad members, building trust like championship teams.
+              </p>
             </div>
-            <div className="space-y-4 p-6 rounded-lg bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <h3 className="text-xl font-semibold text-accent dark:text-accent-light">Growth Tracking</h3>
-              <p className="text-muted-foreground dark:text-gray-400">Track your progress across review cycles and align your development with Fubo's objectives.</p>
+
+            {/* Growth Tracking */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-full bg-accent/10">
+                  <Target className="h-6 w-6 text-accent" />
+                </div>
+                <h3 className="text-xl font-semibold text-accent">Performance Tracking</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Track your progress like an athlete, measuring growth across review cycles to reach your peak potential.
+              </p>
             </div>
           </div>
         </div>
@@ -117,6 +145,7 @@ function HomePage() {
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
             © 2024 Squad360. All rights reserved.
           </p>
+          <p className="text-sm text-muted-foreground">v{getVersion()}</p>
         </div>
       </footer>
     </div>
