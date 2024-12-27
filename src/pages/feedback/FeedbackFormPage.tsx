@@ -4,16 +4,9 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validateFeedback } from '@/utils/feedbackValidation';
 import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface FeedbackRequest {
   id: string;

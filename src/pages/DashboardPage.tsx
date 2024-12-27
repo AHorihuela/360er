@@ -3,13 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { 
-  ArrowRight, Users, Activity, Clock, 
-  CheckCircle, AlertCircle, ChevronRight, 
-  PlusCircle, BarChart, ExternalLink 
+  ArrowRight, Users, Activity,
+  CheckCircle, PlusCircle, ExternalLink 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface FeedbackResponse {
   id: string;

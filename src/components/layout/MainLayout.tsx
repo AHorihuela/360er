@@ -46,6 +46,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-6">
+            <Button
+              variant="ghost"
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </Button>
             <Link to="/" className="flex items-center gap-2">
               <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                 Squad360
