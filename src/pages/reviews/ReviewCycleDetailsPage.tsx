@@ -393,25 +393,19 @@ export function ReviewCycleDetailsPage() {
   if (!reviewCycle) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="container py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/reviews')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Review Cycles
+          <Button 
+            onClick={() => navigate('/reviews')}
+            variant="gradient"
+            size="icon"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{reviewCycle?.title}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <Label className="text-sm text-muted-foreground">Due:</Label>
-              <Input
-                type="date"
-                value={reviewCycle?.review_by_date || ''}
-                onChange={(e) => handleUpdateDueDate(e.target.value ? new Date(e.target.value) : undefined)}
-                className="w-auto h-8"
-                disabled={isUpdatingDueDate}
-              />
-            </div>
+            <p className="text-muted-foreground">Due {new Date(reviewCycle?.review_by_date || '').toLocaleDateString()}</p>
           </div>
         </div>
         <Button onClick={() => setShowAddEmployeesDialog(true)}>
@@ -595,7 +589,7 @@ export function ReviewCycleDetailsPage() {
                       handleRemoveEmployee(request.id);
                     }}
                     disabled={removingEmployeeId === request.id}
-                    className="text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:text-destructive-foreground"
                   >
                     {removingEmployeeId === request.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

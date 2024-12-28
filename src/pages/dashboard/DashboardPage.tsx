@@ -41,6 +41,12 @@ interface MetricData {
   value: number;
 }
 
+interface Employee {
+  id: string;
+  name: string;
+  role: string;
+}
+
 interface DashboardStats {
   pendingFeedback: number;
   completedReviews: number;
@@ -51,6 +57,28 @@ interface DashboardStats {
   };
   pendingTrend: MetricData[];
   completedTrend: MetricData[];
+  currentCycle: {
+    id: string;
+    name: string;
+    dueDate: string;
+    completion: number;
+    completedCount: number;
+    pendingCount: number;
+    employees: Array<Employee & {
+      progress: number;
+      responsesReceived: number;
+      targetResponses: number;
+    }>;
+  } | null;
+  otherEmployees: Employee[];
+}
+
+interface FeedbackRequest {
+  id: string;
+  status: string;
+  target_responses: number;
+  employee: Employee;
+  feedback_responses: Array<{ id: string }>;
 }
 
 function StatsCard({ 
@@ -149,7 +177,9 @@ export function DashboardPage() {
       last24Hours: []
     },
     pendingTrend: [],
-    completedTrend: []
+    completedTrend: [],
+    currentCycle: null,
+    otherEmployees: []
   });
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -209,64 +239,75 @@ export function DashboardPage() {
         throw cyclesError;
       }
 
-      // For each review cycle, get the feedback request counts
-      const cyclesWithCounts = await Promise.all((cyclesData || []).map(async (cycle) => {
-        const { data: requests, error: requestsError } = await supabase
-          .from('feedback_requests')
-          .select('id, status')
-          .eq('review_cycle_id', cycle.id);
+      // Get current cycle (most recent)
+      const currentCycle = cyclesData?.[0];
 
-        if (requestsError) {
-          console.error('Error fetching feedback requests:', requestsError);
-          return cycle;
-        }
+      // Get all employees
+      const { data: allEmployees, error: employeesError } = await supabase
+        .from('employees')
+        .select('id, name, role')
+        .eq('user_id', currentUserId) as { data: Employee[] | null, error: any };
 
-        const total = requests?.length || 0;
-        const pending = requests?.filter(r => r.status === 'pending').length || 0;
-        const completed = requests?.filter(r => r.status === 'completed').length || 0;
-
-        return {
-          ...cycle,
-          _count: {
-            total_feedback: total,
-            pending_feedback: pending,
-            completed_feedback: completed
-          }
-        };
-      }));
-
-      // Get feedback activity in the last 24 hours
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: recentActivity, error: activityError } = await supabase
-        .from('feedback_responses')
-        .select(`
-          id,
-          submitted_at,
-          feedback_request:feedback_requests!feedback_request_id (
-            review_cycles!review_cycle_id (
-              user_id
-            )
-          )
-        `)
-        .gt('submitted_at', twentyFourHoursAgo)
-        .eq('feedback_request.review_cycles.user_id', currentUserId);
-
-      if (activityError) {
-        console.error('Error fetching recent activity:', activityError);
-        throw activityError;
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+        throw employeesError;
       }
 
-      // Update stats with simplified metrics
+      // Get feedback requests for current cycle
+      const { data: currentRequests, error: requestsError } = await supabase
+        .from('feedback_requests')
+        .select(`
+          id,
+          status,
+          target_responses,
+          employee:employees (
+            id,
+            name,
+            role
+          ),
+          feedback_responses (
+            id
+          )
+        `)
+        .eq('review_cycle_id', currentCycle?.id) as { data: FeedbackRequest[] | null, error: any };
+
+      if (requestsError) {
+        console.error('Error fetching feedback requests:', requestsError);
+        throw requestsError;
+      }
+
+      // Process current cycle data
+      const currentCycleEmployees = currentRequests?.map(request => ({
+        ...request.employee,
+        progress: (request.feedback_responses?.length || 0) / (request.target_responses || 1) * 100,
+        responsesReceived: request.feedback_responses?.length || 0,
+        targetResponses: request.target_responses || 0
+      })) || [];
+
+      // Calculate cycle completion
+      const totalResponses = currentRequests?.reduce((acc, req) => acc + (req.feedback_responses?.length || 0), 0) || 0;
+      const totalTargetResponses = currentRequests?.reduce((acc, req) => acc + (req.target_responses || 0), 0) || 1;
+      const cycleCompletion = (totalResponses / totalTargetResponses) * 100;
+
+      // Find employees not in current cycle
+      const currentEmployeeIds = new Set(currentCycleEmployees.map(e => e.id));
+      const otherEmployees = allEmployees?.filter(emp => !currentEmployeeIds.has(emp.id)) || [];
+
+      // Update stats with current cycle info
       setStats(prev => ({
         ...prev,
-        pendingFeedback: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.pending_feedback || 0), 0),
-        completedReviews: cyclesWithCounts.reduce((acc, c) => acc + (c._count?.completed_feedback || 0), 0),
-        realTimeMetrics: {
-          activeVisitors: recentActivity?.length || 0,
-          last24Hours: [] // We're not using this anymore
-        },
-        pendingTrend: [], // We're not using this anymore
-        completedTrend: [] // We're not using this anymore
+        currentCycle: currentCycle ? {
+          id: currentCycle.id,
+          name: currentCycle.name,
+          dueDate: currentCycle.review_by_date,
+          completion: cycleCompletion,
+          completedCount: totalResponses,
+          pendingCount: totalTargetResponses - totalResponses,
+          employees: currentCycleEmployees
+        } : null,
+        otherEmployees,
+        pendingFeedback: totalTargetResponses - totalResponses,
+        completedReviews: totalResponses
       }));
 
       // Get recent feedback
@@ -359,6 +400,11 @@ export function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -430,7 +476,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="container py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
@@ -444,31 +490,111 @@ export function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <StatsCard
-          icon={Activity}
-          title="Recent Activity"
-          value={stats.realTimeMetrics.activeVisitors}
-          description="Reviews submitted in last 24 hours"
-          color="bg-blue-500"
-        />
-        <StatsCard
-          icon={Clock}
-          title="Pending Feedback"
-          value={stats.pendingFeedback}
-          description="Awaiting responses"
-          color="bg-yellow-500"
-        />
-        <StatsCard
-          icon={CheckCircle}
-          title="Completed Reviews"
-          value={stats.completedReviews}
-          description="Successfully finished"
-          color="bg-green-500"
-        />
-      </div>
+      {stats.currentCycle && (
+        <Card className="bg-muted/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{stats.currentCycle.name}</CardTitle>
+                <CardDescription>
+                  Due {new Date(stats.currentCycle.dueDate).toLocaleDateString()}
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">{Math.round(stats.currentCycle.completion)}%</div>
+                <div className="text-sm text-muted-foreground">
+                  {stats.currentCycle.completedCount} reviews completed
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {stats.currentCycle.pendingCount} pending
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
 
-      <Card>
+      {/* Current Cycle Employees Section */}
+      {stats.currentCycle && stats.currentCycle.employees.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Current Cycle Employees</h2>
+            <Button
+              variant="outline"
+              onClick={() => stats.currentCycle && navigate(`/reviews/${stats.currentCycle.id}`)}
+              size="sm"
+            >
+              View Cycle Details
+            </Button>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {stats.currentCycle.employees.map((employee) => (
+              <Card key={employee.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{employee.name}</CardTitle>
+                      <CardDescription>{employee.role}</CardDescription>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold">{Math.round(employee.progress)}%</div>
+                      <div className="text-sm text-muted-foreground">
+                        {employee.responsesReceived} of {employee.targetResponses} responses
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Other Employees Section */}
+      {stats.otherEmployees.length > 0 && (
+        <div className="space-y-4 mt-8 pt-8 border-t">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-muted-foreground">Other Employees</h2>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/reviews/new')}
+              size="sm"
+            >
+              Start New Review Cycle
+            </Button>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {stats.otherEmployees.map((employee) => (
+              <Card 
+                key={employee.id} 
+                className="group relative hover:shadow-lg transition-all duration-300"
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{employee.name}</CardTitle>
+                      <CardDescription>{employee.role}</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-lg">
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate('/reviews/new')}
+                    className="bg-white text-black hover:bg-white/90"
+                  >
+                    Add to Review Cycle
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Feedback Section */}
+      <Card className="mt-8">
         <CardHeader className="border-b p-4">
           <div className="flex items-center justify-between">
             <CardTitle>Recent Feedback</CardTitle>

@@ -10,11 +10,4 @@ SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_che
 FROM pg_policies 
 WHERE schemaname = 'public' 
   AND tablename IN ('employees', 'feedback_requests', 'feedback_responses')
-ORDER BY tablename, cmd;
-
--- Check table privileges
-SELECT grantee, table_name, privilege_type
-FROM information_schema.role_table_grants
-WHERE table_schema = 'public'
-  AND table_name IN ('employees', 'feedback_requests', 'feedback_responses')
-ORDER BY table_name, grantee, privilege_type; 
+ORDER BY tablename, cmd; 

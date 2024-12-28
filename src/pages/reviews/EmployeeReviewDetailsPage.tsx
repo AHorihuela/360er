@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +17,7 @@ import { ReviewCycle, FeedbackRequest } from '@/types/review';
 import { generateAIReport } from '@/lib/openai';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { debounce } from 'lodash';
 
 export function EmployeeReviewDetailsPage() {
   const { cycleId, employeeId } = useParams();
@@ -31,6 +32,27 @@ export function EmployeeReviewDetailsPage() {
   const [generationStep, setGenerationStep] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isReportExpanded, setIsReportExpanded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleCopyLink = async () => {
+    if (!feedbackRequest?.unique_link) return;
+    
+    const feedbackUrl = `${window.location.origin}/feedback/${feedbackRequest.unique_link}`;
+    try {
+      await navigator.clipboard.writeText(feedbackUrl);
+      toast({
+        title: "Success",
+        description: "Feedback link copied to clipboard",
+      });
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
 
   const generationSteps = [
     "Analyzing feedback responses...",
@@ -162,11 +184,11 @@ export function EmployeeReviewDetailsPage() {
 
   async function handleGenerateReport() {
     if (!feedbackRequest || !feedbackRequest.feedback?.length) return;
-
-    console.log('Starting report generation...');
+    
     setIsGeneratingReport(true);
     setGenerationStep(0);
     setStartTime(Date.now());
+    let reportId: string | null = null;
     
     // Start step progression
     const stepInterval = setInterval(() => {
@@ -175,7 +197,7 @@ export function EmployeeReviewDetailsPage() {
         return prev;
       });
     }, 8000); // Change step every 8 seconds
-
+    
     try {
       console.log('Checking for existing report...');
       const { data: existingReport } = await supabase
@@ -186,12 +208,14 @@ export function EmployeeReviewDetailsPage() {
 
       if (existingReport) {
         console.log('Updating existing report...');
+        reportId = existingReport.id;
         const { error: updateError } = await supabase
           .from('ai_reports')
           .update({
             status: 'processing',
             is_final: false,
             error: null,
+            content: null, // Clear content while processing
             updated_at: new Date().toISOString()
           })
           .eq('id', existingReport.id);
@@ -199,23 +223,31 @@ export function EmployeeReviewDetailsPage() {
         if (updateError) throw updateError;
       } else {
         console.log('Creating new report...');
-        const { error: insertError } = await supabase
+        const { data: newReport, error: insertError } = await supabase
           .from('ai_reports')
           .insert({
             feedback_request_id: feedbackRequest.id,
             status: 'processing',
-            is_final: false
-          });
+            is_final: false,
+            content: null // Explicitly set content as null while processing
+          })
+          .select()
+          .single();
 
         if (insertError) throw insertError;
+        if (newReport) reportId = newReport.id;
       }
 
       console.log('Calling OpenAI to generate report...');
       const reportContent = await generateAIReport(
         feedbackRequest.employee?.name || 'Unknown Employee',
         feedbackRequest.employee?.role || 'Unknown Role',
-        feedbackRequest.feedback
+        feedbackRequest.feedback || []
       );
+
+      if (!reportContent) {
+        throw new Error('Failed to generate report content');
+      }
 
       console.log('Report generated:', reportContent.substring(0, 100) + '...');
       clearInterval(stepInterval);
@@ -246,23 +278,26 @@ export function EmployeeReviewDetailsPage() {
     } catch (error: unknown) {
       clearInterval(stepInterval);
       console.error('Error generating report:', error);
+      
+      // Update report with error if we have a report ID
+      if (reportId) {
+        await supabase
+          .from('ai_reports')
+          .update({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            is_final: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', reportId);
+      }
+
       toast({
         title: "Error",
         description: "Failed to generate AI report",
         variant: "destructive",
       });
-
-      // Update report with error
-      await supabase
-        .from('ai_reports')
-        .update({
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          updated_at: new Date().toISOString()
-        })
-        .eq('feedback_request_id', feedbackRequest.id);
     } finally {
-      clearInterval(stepInterval);
       setIsGeneratingReport(false);
       setGenerationStep(0);
       setStartTime(null);
@@ -294,6 +329,68 @@ export function EmployeeReviewDetailsPage() {
     }
   }
 
+  // Add debounced save function
+  const debouncedSave = useCallback(
+    debounce(async (content: string) => {
+      if (!feedbackRequest) return;
+      
+      try {
+        // Only clean up extra hashes while preserving heading structure
+        const cleanContent = content
+          .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2') // Clean up only extra hashes while preserving heading level
+          .trim();
+
+        const { error } = await supabase
+          .from('ai_reports')
+          .update({
+            content: cleanContent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('feedback_request_id', feedbackRequest.id);
+
+        if (error) throw error;
+        setIsSaving(false);
+      } catch (error) {
+        console.error('Error saving report:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save report changes",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+      }
+    }, 1000),
+    [feedbackRequest]
+  );
+
+  // Update the onChange handler
+  function handleReportChange(value: string) {
+    // Only clean up extra hashes while preserving heading structure
+    const cleanValue = value
+      .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2') // Clean up only extra hashes while preserving heading level
+      .trim();
+    
+    setAiReport(cleanValue);
+    setIsSaving(true);
+    debouncedSave(cleanValue);
+  }
+
+  // Add interval for real-time elapsed time updates
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (startTime && isGeneratingReport) {
+      interval = setInterval(() => {
+        // Force re-render to update elapsed time
+        setStartTime(prev => prev);
+      }, 1000);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [startTime, isGeneratingReport]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -313,66 +410,85 @@ export function EmployeeReviewDetailsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button 
-            variant="outline" 
             onClick={() => navigate(`/reviews/${cycleId}`)}
-            className="hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
+            className="bg-gradient-to-r from-[#F87315] to-[#F83A15] text-white hover:opacity-90"
+            size="icon"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Review Cycle
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{feedbackRequest.employee?.name}</h1>
             <p className="text-muted-foreground">{feedbackRequest.employee?.role}</p>
           </div>
         </div>
-        <Button
-          onClick={handleGenerateReport}
-          disabled={isGeneratingReport || !feedbackRequest.feedback?.length}
-          className="hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
-          variant="outline"
-        >
-          {isGeneratingReport ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2 h-4 w-4" />
-              {aiReport ? 'Re-Generate Report' : 'Generate Report'}
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleCopyLink}
+            className="gap-2"
+          >
+            <FileDown className="h-4 w-4" />
+            Copy Feedback Link
+          </Button>
+          <Button
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport || !feedbackRequest.feedback?.length}
+            className="hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
+            variant="outline"
+          >
+            {isGeneratingReport ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                {aiReport ? 'Re-Generate Report' : 'Generate Report'}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
         <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Report</CardTitle>
+          <div 
+            className="flex items-center justify-between p-6 cursor-pointer"
+            onClick={() => !isReportExpanded && setIsReportExpanded(true)}
+          >
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={handleExportPDF}
-                disabled={isGeneratingReport || !aiReport}
-                className="hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
-                onClick={() => setIsReportExpanded(!isReportExpanded)}
-              >
-                {isReportExpanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
+              <h2 className="text-lg font-semibold">Report</h2>
+              {aiReport && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent header click from triggering
+                    handleExportPDF();
+                  }}
+                  className="ml-2"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              )}
             </div>
-          </CardHeader>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent header click from triggering
+                setIsReportExpanded(!isReportExpanded);
+              }}
+            >
+              {isReportExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
           {isReportExpanded && (
             <CardContent>
               {isGeneratingReport ? (
@@ -406,9 +522,21 @@ export function EmployeeReviewDetailsPage() {
                 <div className="space-y-4">
                   {aiReport ? (
                     <div id="report-content">
+                      <div className="flex justify-end mb-2">
+                        {isSaving ? (
+                          <div className="text-sm text-muted-foreground flex items-center">
+                            <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                            Saving...
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            All changes saved
+                          </div>
+                        )}
+                      </div>
                       <MarkdownEditor
                         value={aiReport}
-                        onChange={(value) => setAiReport(value)}
+                        onChange={handleReportChange}
                       />
                     </div>
                   ) : (
@@ -441,13 +569,10 @@ export function EmployeeReviewDetailsPage() {
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Review Cycle
                   </p>
-                  <p className="text-sm font-medium">{reviewCycle.name}</p>
+                  <p className="text-sm font-medium">{reviewCycle?.name}</p>
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-muted-foreground">
-                      Started: {reviewCycle.start_date ? new Date(reviewCycle.start_date).toLocaleDateString() : 'Not set'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Deadline: {reviewCycle.end_date ? new Date(reviewCycle.end_date).toLocaleDateString() : 'Not set'}
+                      Deadline: {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
                     </p>
                   </div>
                 </div>
@@ -456,24 +581,23 @@ export function EmployeeReviewDetailsPage() {
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Completion
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Progress value={completionPercentage} className="h-2" />
-                    <span className="text-sm font-medium">{completionPercentage}%</span>
+                  <div className="space-y-2">
+                    <Progress 
+                      value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
+                      className="h-2"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {feedbackRequest._count?.responses || 0} of {feedbackRequest.target_responses} responses
-                  </p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Status
                   </p>
-                  <Badge 
-                    variant={reviewCycle.status === 'active' ? 'default' : 'secondary'}
-                    className="capitalize"
-                  >
-                    {reviewCycle.status}
+                  <Badge variant="secondary">
+                    {feedbackRequest?.status || 'Pending'}
                   </Badge>
                 </div>
               </div>

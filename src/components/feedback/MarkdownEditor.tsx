@@ -181,7 +181,7 @@ export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
 
   return (
     <div className="relative flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1 rounded-md border bg-background p-1">
+      <div className="sticky top-[64px] z-30 flex flex-wrap items-center gap-1 rounded-md border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-1">
         <Button
           variant="ghost"
           size="sm"

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
@@ -50,96 +50,165 @@ export function DashboardPage(): JSX.Element {
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycle | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
-  useEffect(() => {
+  const startRealtimeSubscription = (userId: string) => {
+    const feedbackChannel = supabase
+      .channel('feedback-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'feedback_responses',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      feedbackChannel.unsubscribe();
+    };
+  };
+
+  const fetchData = async () => {
     if (!user?.id) return;
+    
+    const { data: employeesData, error: employeesError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('user_id', user.id);
 
-    const fetchData = async () => {
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('user_id', user.id);
+    if (employeesError) {
+      toast({
+        title: 'Error fetching employees',
+        description: employeesError.message,
+        variant: 'destructive',
+      });
+      return;
+    }
 
-      if (employeesError) {
+    const hasEmployeesData = (employeesData?.length ?? 0) > 0;
+    setHasEmployees(hasEmployeesData);
+
+    if (hasEmployeesData) {
+      // Get most recent active review cycle with feedback requests
+      const { data: reviewCycles, error: cyclesError } = await supabase
+        .from('review_cycles')
+        .select(`
+          id,
+          title,
+          review_by_date,
+          feedback_requests (
+            id,
+            status,
+            employee_id,
+            target_responses,
+            feedback_responses (
+              id,
+              status,
+              submitted_at
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (cyclesError) {
         toast({
-          title: 'Error fetching employees',
-          description: employeesError.message,
+          title: 'Error fetching review cycles',
+          description: cyclesError.message,
           variant: 'destructive',
         });
         return;
       }
 
-      const hasEmployeesData = (employeesData?.length ?? 0) > 0;
-      setHasEmployees(hasEmployeesData);
+      if (reviewCycles && reviewCycles.length > 0) {
+        const currentCycle = reviewCycles[0] as ReviewCycleWithFeedback;
+        
+        // Calculate total completed requests across all employees
+        const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
+          acc + fr.target_responses, 0);
+        const completedRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
+          acc + (fr.feedback_responses?.length ?? 0), 0);
 
-      if (hasEmployeesData) {
-        // Get most recent active review cycle with feedback requests
-        const { data: reviewCycles, error: cyclesError } = await supabase
-          .from('review_cycles')
-          .select(`
-            id,
-            title,
-            review_by_date,
-            feedback_requests (
-              id,
-              status,
-              employee_id,
-              target_responses,
-              feedback_responses (
-                id,
-                status,
-                submitted_at
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
+        setActiveReviewCycle({
+          id: currentCycle.id,
+          title: currentCycle.title,
+          review_by_date: currentCycle.review_by_date,
+          total_requests: totalRequests,
+          completed_requests: completedRequests
+        });
 
-        if (cyclesError) {
-          toast({
-            title: 'Error fetching review cycles',
-            description: cyclesError.message,
-            variant: 'destructive',
-          });
-          return;
-        }
+        // Process employees with their review status
+        const employeesWithStatus = employeesData?.map(employee => {
+          const employeeRequest = currentCycle.feedback_requests.find(fr => fr.employee_id === employee.id);
+          return {
+            ...employee,
+            completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
+            total_reviews: employeeRequest?.target_responses ?? 0
+          };
+        });
 
-        if (reviewCycles && reviewCycles.length > 0) {
-          const currentCycle = reviewCycles[0] as ReviewCycleWithFeedback;
-          
-          // Calculate total completed requests across all employees
-          const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
-            acc + fr.target_responses, 0);
-          const completedRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
-            acc + (fr.feedback_responses?.length ?? 0), 0);
-
-          setActiveReviewCycle({
-            id: currentCycle.id,
-            title: currentCycle.title,
-            review_by_date: currentCycle.review_by_date,
-            total_requests: totalRequests,
-            completed_requests: completedRequests
-          });
-
-          // Process employees with their review status
-          const employeesWithStatus = employeesData?.map(employee => {
-            const employeeRequest = currentCycle.feedback_requests.find(fr => fr.employee_id === employee.id);
-            return {
-              ...employee,
-              completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
-              total_reviews: employeeRequest?.target_responses ?? 0
-            };
-          });
-
-          setEmployees(employeesWithStatus || []);
-        }
+        setEmployees(employeesWithStatus || []);
       }
+    }
 
-      setIsLoading(false);
-    };
+    setIsLoading(false);
+  };
 
+  useEffect(() => {
+    if (!user?.id) return;
     fetchData();
+    startRealtimeSubscription(user.id);
   }, [user?.id, toast]);
+
+  // Add new function to handle adding employee to current cycle
+  async function handleAddEmployeeToCycle(employeeId: string) {
+    if (!activeReviewCycle) {
+      toast({
+        title: "No active cycle",
+        description: "Please create a review cycle first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Generate a unique link using crypto
+      const uniqueLink = crypto.randomUUID();
+
+      // Create a new feedback request for this employee in the current cycle
+      const { error: insertError } = await supabase
+        .from('feedback_requests')
+        .insert({
+          employee_id: employeeId,
+          review_cycle_id: activeReviewCycle.id,
+          status: 'pending',
+          target_responses: 3,
+          unique_link: uniqueLink
+        });
+
+      if (insertError) throw insertError;
+
+      // Refresh the dashboard data
+      await fetchData();
+
+      toast({
+        title: "Success",
+        description: "Employee added to current review cycle",
+      });
+    } catch (error) {
+      console.error('Error adding employee to cycle:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add employee to cycle",
+        variant: "destructive",
+      });
+    }
+  }
 
   if (isLoading) {
     return (
@@ -224,8 +293,7 @@ export function DashboardPage(): JSX.Element {
       {/* Active Review Cycle Progress */}
       {activeReviewCycle && (
         <Card 
-          className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10 cursor-pointer hover:border-primary/50 transition-colors"
-          onClick={() => navigate('/reviews')}
+          className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10"
         >
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -256,59 +324,112 @@ export function DashboardPage(): JSX.Element {
         </Card>
       )}
 
-      {/* Employee Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {employees.map((employee) => (
-          <Card 
-            key={employee.id}
-            className={`cursor-pointer hover:border-primary/50 transition-colors ${employee.total_reviews > 0 ? 'opacity-100' : 'opacity-60'}`}
-            onClick={() => {
-              if (activeReviewCycle && employee.total_reviews > 0) {
-                navigate(`/reviews/${activeReviewCycle.id}/employee/${employee.id}`);
-              } else {
-                toast({
-                  title: "Not in current cycle",
-                  description: "This employee is not part of the current review cycle.",
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {employee.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{employee.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{employee.role}</p>
+      {/* Current Cycle Employees */}
+      {employees.filter(e => e.total_reviews > 0).length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Current Cycle Employees</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {employees
+              .filter(e => e.total_reviews > 0)
+              .map((employee) => (
+                <Card 
+                  key={employee.id}
+                  className="hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => navigate(`/reviews/${activeReviewCycle?.id}/employee/${employee.id}`)}
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback>
+                            {employee.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold">{employee.name}</h3>
+                          <p className="text-sm text-muted-foreground">{employee.role}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Feedback Progress</span>
+                        <span className="font-medium">
+                          {Math.round((employee.completed_reviews / employee.total_reviews) * 100)}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(employee.completed_reviews / employee.total_reviews) * 100} 
+                        className="h-2"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{employee.completed_reviews} of {employee.total_reviews} responses</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Other Employees */}
+      {employees.filter(e => e.total_reviews === 0).length > 0 && (
+        <div className="space-y-4 mt-8 pt-8 border-t">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-muted-foreground">Other Employees</h2>
+            {!activeReviewCycle && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/reviews/new-cycle')}
+                size="sm"
+              >
+                Start New Review Cycle
+              </Button>
+            )}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {employees
+              .filter(e => e.total_reviews === 0)
+              .map((employee) => (
+                <Card 
+                  key={employee.id}
+                  className="group relative hover:shadow-lg transition-all duration-300"
+                >
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>
+                          {employee.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold">{employee.name}</h3>
+                        <p className="text-sm text-muted-foreground">{employee.role}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-lg">
+                    <Button
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddEmployeeToCycle(employee.id);
+                      }}
+                      className="bg-white text-black hover:bg-white/90"
+                      disabled={!activeReviewCycle}
+                    >
+                      {activeReviewCycle 
+                        ? 'Add to Current Cycle' 
+                        : 'No Active Cycle'}
+                    </Button>
                   </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span>Feedback Progress</span>
-                  <span>
-                    {Math.round((employee.completed_reviews / (employee.total_reviews || 1)) * 100)}%
-                  </span>
-                </div>
-                <Progress 
-                  value={(employee.completed_reviews / (employee.total_reviews || 1)) * 100} 
-                  className="h-2"
-                />
-                <div className="text-sm text-muted-foreground">
-                  {employee.completed_reviews} of {employee.total_reviews} responses received
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </Card>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

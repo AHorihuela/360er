@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, ChevronRight, Calendar, Users } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Calendar, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -279,18 +279,43 @@ export function ReviewCyclesPage() {
   }
 
   function calculateProgress(cycle: ReviewCycle): number {
-    if (!cycle._count?.feedback_requests) return 0;
-    const totalRequests = cycle._count.feedback_requests;
-    const completedRequests = cycle._count.completed_feedback;
-    return Math.round((completedRequests / totalRequests) * 100);
+    const { completed, pending } = getResponseCounts(cycle);
+    const total = completed + pending;
+    
+    return total > 0 
+      ? Math.round((completed / total) * 100)
+      : 0;
+  }
+
+  // Add helper function to get completed and pending counts for display
+  function getResponseCounts(cycle: ReviewCycle): { completed: number; pending: number } {
+    if (!cycle.feedback_requests?.length) return { completed: 0, pending: 0 };
+    
+    let completedReviews = 0;
+    let totalReviews = 0;
+    
+    cycle.feedback_requests.forEach(request => {
+      const responses = request._count?.responses || 0;
+      const target = request.target_responses || 0;
+      completedReviews += responses;
+      totalReviews += target;
+    });
+    
+    return {
+      completed: completedReviews,
+      pending: totalReviews - completedReviews
+    };
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Review Cycles</h1>
-        <Button onClick={() => navigate('/reviews/new-cycle')}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={() => navigate('/reviews/new-cycle')}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
           New Review Cycle
         </Button>
       </div>
@@ -347,31 +372,45 @@ export function ReviewCyclesPage() {
                     <span>{calculateProgress(cycle)}%</span>
                   </div>
                   <Progress value={calculateProgress(cycle)} className="h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    {(() => {
+                      const { completed, pending } = getResponseCounts(cycle);
+                      return (
+                        <>
+                          <span>{completed} reviews completed</span>
+                          <span>{pending} pending</span>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(cycle.id);
-                  }}
-                  disabled={isDeletingId === cycle.id}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/reviews/${cycle.id}/manage`);
-                  }}
-                >
-                  Manage
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(cycle.id);
+                    }}
+                    disabled={isDeletingId === cycle.id}
+                    className="text-destructive hover:text-destructive-foreground"
+                  >
+                    {isDeletingId === cycle.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => navigate(`/reviews/${cycle.id}`)}
+                    className="gap-2"
+                  >
+                    Manage
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardFooter>
             </Card>
           ))}

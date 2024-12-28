@@ -4,20 +4,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "border border-input bg-background shadow-sm hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white hover:border-transparent",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
-          "border border-input bg-background shadow-sm hover:bg-gradient-to-r hover:from-primary hover:to-secondary hover:text-white hover:border-transparent",
+          "border border-input bg-background shadow-sm hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white hover:border-transparent",
         secondary:
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        ghost: 
+          "hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white",
+        link: 
+          "text-primary underline-offset-4 hover:underline",
+        gradient:
+          "bg-gradient-to-r from-[#F87315] to-[#F83A15] text-white hover:opacity-90",
       },
       size: {
         default: "h-9 px-4 py-2",

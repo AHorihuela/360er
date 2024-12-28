@@ -1,7 +1,3 @@
-# 360 AI Review
-
-Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
-
 ## Project Context
 A web-based 360-degree feedback platform that allows managers to register, set up review cycles for their direct reports, and distribute a unique anonymous feedback link to multiple reviewers (peers, direct reports, and senior coleagues). Reviewers submit their feedback anonymously through a centralized form, and the system aggregates all responses into a consolidated report for the manager to review.
 - The manager can create an account and maintain a list of employees to be reviewed.
