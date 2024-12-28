@@ -5,7 +5,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { EmployeesPage } from './pages/employees/EmployeesPage';
 import { ReviewCyclesPage } from './pages/reviews/ReviewCyclesPage';
 import { NewReviewCyclePage } from './pages/reviews/NewReviewCyclePage';
-import { ManageReviewCyclePage } from './pages/reviews/ManageReviewCyclePage';
+import { ReviewCycleDetailsPage } from './pages/reviews/ReviewCycleDetailsPage';
+import { EmployeeReviewDetailsPage } from './pages/reviews/EmployeeReviewDetailsPage';
 import { FeedbackFormPage } from './pages/feedback/FeedbackFormPage';
 import { ThankYouPage } from './pages/feedback/ThankYouPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -236,11 +237,21 @@ function App() {
             }
           />
           <Route
-            path="/reviews/:cycleId/manage"
+            path="/reviews/:cycleId"
             element={
               <ProtectedRoute>
                 <MainLayout>
-                  <ManageReviewCyclePage />
+                  <ReviewCycleDetailsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reviews/:cycleId/employee/:employeeId"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <EmployeeReviewDetailsPage />
                 </MainLayout>
               </ProtectedRoute>
             }

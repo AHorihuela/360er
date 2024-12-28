@@ -219,7 +219,7 @@ export function DashboardPage() {
         <div className="flex gap-4">
           {activeReviewCycle && (
             <Button
-              onClick={() => navigate(`/reviews/${activeReviewCycle.id}/manage`)}
+              onClick={() => navigate(`/reviews/${activeReviewCycle.id}`)}
               variant="outline"
               className="hover:bg-black hover:text-white transition-all duration-300"
             >

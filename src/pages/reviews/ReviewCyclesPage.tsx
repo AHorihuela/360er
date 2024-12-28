@@ -314,7 +314,7 @@ export function ReviewCyclesPage() {
             <Card 
               key={cycle.id} 
               className="relative cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => navigate(`/reviews/${cycle.id}/manage`)}
+              onClick={() => navigate(`/reviews/${cycle.id}`)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">

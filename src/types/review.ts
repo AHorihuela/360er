@@ -4,16 +4,15 @@ export interface TimestampValidation {
   submitted_at?: string;
 }
 
-export interface ReviewCycle extends TimestampValidation {
+export interface ReviewCycle {
   id: string;
-  title: string;
-  status: 'active' | 'completed';
-  review_by_date: string;
-  user_id: string;
-  _count?: {
-    feedback_requests: number;
-    completed_feedback: number;
-  };
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'completed' | 'draft';
+  created_at: string;
+  updated_at: string;
+  created_by: string;
   feedback_requests?: FeedbackRequest[];
 }
 
