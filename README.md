@@ -11,7 +11,8 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
 - **Anonymous Feedback**: Generate unique, anonymous feedback links for reviewers
 - **Progress Tracking**: Visual progress tracking of feedback collection
 - **Feedback Management**: View, manage, and analyze collected feedback
-- **AI Report Generation**: Generate comprehensive AI-powered feedback reports
+- **AI Report Generation**: Generate comprehensive AI-powered feedback reports with managerial insights
+- **Rich Text Editing**: Full-featured markdown editor for customizing reports
 - **Export Options**: Export reports in PDF or text format with professional formatting
 - **Keyboard Shortcuts**: Convenient shortcuts like Command+S for saving reports
 - **Responsive Design**: Modern UI that works across devices
@@ -26,9 +27,10 @@ A modern, web-based 360-degree feedback platform that enables managers to collec
   - Shadcn UI components
   - React Router for navigation
   - Lucide React for icons
+  - TipTap for rich text editing
   - jsPDF for PDF generation
   - html2canvas for PDF rendering
-  - marked for markdown parsing
+  - markdown-it for markdown parsing
 
 - **Backend**:
   - Supabase for database and authentication
