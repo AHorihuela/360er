@@ -71,17 +71,23 @@ npm run dev
 ### Database Setup
 
 1. Create a new Supabase project
-2. Run the migration files in the `supabase/migrations` directory in sequence:
-   - `create_employees_table.sql`
-   - `create_feedback_tables.sql`
-   - `update_review_cycles_table.sql`
-   - `update_review_cycles_policies.sql`
-   - `add_created_by_to_review_cycles.sql`
-   - `update_feedback_policies.sql`
-   - `fix_feedback_relationships.sql`
-   - `add_feedback_delete_policy.sql`
-   - `add_delete_policy.sql`
-   - `create_ai_reports_table.sql`
+2. Run the consolidated migration file:
+   - `20240130000001_consolidated_schema.sql`
+
+This migration includes:
+- All table definitions
+- Row Level Security (RLS) policies
+- Triggers and functions
+- Permission grants
+- Anonymous access setup
+
+The migration handles:
+- Employee management
+- Review cycles
+- Feedback requests and responses
+- AI report generation
+- Security policies
+- Anonymous feedback submission
 
 ## Usage
 

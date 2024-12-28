@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { StateCreator } from 'zustand';
 import { User } from '@supabase/supabase-js';
 
 type AuthState = 'Loading' | 'Authenticated' | 'Unauthenticated';

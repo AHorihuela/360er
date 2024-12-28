@@ -2,20 +2,18 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2, Loader2, Calendar, UserPlus } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS } from '@/types/review';
-import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,7 +44,6 @@ export function ReviewCycleDetailsPage() {
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [removingEmployeeId, setRemovingEmployeeId] = useState<string | null>(null);
-  const [isUpdatingDueDate, setIsUpdatingDueDate] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [showAddEmployeesDialog, setShowAddEmployeesDialog] = useState(false);
   const [availableEmployees, setAvailableEmployees] = useState<Array<{ id: string; name: string; role: string; }>>([]);
@@ -55,6 +52,7 @@ export function ReviewCycleDetailsPage() {
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [newEmployee, setNewEmployee] = useState({ name: '', role: '' });
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -195,36 +193,32 @@ export function ReviewCycleDetailsPage() {
   }
 
   async function handleUpdateDueDate(date: Date | undefined) {
-    if (!date || !reviewCycle || !cycleId) return;
-
-    setIsUpdatingDueDate(true);
+    if (!date || !cycleId) return;
+    
     try {
-      // Add one day to compensate for timezone offset
-      const adjustedDate = new Date(date);
-      adjustedDate.setDate(adjustedDate.getDate() + 1);
-      const formattedDate = format(adjustedDate, 'yyyy-MM-dd');
-      
-      const { data, error } = await supabase
+      setIsUpdating(true);
+      const { error } = await supabase
         .from('review_cycles')
-        .update({ review_by_date: formattedDate })
+        .update({ review_by_date: date.toISOString() })
+        .eq('id', cycleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Due date updated successfully",
+      });
+
+      // Refresh the data by refetching
+      const { data: updatedCycle } = await supabase
+        .from('review_cycles')
+        .select('*')
         .eq('id', cycleId)
-        .select('*');
+        .single();
 
-      if (error) {
-        console.error('Error updating due date:', error);
-        throw error;
+      if (updatedCycle) {
+        setReviewCycle(updatedCycle);
       }
-
-      if (data && data[0]) {
-        setReviewCycle(data[0]);
-        toast({
-          title: "Success",
-          description: "Due date updated successfully",
-        });
-      } else {
-        throw new Error('No data returned from update');
-      }
-
     } catch (error) {
       console.error('Error updating due date:', error);
       toast({
@@ -233,7 +227,7 @@ export function ReviewCycleDetailsPage() {
         variant: "destructive",
       });
     } finally {
-      setIsUpdatingDueDate(false);
+      setIsUpdating(false);
     }
   }
 

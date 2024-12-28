@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, LogOut, Trash2, Inbox, Activity } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LogOut, Trash2, Inbox } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -79,45 +79,6 @@ interface FeedbackRequest {
   target_responses: number;
   employee: Employee;
   feedback_responses: Array<{ id: string }>;
-}
-
-function StatsCard({ 
-  icon: Icon, 
-  title, 
-  value, 
-  description, 
-  color,
-}: {
-  icon: any;
-  title: string;
-  value: number;
-  description?: string;
-  color: string;
-}) {
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">
-              {title}
-            </CardTitle>
-            <div className={`p-2 rounded-full ${color}`}>
-              <Icon className="h-4 w-4 text-white" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="text-3xl font-bold">{value}</div>
-            {description && (
-              <CardDescription className="mt-2 text-sm">
-                {description}
-              </CardDescription>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
-    </div>
-  );
 }
 
 function EmptyFeedback() {

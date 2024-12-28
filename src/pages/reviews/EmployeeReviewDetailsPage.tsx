@@ -401,10 +401,6 @@ export function EmployeeReviewDetailsPage() {
 
   if (!reviewCycle || !feedbackRequest) return null;
 
-  const completionPercentage = Math.round(
-    ((feedbackRequest._count?.responses || 0) / (feedbackRequest.target_responses || 1)) * 100
-  );
-
   return (
     <div className="container py-6 space-y-6">
       <div className="flex items-center justify-between">

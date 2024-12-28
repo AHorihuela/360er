@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Listen for auth state changes without logging sensitive data
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange((event, _session) => {
   if (process.env.NODE_ENV === 'development') {
     console.log('Auth state changed:', event);
   }
