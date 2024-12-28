@@ -365,9 +365,10 @@ export function EmployeeReviewDetailsPage() {
 
   // Update the onChange handler
   function handleReportChange(value: string) {
-    // Only clean up extra hashes while preserving heading structure
+    // Clean up markdown formatting while preserving line breaks between sections
     const cleanValue = value
-      .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2') // Clean up only extra hashes while preserving heading level
+      .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2\n') // Add newline after headings
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
       .trim();
     
     setAiReport(cleanValue);

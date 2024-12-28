@@ -44,7 +44,6 @@ export function ReviewCycleDetailsPage() {
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [removingEmployeeId, setRemovingEmployeeId] = useState<string | null>(null);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [showAddEmployeesDialog, setShowAddEmployeesDialog] = useState(false);
   const [availableEmployees, setAvailableEmployees] = useState<Array<{ id: string; name: string; role: string; }>>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
@@ -52,7 +51,6 @@ export function ReviewCycleDetailsPage() {
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [newEmployee, setNewEmployee] = useState({ name: '', role: '' });
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -190,45 +188,6 @@ export function ReviewCycleDetailsPage() {
     const count = request._count?.responses || 0;
     const target = request.target_responses;
     return `${count}/${target} responses`;
-  }
-
-  async function handleUpdateDueDate(date: Date | undefined) {
-    if (!date || !cycleId) return;
-    
-    try {
-      setIsUpdating(true);
-      const { error } = await supabase
-        .from('review_cycles')
-        .update({ review_by_date: date.toISOString() })
-        .eq('id', cycleId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Due date updated successfully",
-      });
-
-      // Refresh the data by refetching
-      const { data: updatedCycle } = await supabase
-        .from('review_cycles')
-        .select('*')
-        .eq('id', cycleId)
-        .single();
-
-      if (updatedCycle) {
-        setReviewCycle(updatedCycle);
-      }
-    } catch (error) {
-      console.error('Error updating due date:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update due date",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
   }
 
   async function fetchAvailableEmployees() {
