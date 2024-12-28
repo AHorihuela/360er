@@ -7,13 +7,20 @@ export interface TimestampValidation {
 export interface ReviewCycle {
   id: string;
   name: string;
+  title: string;
   start_date: string;
   end_date: string;
+  review_by_date: string;
   status: 'active' | 'completed' | 'draft';
   created_at: string;
   updated_at: string;
   created_by: string;
+  user_id: string;
   feedback_requests?: FeedbackRequest[];
+  _count?: {
+    feedback_requests: number;
+    completed_feedback: number;
+  };
 }
 
 export interface PageView extends TimestampValidation {

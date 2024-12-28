@@ -2,24 +2,35 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Trash2, Loader2, Calendar, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS } from '@/types/review';
+import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function determineRequestStatus(
   responseCount: number,
   targetResponses: number,
   manuallyCompleted: boolean
-): REQUEST_STATUS {
+): typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS] {
   if (manuallyCompleted) return REQUEST_STATUS.COMPLETED;
   if (responseCount === 0) return REQUEST_STATUS.PENDING;
   if (responseCount < targetResponses) return REQUEST_STATUS.IN_PROGRESS;
@@ -35,6 +46,15 @@ export function ReviewCycleDetailsPage() {
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([]);
   const [removingEmployeeId, setRemovingEmployeeId] = useState<string | null>(null);
+  const [isUpdatingDueDate, setIsUpdatingDueDate] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [showAddEmployeesDialog, setShowAddEmployeesDialog] = useState(false);
+  const [availableEmployees, setAvailableEmployees] = useState<Array<{ id: string; name: string; role: string; }>>([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
+  const [isAddingEmployees, setIsAddingEmployees] = useState(false);
+  const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({ name: '', role: '' });
+  const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -174,6 +194,194 @@ export function ReviewCycleDetailsPage() {
     return `${count}/${target} responses`;
   }
 
+  async function handleUpdateDueDate(date: Date | undefined) {
+    if (!date || !reviewCycle || !cycleId) return;
+
+    setIsUpdatingDueDate(true);
+    try {
+      // Add one day to compensate for timezone offset
+      const adjustedDate = new Date(date);
+      adjustedDate.setDate(adjustedDate.getDate() + 1);
+      const formattedDate = format(adjustedDate, 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('review_cycles')
+        .update({ review_by_date: formattedDate })
+        .eq('id', cycleId)
+        .select('*');
+
+      if (error) {
+        console.error('Error updating due date:', error);
+        throw error;
+      }
+
+      if (data && data[0]) {
+        setReviewCycle(data[0]);
+        toast({
+          title: "Success",
+          description: "Due date updated successfully",
+        });
+      } else {
+        throw new Error('No data returned from update');
+      }
+
+    } catch (error) {
+      console.error('Error updating due date:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update due date",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingDueDate(false);
+    }
+  }
+
+  async function fetchAvailableEmployees() {
+    setIsFetchingEmployees(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: allEmployees, error: employeesError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (employeesError) throw employeesError;
+
+      // Filter out employees already in the review cycle
+      const available = allEmployees.filter(emp => 
+        !feedbackRequests.some(req => req.employee_id === emp.id)
+      );
+
+      setAvailableEmployees(available || []);
+    } catch (error) {
+      console.error('Error fetching available employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load available employees",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingEmployees(false);
+    }
+  }
+
+  async function handleAddEmployees() {
+    if (selectedEmployeeIds.size === 0) return;
+
+    setIsAddingEmployees(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const feedbackRequestsToAdd = Array.from(selectedEmployeeIds).map(employeeId => ({
+        review_cycle_id: cycleId,
+        employee_id: employeeId,
+        unique_link: crypto.randomUUID(),
+        status: 'pending',
+        target_responses: 10
+      }));
+
+      const { data, error } = await supabase
+        .from('feedback_requests')
+        .insert(feedbackRequestsToAdd)
+        .select('*, employee:employees(*)');
+
+      if (error) throw error;
+
+      setFeedbackRequests(prev => [...prev, ...data]);
+      setSelectedEmployeeIds(new Set());
+      setShowAddEmployeesDialog(false);
+      toast({
+        title: "Success",
+        description: `Added ${data.length} employee(s) to the review cycle`,
+      });
+    } catch (error) {
+      console.error('Error adding employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add employees to review cycle",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingEmployees(false);
+    }
+  }
+
+  async function handleCreateEmployee(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newEmployee.name || !newEmployee.role) return;
+
+    setIsAddingEmployees(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      // Create new employee
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .insert([{ 
+          name: newEmployee.name, 
+          role: newEmployee.role,
+          user_id: user.id
+        }])
+        .select()
+        .single();
+
+      if (employeeError) throw employeeError;
+
+      // Create feedback request for the new employee
+      const { data: requestData, error: requestError } = await supabase
+        .from('feedback_requests')
+        .insert([{
+          review_cycle_id: cycleId,
+          employee_id: employeeData.id,
+          unique_link: crypto.randomUUID(),
+          status: 'pending',
+          target_responses: 10
+        }])
+        .select('*, employee:employees(*)');
+
+      if (requestError) throw requestError;
+
+      setFeedbackRequests(prev => [...prev, ...requestData]);
+      setNewEmployee({ name: '', role: '' });
+      setShowNewEmployeeForm(false);
+      setShowAddEmployeesDialog(false);
+      toast({
+        title: "Success",
+        description: "New employee added to review cycle",
+      });
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create employee",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingEmployees(false);
+    }
+  }
+
+  function toggleEmployeeSelection(employeeId: string) {
+    const newSelection = new Set(selectedEmployeeIds);
+    if (newSelection.has(employeeId)) {
+      newSelection.delete(employeeId);
+    } else {
+      newSelection.add(employeeId);
+    }
+    setSelectedEmployeeIds(newSelection);
+  }
+
+  useEffect(() => {
+    if (showAddEmployeesDialog) {
+      fetchAvailableEmployees();
+    }
+  }, [showAddEmployeesDialog, feedbackRequests]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -192,13 +400,143 @@ export function ReviewCycleDetailsPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Review Cycles
           </Button>
-          <h1 className="text-2xl font-bold">{reviewCycle.title}</h1>
+          <div>
+            <h1 className="text-2xl font-bold">{reviewCycle?.title}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Label className="text-sm text-muted-foreground">Due:</Label>
+              <Input
+                type="date"
+                value={reviewCycle?.review_by_date || ''}
+                onChange={(e) => handleUpdateDueDate(e.target.value ? new Date(e.target.value) : undefined)}
+                className="w-auto h-8"
+                disabled={isUpdatingDueDate}
+              />
+            </div>
+          </div>
         </div>
-        <Button onClick={() => navigate(`/reviews/${cycleId}/add-employees`)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={() => setShowAddEmployeesDialog(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
           Add Employees
         </Button>
       </div>
+
+      <Dialog open={showAddEmployeesDialog} onOpenChange={setShowAddEmployeesDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add Employees to Review</DialogTitle>
+            <DialogDescription>
+              Select employees to add to this review cycle or create a new employee.
+            </DialogDescription>
+          </DialogHeader>
+
+          {showNewEmployeeForm ? (
+            <form onSubmit={handleCreateEmployee} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={newEmployee.name}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Employee name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Input
+                  value={newEmployee.role}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
+                  placeholder="Employee role"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNewEmployeeForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isAddingEmployees}>
+                  {isAddingEmployees ? 'Adding...' : 'Add Employee'}
+                </Button>
+              </div>
+            </form>
+          ) : isFetchingEmployees ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : availableEmployees.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableEmployees.map(employee => (
+                  <div
+                    key={employee.id}
+                    className={`
+                      relative rounded-lg border p-4 cursor-pointer transition-colors
+                      ${selectedEmployeeIds.has(employee.id) 
+                        ? 'border-primary bg-primary/5' 
+                        : 'hover:border-primary/50'
+                      }
+                    `}
+                    onClick={() => toggleEmployeeSelection(employee.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployeeIds.has(employee.id)}
+                        onChange={() => toggleEmployeeSelection(employee.id)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <div>
+                        <h3 className="font-medium">{employee.name}</h3>
+                        <p className="text-sm text-muted-foreground">{employee.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNewEmployeeForm(true)}
+                >
+                  Create New Employee
+                </Button>
+                <Button
+                  onClick={handleAddEmployees}
+                  disabled={selectedEmployeeIds.size === 0 || isAddingEmployees}
+                >
+                  {isAddingEmployees ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Selected ({selectedEmployeeIds.size})
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-center text-muted-foreground">
+                No employees available to add to this review cycle.
+              </p>
+              <div className="flex justify-center">
+                <Button onClick={() => setShowNewEmployeeForm(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create New Employee
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {feedbackRequests.map((request) => (
@@ -230,11 +568,11 @@ export function ReviewCycleDetailsPage() {
                 <div className="flex justify-between text-sm">
                   <span>Completion</span>
                   <span>
-                    {Math.round((request._count.responses / request.target_responses) * 100)}%
+                    {Math.round(((request._count?.responses || 0) / request.target_responses) * 100)}%
                   </span>
                 </div>
                 <Progress 
-                  value={(request._count.responses / request.target_responses) * 100} 
+                  value={((request._count?.responses || 0) / request.target_responses) * 100} 
                   className="h-2"
                 />
                 <div className="flex items-center justify-between">

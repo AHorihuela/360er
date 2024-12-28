@@ -7,29 +7,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce'
-  },
-  db: {
-    schema: 'public'
-  },
-  global: {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  }
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Debug logging for auth state changes
+// Listen for auth state changes without logging sensitive data
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', { event, session });
-  if (session) {
-    console.log('User ID:', session.user.id);
-    console.log('Access Token:', session.access_token);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Auth state changed:', event);
   }
 });
 

@@ -11,12 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
-import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
+import { ReviewCycle, FeedbackRequest } from '@/types/review';
 import { generateAIReport } from '@/lib/openai';
-import { marked } from 'marked';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 

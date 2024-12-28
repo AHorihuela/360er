@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { getVersion } from './lib/version';
 import { Trophy, Target, LineChart } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -156,6 +157,7 @@ function HomePage() {
 function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const { setAuthState, setUser } = useAuth();
 
   useEffect(() => {
     // Initialize auth state
@@ -163,19 +165,21 @@ function App() {
       if (error) {
         console.error('Error checking auth state:', error);
       }
-      console.log('Initial auth state:', session ? 'Authenticated' : 'Not authenticated');
       setSession(session);
+      setAuthState(session ? 'Authenticated' : 'Unauthenticated');
+      setUser(session?.user ?? null);
       setIsInitialized(true);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session ? 'Authenticated' : 'Not authenticated');
       setSession(session);
+      setAuthState(session ? 'Authenticated' : 'Unauthenticated');
+      setUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setAuthState, setUser]);
 
   if (!isInitialized) {
     return (

@@ -191,11 +191,15 @@ export function ReviewCyclesPage() {
 
           return {
             id: cycle.id,
+            name: cycle.title,
             title: cycle.title,
-            status: cycle.status as 'active' | 'completed',
+            start_date: cycle.created_at,
+            end_date: cycle.review_by_date,
             review_by_date: cycle.review_by_date,
+            status: cycle.status as 'active' | 'completed' | 'draft',
             created_at: cycle.created_at,
             updated_at: cycle.updated_at,
+            created_by: cycle.user_id,
             user_id: cycle.user_id,
             feedback_requests: validFeedbackRequests,
             _count: {

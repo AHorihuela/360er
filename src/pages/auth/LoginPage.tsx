@@ -79,7 +79,7 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center blur-sm scale-110" 
-        style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&q=80")' }}
+        style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1557682260-96773eb01377?q=80&w=3458&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")' }}
       />
       <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/20" />
       <div className="w-full max-w-md p-8 space-y-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl relative">
