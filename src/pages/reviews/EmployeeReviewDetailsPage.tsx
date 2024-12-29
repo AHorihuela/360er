@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, Copy, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, Copy, Sparkles, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +18,11 @@ import { ReviewCycle, FeedbackRequest } from '@/types/review';
 import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
 import { cn } from '@/lib/utils';
+
+interface AIReport {
+  content: string;
+  created_at: string;
+}
 
 export function EmployeeReviewDetailsPage() {
   const { cycleId, employeeId } = useParams();
@@ -27,11 +33,12 @@ export function EmployeeReviewDetailsPage() {
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [aiReport, setAiReport] = useState('');
+  const [aiReport, setAiReport] = useState<AIReport | null>(null);
   const [generationStep, setGenerationStep] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isReportExpanded, setIsReportExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -124,7 +131,7 @@ export function EmployeeReviewDetailsPage() {
       });
 
       if (request.ai_reports?.[0]?.content) {
-        setAiReport(request.ai_reports[0].content);
+        setAiReport(request.ai_reports[0]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -187,6 +194,8 @@ export function EmployeeReviewDetailsPage() {
     setIsGeneratingReport(true);
     setGenerationStep(0);
     setStartTime(Date.now());
+    // Expand the Report panel if not already expanded
+    setIsReportOpen(true);
     let reportId: string | null = null;
     
     // Start step progression
@@ -253,7 +262,10 @@ export function EmployeeReviewDetailsPage() {
       
       // Force a re-render by creating a new string
       const formattedReport = reportContent.trim();
-      setAiReport(formattedReport);
+      setAiReport({
+        content: formattedReport,
+        created_at: new Date().toISOString()
+      });
       console.log('Set AI report in state');
 
       console.log('Updating report in Supabase...');
@@ -345,7 +357,10 @@ export function EmployeeReviewDetailsPage() {
       .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
       .trim();
     
-    setAiReport(cleanValue);
+    setAiReport({
+      content: cleanValue,
+      created_at: new Date().toISOString()
+    });
     setIsSaving(true);
     debouncedSave(cleanValue);
   }
@@ -411,110 +426,164 @@ export function EmployeeReviewDetailsPage() {
             disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
             className="h-8 text-xs flex items-center gap-1.5"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            {isGeneratingReport ? 'Generating...' : aiReport ? 'Regenerate' : 'Generate'}
+            {isGeneratingReport ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                {aiReport ? 'Regenerate' : 'Generate'}
+              </>
+            )}
           </Button>
+          {isGeneratingReport && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-in fade-in">
+              <Progress 
+                value={((generationStep + 1) / generationSteps.length) * 100} 
+                className="w-32 h-1.5"
+              />
+              <span>{generationSteps[generationStep]}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Report Section */}
-      {aiReport ? (
-        <Card>
-          <CardHeader className="border-b p-4">
-            <div className="flex items-center justify-between">
-              <CardTitle>Report</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsReportExpanded(!isReportExpanded)}
-                className="h-8 w-8"
-              >
-                <ChevronDown className={cn(
-                  "h-5 w-5 transition-transform",
-                  isReportExpanded ? "transform rotate-180" : ""
-                )} />
-              </Button>
-            </div>
-          </CardHeader>
-          {isReportExpanded && (
-            <CardContent className="p-4">
-              <div id="report-content">
-                <div className="flex justify-end mb-4">
-                  {isSaving ? (
-                    <div className="text-sm text-muted-foreground flex items-center">
-                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                      Saving...
+      <div className="space-y-4">
+        <div 
+          onClick={() => setIsReportOpen(!isReportOpen)}
+          className="flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Report</h2>
+          </div>
+          <ChevronDown className={cn("h-5 w-5 transition-transform", isReportOpen && "rotate-180")} />
+        </div>
+
+        {isReportOpen && (
+          <div className="space-y-4">
+            {aiReport ? (
+              <Card>
+                <CardHeader className="border-b p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle>AI-Generated Feedback Report</CardTitle>
+                      <CardDescription>
+                        {aiReport?.created_at ? `Generated ${new Date(aiReport.created_at).toLocaleString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: 'numeric',
+                          hour12: true
+                        })}` : 'Recently generated'}
+                      </CardDescription>
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      All changes saved
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateReport}
+                      disabled={isGeneratingReport}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Regenerate
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="prose prose-gray dark:prose-invert max-w-none">
+                    <MarkdownEditor
+                      value={aiReport.content}
+                      onChange={() => {}} // Read-only, so empty handler
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : isGeneratingReport ? (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-col items-center justify-center space-y-6 py-8">
+                    <div className="w-full max-w-md space-y-4">
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                        <p className="text-lg font-medium text-primary">
+                          {generationSteps[generationStep]}
+                        </p>
+                      </div>
+
+                      <div className="w-full space-y-2">
+                        <Progress 
+                          value={((generationStep + 1) / generationSteps.length) * 100} 
+                          className="h-2"
+                        />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Step {generationStep + 1} of {generationSteps.length}</span>
+                          <span>Time elapsed: {getElapsedTime(startTime)}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground text-center mt-4">
+                        This process typically takes 30-45 seconds to complete.
+                        We're using AI to carefully analyze all feedback and generate comprehensive insights.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="text-center space-y-3 border border-primary/20 rounded-lg p-6 bg-primary/5">
+                <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-base font-semibold">Generate AI-Powered Feedback Report</h3>
+                <p className="text-muted-foreground text-sm">
+                  Create a comprehensive report that analyzes all feedback responses, identifies key themes, and provides actionable insights.
+                </p>
+                <div className="flex flex-col items-center gap-4">
+                  <Button
+                    size="default"
+                    onClick={handleGenerateReport}
+                    disabled={!feedbackRequest?.feedback?.length || isGeneratingReport}
+                    className="mt-2"
+                  >
+                    {isGeneratingReport ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Generate Report
+                      </>
+                    )}
+                  </Button>
+                  
+                  {isGeneratingReport && (
+                    <div className="w-full max-w-sm space-y-2">
+                      <Progress 
+                        value={((generationStep + 1) / generationSteps.length) * 100} 
+                        className="h-1.5"
+                      />
+                      <div className="flex justify-between items-center text-xs text-muted-foreground">
+                        <span>{generationSteps[generationStep]}</span>
+                        <span>Step {generationStep + 1}/{generationSteps.length}</span>
+                      </div>
                     </div>
                   )}
                 </div>
-                <MarkdownEditor
-                  value={aiReport}
-                  onChange={handleReportChange}
-                />
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      ) : isGeneratingReport ? (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col items-center justify-center space-y-6 py-8">
-              <div className="w-full max-w-md space-y-4">
-                <div className="flex flex-col items-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                  <p className="text-lg font-medium text-primary">
-                    {generationSteps[generationStep]}
+                {!feedbackRequest?.feedback?.length && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Waiting for feedback responses before a report can be generated
                   </p>
-                </div>
-
-                <div className="w-full space-y-2">
-                  <Progress 
-                    value={((generationStep + 1) / generationSteps.length) * 100} 
-                    className="h-2"
-                  />
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Step {generationStep + 1} of {generationSteps.length}</span>
-                    <span>Time elapsed: {getElapsedTime(startTime)}</span>
-                  </div>
-                </div>
-
-                <p className="text-sm text-muted-foreground text-center mt-4">
-                  This process typically takes 30-45 seconds to complete.
-                  We're using AI to carefully analyze all feedback and generate comprehensive insights.
-                </p>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="text-center space-y-3 border border-primary/20 rounded-lg p-6 bg-primary/5">
-          <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
-            <FileText className="h-6 w-6 text-primary" />
+            )}
           </div>
-          <h3 className="text-base font-semibold">Generate AI-Powered Feedback Report</h3>
-          <p className="text-muted-foreground text-sm">
-            Create a comprehensive report that analyzes all feedback responses, identifies key themes, and provides actionable insights.
-          </p>
-          <Button
-            size="default"
-            onClick={handleGenerateReport}
-            disabled={!feedbackRequest?.feedback?.length}
-            className="mt-2"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-          {!feedbackRequest?.feedback?.length && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Waiting for feedback responses before a report can be generated
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Overview and Feedback Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
