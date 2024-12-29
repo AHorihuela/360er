@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, ChevronUp, FileDown, Copy, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, Copy, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -15,8 +15,6 @@ import { Progress } from "@/components/ui/progress";
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
 import { ReviewCycle, FeedbackRequest } from '@/types/review';
 import { generateAIReport } from '@/lib/openai';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { debounce } from 'lodash';
 import { cn } from '@/lib/utils';
 
@@ -302,31 +300,6 @@ export function EmployeeReviewDetailsPage() {
       setIsGeneratingReport(false);
       setGenerationStep(0);
       setStartTime(null);
-    }
-  }
-
-  async function handleExportPDF() {
-    const reportContent = document.getElementById('report-content');
-    if (!reportContent) return;
-
-    try {
-      const canvas = await html2canvas(reportContent);
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`${feedbackRequest?.employee?.name}_360_Report.pdf`);
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to export report as PDF",
-        variant: "destructive",
-      });
     }
   }
 

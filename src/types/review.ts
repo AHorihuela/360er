@@ -67,6 +67,14 @@ export interface FeedbackRequest {
     strengths: string | null;
     areas_for_improvement: string | null;
   }>;
+  feedback_responses?: Array<{
+    id: string;
+    status: string;
+    submitted_at: string;
+    relationship: string;
+    strengths: string | null;
+    areas_for_improvement: string | null;
+  }>;
   _count?: {
     responses: number;
     page_views?: number;
@@ -75,14 +83,16 @@ export interface FeedbackRequest {
   review_cycle?: ReviewCycle;
 }
 
-export interface FeedbackResponse extends TimestampValidation {
+export interface FeedbackResponse {
   id: string;
-  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
+  status: string;
+  submitted_at: string;
+  relationship: string;
   strengths: string | null;
   areas_for_improvement: string | null;
-  overall_rating: number;
-  feedback_request_id: string;
-  submitted_at: string;
+  overall_rating?: number;
+  feedback_request_id?: string;
+  created_at?: string;
 }
 
 export interface CreateReviewCycleInput {

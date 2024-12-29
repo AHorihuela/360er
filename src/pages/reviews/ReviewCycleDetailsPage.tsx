@@ -2,39 +2,32 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Plus, Trash2, Loader2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS } from '@/types/review';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-function determineRequestStatus(
-  responseCount: number,
-  targetResponses: number,
-  manuallyCompleted: boolean
-): typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS] {
-  if (manuallyCompleted) return REQUEST_STATUS.COMPLETED;
-  if (responseCount === 0) return REQUEST_STATUS.PENDING;
-  if (responseCount < targetResponses) return REQUEST_STATUS.IN_PROGRESS;
-  if (responseCount === targetResponses) return REQUEST_STATUS.COMPLETED;
-  return REQUEST_STATUS.EXCEEDED;
+function determineRequestStatus(request: FeedbackRequest): string {
+  if (!request.target_responses) return REQUEST_STATUS.PENDING;
+  if (request._count?.responses === 0) return REQUEST_STATUS.PENDING;
+  if (request._count?.responses === request.target_responses) return REQUEST_STATUS.COMPLETED;
+  if (request._count?.responses && request._count.responses > 0) return REQUEST_STATUS.IN_PROGRESS;
+  return REQUEST_STATUS.PENDING;
 }
 
 export function ReviewCycleDetailsPage() {
@@ -95,9 +88,7 @@ export function ReviewCycleDetailsPage() {
       const processedRequests = cycleData.feedback_requests.map((request: any) => {
         const responseCount = request.feedback_responses?.length || 0;
         const status = determineRequestStatus(
-          responseCount,
-          request.target_responses,
-          request.manually_completed
+          request
         );
 
         return {
@@ -183,12 +174,6 @@ export function ReviewCycleDetailsPage() {
       default:
         return 'outline';
     }
-  }
-
-  function getStatusText(request: FeedbackRequest) {
-    const count = request._count?.responses || 0;
-    const target = request.target_responses;
-    return `${count}/${target} responses`;
   }
 
   async function fetchAvailableEmployees() {

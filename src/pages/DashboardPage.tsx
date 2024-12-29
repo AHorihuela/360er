@@ -293,7 +293,8 @@ export function DashboardPage(): JSX.Element {
       {/* Active Review Cycle Progress */}
       {activeReviewCycle && (
         <Card 
-          className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10"
+          onClick={() => navigate(`/reviews/${activeReviewCycle.id}`)}
+          className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
         >
           <CardHeader>
             <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
