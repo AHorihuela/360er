@@ -51,6 +51,7 @@
     "framer-motion": "^11.15.0",
     "gsap": "^3.12.5",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.10.2",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.323.0",
     "markdown-it": "^14.1.0",
