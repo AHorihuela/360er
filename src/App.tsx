@@ -15,8 +15,9 @@ import { Toaster } from './components/ui/toaster';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { getVersion } from './lib/version';
-import { Trophy, Target, LineChart } from 'lucide-react';
+import { Trophy, Target, LineChart, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { FeedbackViz } from '@/components/FeedbackViz';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ function HomePage() {
       {/* Navigation */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
         <div className="container mx-auto flex h-14 items-center justify-between">
-          <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             Squad360
           </span>
           <Button 
@@ -58,84 +59,277 @@ function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="flex-1">
-        <div className="container mx-auto grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-2 items-center gap-8 py-8">
-          <div className="space-y-6">
-            <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-[1.2] pb-1">
-              Transform peer feedback into actionable insights
-            </h1>
-            <p className="text-xl text-muted-foreground dark:text-gray-400">
-              Harness the power of AI to collect, analyze, and deliver meaningful feedback that drives professional growth.
-            </p>
-            <div className="flex gap-4">
+      <section className="flex-1 relative overflow-hidden">
+        {/* Original background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5" />
+        
+        {/* Background animation with reduced opacity */}
+        <div className="absolute inset-0 opacity-100">
+          <FeedbackViz />
+        </div>
+        
+        {/* Content */}
+        <div className="container max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8 py-8 relative">
+          {/* Left column - Content */}
+          <div className="flex-1 space-y-8 pt-12 lg:pt-24">
+            <div className="inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium bg-background/80 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer">
+              <span className="relative flex h-2 w-2 mr-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+              </span>
+              Now with AI-powered insights
+            </div>
+            <div className="space-y-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
+                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">Transform peer feedback into growth</span>
+              </h1>
+              <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
+                Collect, analyze, and deliver meaningful 360° feedback that drives professional development using AI-powered insights.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button 
                 size="lg" 
                 onClick={() => navigate('/login')}
-                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-12 px-8"
               >
-                Get Started
+                Get Started for Free
               </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-primary text-primary hover:bg-primary/10 transition-all duration-300"
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="border-primary text-primary hover:bg-primary/10 transition-all duration-300 bg-background/80 backdrop-blur-sm h-12 px-8"
               >
-                Learn More
+                See How It Works
               </Button>
             </div>
+            <div className="flex flex-wrap items-center gap-6 sm:gap-8 text-sm text-muted-foreground pt-4">
+              <div className="flex items-center gap-2 hover:text-primary transition-colors">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                100% Anonymous
+              </div>
+              <div className="flex items-center gap-2 hover:text-primary transition-colors">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Free to Use
+              </div>
+              <div className="flex items-center gap-2 hover:text-primary transition-colors">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                AI-Powered Insights
+              </div>
+            </div>
           </div>
-          <div className="hidden lg:block relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-lg dark:from-primary/10 dark:via-secondary/10 dark:to-accent/10" />
-            <div className="aspect-square rounded-lg bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/10 shadow-xl dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+
+          {/* Right column - Empty space for animation to show through */}
+          <div className="flex-1 h-[600px]" />
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="border-t bg-background">
+        <div className="container mx-auto py-24">
+          <div className="text-center space-y-4 mb-24">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">How It Works</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Get started with Squad360 in four simple steps
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Connecting Line */}
+            <div className="hidden md:block absolute top-[45px] left-[10%] right-[10%] h-0.5 bg-primary/10 -z-10" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-6 relative">
+              {/* Step 1 */}
+              <div className="relative group">
+                <div className="absolute -inset-4 rounded-lg bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-6">
+                  <div className="relative flex justify-center">
+                    <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
+                      <div className="absolute inset-0 rounded-full bg-primary/5" />
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                        1
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Create Account</h3>
+                    <p className="text-muted-foreground">
+                      Sign up in seconds with your work email - no credit card required
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="relative group">
+                <div className="absolute -inset-4 rounded-lg bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-6">
+                  <div className="relative flex justify-center">
+                    <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
+                      <div className="absolute inset-0 rounded-full bg-primary/5" />
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                        2
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Add Your Team</h3>
+                    <p className="text-muted-foreground">
+                      Create review cycles and add team members to collect feedback from
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="relative group">
+                <div className="absolute -inset-4 rounded-lg bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-6">
+                  <div className="relative flex justify-center">
+                    <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
+                      <div className="absolute inset-0 rounded-full bg-primary/5" />
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                        3
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Gather Feedback</h3>
+                    <p className="text-muted-foreground">
+                      Share anonymous feedback links with peers, reports, and managers
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="relative group">
+                <div className="absolute -inset-4 rounded-lg bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative space-y-6">
+                  <div className="relative flex justify-center">
+                    <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
+                      <div className="absolute inset-0 rounded-full bg-primary/5" />
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                        4
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Get Insights</h3>
+                    <p className="text-muted-foreground">
+                      Receive AI-powered analysis and actionable insights from feedback
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA after steps */}
+          <div className="text-center mt-16">
+            <Button
+              size="lg"
+              onClick={() => navigate('/login')}
+              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-12 px-8"
+            >
+              Get Started Now
+            </Button>
+            <p className="text-muted-foreground mt-4">
+              Start collecting feedback in minutes • 100% anonymous
+            </p>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="border-t bg-muted/50 dark:bg-gray-900">
+      <section id="features" className="border-t bg-background">
         <div className="container mx-auto py-24 space-y-16">
-          <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
-            Built for High-Performance Teams
-          </h2>
-          <div className="grid gap-12 md:grid-cols-3">
-            {/* AI-Enhanced Reviews */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-primary/10">
+          {/* Main Features */}
+          <div className="text-center space-y-4 mb-24">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Built for High-Performance Teams</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Get the insights you need to build stronger teams and drive better performance
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* AI-Powered Insights */}
+            <div className="group relative rounded-xl border bg-gradient-to-b from-background to-muted/50 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
                   <LineChart className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-primary">Game-Changing AI Analysis</h3>
+                <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">AI-Powered Insights</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Get AI-powered insights on performance across key competencies, identifying patterns and trends in feedback data.
+                </p>
               </div>
-              <p className="text-muted-foreground">
-                Get AI-powered insights on your performance across key competencies, just like pro sports analytics.
-              </p>
             </div>
 
-            {/* Team-First Feedback */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-secondary/10">
-                  <Trophy className="h-6 w-6 text-secondary" />
+            {/* Actionable Feedback */}
+            <div className="group relative rounded-xl border bg-gradient-to-b from-background to-muted/50 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Target className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-secondary">Squad-First Feedback</h3>
+                <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">Actionable Feedback</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Transform qualitative feedback into concrete action items and development opportunities.
+                </p>
               </div>
-              <p className="text-muted-foreground">
-                Foster honest communication through anonymous feedback from your squad members, building trust like championship teams.
-              </p>
             </div>
 
             {/* Growth Tracking */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-accent/10">
-                  <Target className="h-6 w-6 text-accent" />
+            <div className="group relative rounded-xl border bg-gradient-to-b from-background to-muted/50 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Trophy className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-accent">Performance Tracking</h3>
+                <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">Growth Tracking</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Monitor progress over time with detailed performance metrics and improvement tracking.
+                </p>
               </div>
-              <p className="text-muted-foreground">
-                Track your progress like an athlete, measuring growth across review cycles to reach your peak potential.
-              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="border-t bg-background">
+        <div className="container mx-auto py-24">
+          <div className="relative rounded-lg overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 blur-xl" />
+            <div className="relative bg-background/80 backdrop-blur-sm rounded-lg p-8 md:p-12">
+              <div className="mx-auto max-w-2xl text-center space-y-8">
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                  Ready to transform your team's feedback?
+                </h2>
+                <p className="text-lg text-muted-foreground">
+                  Join forward-thinking teams using Squad360 to drive professional growth and development.
+                </p>
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <Button 
+                    size="lg" 
+                    onClick={() => navigate('/login')}
+                    className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
+                  >
+                    Get Started for Free
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => window.open('mailto:support@squad360.com')}
+                    className="border-primary text-primary hover:bg-primary/10 transition-all duration-300"
+                  >
+                    Contact Sales
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

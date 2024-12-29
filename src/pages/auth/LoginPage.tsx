@@ -1,25 +1,20 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/components/ui/use-toast";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { FeedbackViz } from '@/components/FeedbackViz';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [view, setView] = useState<'signIn' | 'signUp' | 'forgotPassword'>('signIn');
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate('/dashboard');
       }
+      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -31,148 +26,57 @@ export function LoginPage() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      let response;
-
-      if (view === 'signIn') {
-        response = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-      } else if (view === 'signUp') {
-        response = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-        });
-      } else {
-        response = await supabase.auth.resetPasswordForEmail(formData.email);
-        toast({
-          title: "Check your email",
-          description: "We've sent you a password reset link.",
-        });
-      }
-
-      if (response.error) throw response.error;
-      
-      if (view === 'signUp') {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link.",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div 
-        className="absolute inset-0 bg-cover bg-center blur-sm scale-110" 
-        style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1557682260-96773eb01377?q=80&w=3458&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")' }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/20" />
-      <div className="w-full max-w-md p-8 space-y-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl relative">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Welcome back to Squad360
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Enter your email to sign in to your account
-          </p>
-        </div>
+    <div className="flex min-h-screen flex-col relative overflow-hidden">
+      {/* Original background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5" />
+      
+      {/* Background animation */}
+      <div className="absolute inset-0">
+        <FeedbackViz />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email address</label>
-            <Input 
-              type="email" 
-              placeholder="name@fubo.tv"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              required 
-            />
-          </div>
-          
-          {view !== 'forgotPassword' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
-              <Input 
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
-            </div>
-          )}
-
-          <Button 
-            type="submit"
-            className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary-dark hover:to-secondary-dark transition-all duration-300"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 
-             view === 'signIn' ? 'Sign in' : 
-             view === 'signUp' ? 'Create account' : 
-             'Reset password'}
-          </Button>
-
+      {/* Content */}
+      <div className="container relative mx-auto flex flex-1 items-center justify-center">
+        <div className="w-full max-w-md space-y-6 bg-background/95 backdrop-blur-sm p-8 rounded-lg border shadow-lg">
           <div className="space-y-2 text-center">
-            {view === 'signIn' ? (
-              <>
-                <button 
-                  type="button"
-                  onClick={() => setView('forgotPassword')}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot your password?
-                </button>
-                <div className="text-sm text-muted-foreground">
-                  New to Squad360?{" "}
-                  <button 
-                    type="button"
-                    onClick={() => setView('signUp')}
-                    className="text-primary hover:underline"
-                  >
-                    Create an account
-                  </button>
-                </div>
-              </>
-            ) : view === 'signUp' ? (
-              <div className="text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <button 
-                  type="button"
-                  onClick={() => setView('signIn')}
-                  className="text-primary hover:underline"
-                >
-                  Sign in
-                </button>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Remember your password?{" "}
-                <button 
-                  type="button"
-                  onClick={() => setView('signIn')}
-                  className="text-primary hover:underline"
-                >
-                  Sign in
-                </button>
-              </div>
-            )}
+            <h1 className="text-2xl font-bold">Welcome to Squad360</h1>
+            <p className="text-muted-foreground">Sign in to your account to continue</p>
           </div>
-        </form>
+
+          <Auth
+            supabaseClient={supabase}
+            appearance={{
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: 'rgb(var(--primary))',
+                    brandAccent: 'rgb(var(--primary))',
+                  },
+                },
+              },
+              className: {
+                container: 'space-y-4',
+                button: '!bg-primary hover:!bg-primary/90',
+                anchor: 'text-primary hover:text-primary/90',
+                label: 'text-foreground',
+                input: 'bg-background border-input',
+                divider: 'bg-border',
+              },
+            }}
+            providers={[]}
+            redirectTo={`${window.location.origin}/auth/callback`}
+          />
+        </div>
       </div>
     </div>
   );
