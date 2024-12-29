@@ -43,76 +43,86 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Button
-              variant="ghost"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </Button>
-            <Link to="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                Squad360
-              </span>
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link
-                to="/dashboard"
-                className={`text-sm font-medium ${location.pathname === '/dashboard' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="flex flex-1 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
-                <LayoutDashboard className="h-4 w-4 inline-block mr-1" />
-                Dashboard
+                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+              <Link to="/" className="flex items-center gap-2">
+                <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                  Squad360
+                </span>
               </Link>
-              <Link
-                to="/employees"
-                className={`text-sm font-medium ${location.pathname === '/employees' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Users className="h-4 w-4 inline-block mr-1" />
-                Employees
-              </Link>
-              <Link
-                to="/reviews"
-                className={`text-sm font-medium ${location.pathname === '/reviews' ? 'text-primary dark:text-primary-light' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <ClipboardList className="h-4 w-4 inline-block mr-1" />
-                Reviews
-              </Link>
+            </div>
+            <nav className="hidden md:flex items-center gap-6">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
+                    isActive(item.path) ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              ))}
             </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{userEmail}</span>
-            <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:block text-sm text-muted-foreground">{userEmail}</span>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleSignOut}
+                className="hidden md:flex"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 top-14 z-50 bg-background md:hidden">
-          <nav className="container grid gap-2 p-4">
+        <div className="fixed inset-0 top-14 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
+          <nav className="container grid gap-1 p-4">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center space-x-2 rounded-md p-2 text-sm transition-colors hover:bg-muted",
-                  isActive(item.path) ? "bg-muted font-medium" : "text-muted-foreground"
+                  "flex items-center gap-2 rounded-md p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  isActive(item.path) 
+                    ? "bg-accent text-accent-foreground" 
+                    : "text-muted-foreground"
                 )}
               >
                 {item.icon}
                 <span>{item.label}</span>
               </Link>
             ))}
-            {userEmail && (
-              <Button variant="ghost" className="justify-start" onClick={handleSignOut}>
+            <div className="mt-4 pt-4 border-t">
+              <div className="text-sm text-muted-foreground mb-2">{userEmail}</div>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start" 
+                onClick={handleSignOut}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </Button>
-            )}
+            </div>
           </nav>
         </div>
       )}
@@ -123,7 +133,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       <footer className="mt-auto border-t">
         <div className="container flex h-14 items-center justify-between text-sm text-muted-foreground">
-          <span>© 2024 360° Feedback. All rights reserved.</span>
+          <span>© 2024 Squad360. All rights reserved.</span>
           <span className="text-xs">{getVersion()}</span>
         </div>
       </footer>

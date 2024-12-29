@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 function determineRequestStatus(
   responseCount: number,
@@ -346,110 +347,183 @@ export function ReviewCycleDetailsPage() {
   if (!reviewCycle) return null;
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button 
             onClick={() => navigate('/reviews')}
-            variant="gradient"
+            variant="ghost"
             size="icon"
+            className="h-10 w-10 shrink-0"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{reviewCycle?.title}</h1>
-            <p className="text-muted-foreground">Due {new Date(reviewCycle?.review_by_date || '').toLocaleDateString()}</p>
+            <p className="text-muted-foreground text-sm">Due {new Date(reviewCycle?.review_by_date || '').toLocaleDateString()}</p>
           </div>
         </div>
-        <Button onClick={() => setShowAddEmployeesDialog(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
+        <Button 
+          onClick={() => setShowAddEmployeesDialog(true)}
+          className="w-full sm:w-auto gap-2"
+        >
+          <UserPlus className="h-4 w-4" />
           Add Employees
         </Button>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {feedbackRequests.map((request) => (
+          <Card 
+            key={request.id}
+            className="group cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => navigate(`/reviews/${cycleId}/employee/${request.employee_id}`)}
+          >
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="text-sm">
+                    {request.employee?.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm truncate">{request.employee?.name}</h3>
+                  <p className="text-xs text-muted-foreground truncate">{request.employee?.role}</p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Completion</span>
+                      <span className="font-medium">
+                        {Math.round(((request._count?.responses || 0) / request.target_responses) * 100)}%
+                      </span>
+                    </div>
+                    <Progress 
+                      value={((request._count?.responses || 0) / request.target_responses) * 100} 
+                      className="h-1.5"
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge 
+                        variant={getStatusBadgeVariant(request)}
+                        className="text-xs px-1.5 h-5"
+                      >
+                        {request._count?.responses || 0}/{request.target_responses}
+                      </Badge>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyLink(request.unique_link);
+                          }}
+                          className="h-7 px-2"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveEmployee(request.id);
+                          }}
+                          disabled={removingEmployeeId === request.id}
+                          className="h-7 px-2 text-destructive hover:text-destructive-foreground"
+                        >
+                          {removingEmployeeId === request.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Dialog open={showAddEmployeesDialog} onOpenChange={setShowAddEmployeesDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add Employees to Review</DialogTitle>
-            <DialogDescription>
-              Select employees to add to this review cycle or create a new employee.
-            </DialogDescription>
+        <DialogContent className="max-w-[400px] p-0 gap-0">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle>Add Employees</DialogTitle>
           </DialogHeader>
 
           {showNewEmployeeForm ? (
-            <form onSubmit={handleCreateEmployee} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
+            <div className="p-4 space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Name</Label>
                 <Input
+                  id="name"
                   value={newEmployee.name}
-                  onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Employee name"
-                  required
+                  onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                  placeholder="John Doe"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Role</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="role">Role</Label>
                 <Input
+                  id="role"
                   value={newEmployee.role}
-                  onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
-                  placeholder="Employee role"
-                  required
+                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                  placeholder="Software Engineer"
                 />
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button
-                  type="button"
                   variant="outline"
                   onClick={() => setShowNewEmployeeForm(false)}
+                  className="flex-1"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isAddingEmployees}>
-                  {isAddingEmployees ? 'Adding...' : 'Add Employee'}
+                <Button onClick={handleCreateEmployee} className="flex-1">
+                  Create
                 </Button>
               </div>
-            </form>
+            </div>
           ) : isFetchingEmployees ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : availableEmployees.length > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
                 {availableEmployees.map(employee => (
                   <div
                     key={employee.id}
-                    className={`
-                      relative rounded-lg border p-4 cursor-pointer transition-colors
-                      ${selectedEmployeeIds.has(employee.id) 
-                        ? 'border-primary bg-primary/5' 
-                        : 'hover:border-primary/50'
-                      }
-                    `}
+                    className={cn(
+                      "relative rounded-lg border p-3 cursor-pointer transition-colors",
+                      selectedEmployeeIds.has(employee.id) 
+                        ? "border-primary bg-primary/5" 
+                        : "hover:border-primary/50"
+                    )}
                     onClick={() => toggleEmployeeSelection(employee.id)}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={selectedEmployeeIds.has(employee.id)}
                         onChange={() => toggleEmployeeSelection(employee.id)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
                       <div>
-                        <h3 className="font-medium">{employee.name}</h3>
-                        <p className="text-sm text-muted-foreground">{employee.role}</p>
+                        <h3 className="font-medium text-sm">{employee.name}</h3>
+                        <p className="text-xs text-muted-foreground">{employee.role}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowNewEmployeeForm(true)}
                 >
-                  Create New Employee
+                  Create New
                 </Button>
                 <Button
                   onClick={handleAddEmployees}
@@ -462,100 +536,25 @@ export function ReviewCycleDetailsPage() {
                     </>
                   ) : (
                     <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Selected ({selectedEmployeeIds.size})
+                      Add ({selectedEmployeeIds.size})
                     </>
                   )}
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <p className="text-center text-muted-foreground">
-                No employees available to add to this review cycle.
-              </p>
-              <div className="flex justify-center">
-                <Button onClick={() => setShowNewEmployeeForm(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New Employee
-                </Button>
-              </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-muted-foreground text-center">No employees available</p>
+              <Button
+                onClick={() => setShowNewEmployeeForm(true)}
+                className="w-full"
+              >
+                Create New Employee
+              </Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {feedbackRequests.map((request) => (
-          <Card 
-            key={request.id}
-            className="group cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => navigate(`/reviews/${cycleId}/employee/${request.employee_id}`)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {request.employee?.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{request.employee?.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{request.employee?.role}</p>
-                  </div>
-                </div>
-                <Badge variant={getStatusBadgeVariant(request)}>
-                  {getStatusText(request)}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between text-sm">
-                  <span>Completion</span>
-                  <span>
-                    {Math.round(((request._count?.responses || 0) / request.target_responses) * 100)}%
-                  </span>
-                </div>
-                <Progress 
-                  value={((request._count?.responses || 0) / request.target_responses) * 100} 
-                  className="h-2"
-                />
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyLink(request.unique_link);
-                    }}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy Link
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveEmployee(request.id);
-                    }}
-                    disabled={removingEmployeeId === request.id}
-                    className="text-destructive hover:text-destructive-foreground"
-                  >
-                    {removingEmployeeId === request.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 } 

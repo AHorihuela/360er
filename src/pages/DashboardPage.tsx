@@ -259,30 +259,30 @@ export function DashboardPage(): JSX.Element {
 
   // Show regular dashboard for existing users
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
       {/* Header with Active Review Cycle */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             {activeReviewCycle 
               ? `Current Review Cycle: ${activeReviewCycle.title}`
               : 'No active review cycle'}
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           {activeReviewCycle && (
             <Button
               onClick={() => navigate(`/reviews/${activeReviewCycle.id}`)}
               variant="outline"
-              className="hover:bg-black hover:text-white transition-all duration-300"
+              className="w-full sm:w-auto hover:bg-black hover:text-white transition-all duration-300"
             >
               View Current Cycle <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           )}
           <Button
             onClick={() => navigate('/reviews/new-cycle')}
-            className="bg-black hover:bg-black/90 text-white transition-all duration-300"
+            className="w-full sm:w-auto bg-black hover:bg-black/90 text-white transition-all duration-300"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             New Review Cycle
@@ -296,7 +296,7 @@ export function DashboardPage(): JSX.Element {
           className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10"
         >
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <span>{activeReviewCycle.title}</span>
               <span className="text-sm font-normal text-muted-foreground">
                 Due {new Date(activeReviewCycle.review_by_date).toLocaleDateString()}
@@ -313,7 +313,7 @@ export function DashboardPage(): JSX.Element {
               </div>
               <Progress 
                 value={(activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100} 
-                className="h-2"
+                className="h-3"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{activeReviewCycle.completed_requests} reviews completed</span>
@@ -328,7 +328,7 @@ export function DashboardPage(): JSX.Element {
       {employees.filter(e => e.total_reviews > 0).length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Current Cycle Employees</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {employees
               .filter(e => e.total_reviews > 0)
               .map((employee) => (
@@ -337,22 +337,22 @@ export function DashboardPage(): JSX.Element {
                   className="hover:shadow-lg transition-all duration-300 cursor-pointer"
                   onClick={() => navigate(`/reviews/${activeReviewCycle?.id}/employee/${employee.id}`)}
                 >
-                  <CardContent className="pt-6">
+                  <CardContent className="pt-4 sm:pt-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <Avatar>
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                           <AvatarFallback>
                             {employee.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold">{employee.name}</h3>
-                          <p className="text-sm text-muted-foreground">{employee.role}</p>
+                          <h3 className="font-semibold text-sm sm:text-base">{employee.name}</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">{employee.role}</p>
                         </div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs sm:text-sm">
                         <span>Feedback Progress</span>
                         <span className="font-medium">
                           {Math.round((employee.completed_reviews / employee.total_reviews) * 100)}%
@@ -360,7 +360,7 @@ export function DashboardPage(): JSX.Element {
                       </div>
                       <Progress 
                         value={(employee.completed_reviews / employee.total_reviews) * 100} 
-                        className="h-2"
+                        className="h-2 sm:h-3"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{employee.completed_reviews} of {employee.total_reviews} responses</span>

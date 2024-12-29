@@ -238,6 +238,8 @@ export function EmployeesPage() {
 
   async function handleDelete(id: string): Promise<void> {
     try {
+      if (!confirm('Are you sure you want to delete this employee? This will permanently delete the employee and all associated feedback requests.')) return;
+
       setIsDeleteLoading(true);
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();

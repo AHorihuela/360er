@@ -118,8 +118,6 @@ Rules:
 ## Development Workflow
 - Use proper version control
 - Implement proper code review process
-- Test in multiple environments
-- Follow semantic versioning for releases
 - Maintain changelog 
 
 ## SQL Code Style
@@ -130,34 +128,42 @@ Rules:
 - Break complex queries into multiple lines for readability
 - Add comments to explain complex operations
 
-## Supabase RLS Rules
+## Supabase and Database Rules
 - When creating RLS policies for anonymous access:
   1. Always check unique_link IS NOT NULL for feedback request access
   2. Grant both table permissions (GRANT) AND create RLS policies
   3. Check all dependent tables in policies (e.g., review_cycles for dates)
   4. Test both positive and negative cases after policy changes
   5. Keep existing working policies until new ones are verified
-
-## Common Mistakes to Avoid
-- Don't remove unique_link check from feedback request policies
-- Don't forget to GRANT SELECT on tables referenced in policy checks
 - Don't enable RLS without corresponding policies (causes lockout)
-- Don't modify policies without checking dependent tables
-- When querying related tables (e.g., employees, review_cycles), ensure anonymous access is granted if needed
-- Avoid overlapping policies for the same operation - each operation should have one clear policy
-- Always review ALL existing policies before making changes to avoid unintended side effects
-- Don't forget to update version number in footer with deployments
+- When querying related tables, ensure anonymous access is granted if needed
+- Avoid overlapping policies for the same operation
+
+## Data Flow and Type Safety
+- Never rename properties that come directly from database queries without updating all dependent code
+- When modifying data structures, verify the complete data flow from database to UI
+- Keep property names consistent between database fields and TypeScript types
+- Before changing any property used in calculations (like progress bars), verify all places where it's used
+- When working with arrays (like feedback_responses), always check both the array and its length accessor
+- Document any property renames in comments to make the data flow clear
 
 ## Debugging Protocol
 When encountering issues, request the following if not already provided:
 1. Full error message and stack trace from console
-2. Network tab details for failed requests (status, headers, response)
+2. Network tab details for failed requests
 3. Current state of relevant database tables
 4. Screenshots of the UI state when error occurs
 5. Steps to reproduce the error
-6. Full list of existing RLS policies for ALL affected tables before making changes
 
-For Supabase specific issues, also check:
+For data flow issues:
+1. Check the Supabase query structure
+2. Verify property names match between database and code
+3. Check TypeScript types match the actual data shape
+4. Look for any property renames in data processing
+5. Verify calculations use the correct property names
+6. Test with both empty and populated data states
+
+For Supabase specific issues:
 1. RLS policy effectiveness with `auth.uid()` checks
 2. Table permissions via `GRANT` listings
 3. Policy definitions with `\d tablename`
@@ -167,10 +173,9 @@ For Supabase specific issues, also check:
 ## Version Control
 - Update version number in `src/lib/version.ts` with every deployment
 - Version format: v{major}.{minor}.{patch} (e.g., v0.1.0)
-- Major: Breaking changes
-- Minor: New features
-- Patch: Bug fixes and small improvements
-- Version number must be visible in the footer of every page
+  - Major: Breaking changes
+  - Minor: New features
+  - Patch: Bug fixes and small improvements
 
 ## Hosting and Deployment
 - Project is hosted on Vercel (https://vercel.com/ahorihuelas-projects/squad360)
@@ -262,20 +267,3 @@ After deploying:
    - Anonymous feedback links
 4. Monitor Supabase logs for database issues
 5. Check environment variables are properly set
-
-### Rollback Process
-If deployment fails:
-1. View deployment on Vercel dashboard
-2. Click "View Build Logs" to identify issue
-3. If needed, rollback to previous deployment:
-   ```bash
-   vercel rollback
-   ```
-4. Verify rollback succeeded
-5. Fix issues locally before attempting new deployment
-
-### Monitoring
-- Vercel Analytics Dashboard
-- Supabase Database Health
-- Error Tracking via Console Logs
-- Performance Metrics in Vercel Dashboard

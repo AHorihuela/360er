@@ -170,16 +170,16 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
           <span 
             contentEditable={false}
             suppressContentEditableWarning
-            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 z-[9999] invisible group-hover:visible"
+            className="pointer-events-none fixed sm:absolute left-4 sm:left-1/2 right-4 sm:right-auto bottom-4 sm:bottom-[calc(100%+8px)] -translate-x-0 sm:-translate-x-1/2 z-[9999] invisible group-hover:visible"
           >
-            <span className="relative flex flex-col items-center min-w-[300px]">
+            <span className="relative flex flex-col items-center min-w-[200px] sm:min-w-[300px]">
               <span className="bg-slate-800 text-white text-sm rounded-lg p-4 whitespace-normal shadow-xl w-full">
                 <span className="font-semibold mb-2 block border-b border-slate-600 pb-2">
                   {leaf.highlight.category.charAt(0).toUpperCase() + leaf.highlight.category.slice(1)}
                 </span>
                 {leaf.highlight.suggestion}
               </span>
-              <span className="border-[8px] border-transparent border-t-slate-800 -mt-[1px]" />
+              <span className="hidden sm:block border-[8px] border-transparent border-t-slate-800 -mt-[1px]" />
             </span>
           </span>
         </span>

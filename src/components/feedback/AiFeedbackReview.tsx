@@ -333,8 +333,8 @@ ${feedbackData.areas_for_improvement}`
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>AI Feedback Review</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle className="text-lg sm:text-xl">AI Feedback Review</CardTitle>
           {aiResponse && (
             <Badge 
               className={qualityColors[aiResponse.overallQuality]}
@@ -346,7 +346,7 @@ ${feedbackData.areas_for_improvement}`
           )}
         </div>
         {aiResponse && (
-          <CardDescription className="text-gray-700 text-base leading-relaxed mt-2">
+          <CardDescription className="text-sm sm:text-base text-gray-700 leading-relaxed mt-2">
             {aiResponse.summary}
           </CardDescription>
         )}
@@ -354,15 +354,15 @@ ${feedbackData.areas_for_improvement}`
       
       <CardContent>
         {analysisError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 sm:p-4 space-y-2">
             <div className="flex items-center space-x-2">
               <Badge variant="destructive">Error</Badge>
-              <span className="text-sm font-medium text-red-800">Analysis Failed</span>
+              <span className="text-xs sm:text-sm font-medium text-red-800">Analysis Failed</span>
             </div>
-            <p className="text-sm text-red-700">
+            <p className="text-xs sm:text-sm text-red-700">
               {analysisError}
             </p>
-            <p className="text-sm text-red-600">
+            <p className="text-xs sm:text-sm text-red-600">
               You can still submit your feedback, or try analyzing again.
             </p>
           </div>
@@ -371,14 +371,14 @@ ${feedbackData.areas_for_improvement}`
         {aiResponse && (
           <Tabs defaultValue="edit" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="edit">Edit & Preview</TabsTrigger>
-              <TabsTrigger value="suggestions">AI Suggestions</TabsTrigger>
+              <TabsTrigger value="edit" className="text-xs sm:text-sm">Edit & Preview</TabsTrigger>
+              <TabsTrigger value="suggestions" className="text-xs sm:text-sm">AI Suggestions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="edit" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-sm mb-2">Strengths</h4>
+                  <h4 className="text-sm sm:text-base font-medium mb-2">Strengths</h4>
                   <RichTextEditor
                     value={feedbackData.strengths}
                     onChange={(value) => onFeedbackChange?.('strengths', value)}
@@ -392,7 +392,7 @@ ${feedbackData.areas_for_improvement}`
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-sm mb-2">Areas for Improvement</h4>
+                  <h4 className="text-sm sm:text-base font-medium mb-2">Areas for Improvement</h4>
                   <RichTextEditor
                     value={feedbackData.areas_for_improvement}
                     onChange={(value) => onFeedbackChange?.('areas_for_improvement', value)}
@@ -408,22 +408,22 @@ ${feedbackData.areas_for_improvement}`
             </TabsContent>
 
             <TabsContent value="suggestions" className="mt-4">
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Critical Suggestions */}
-          <div className="space-y-3">
-                  <h4 className="font-medium text-sm">Critical Improvements Needed</h4>
+                <div className="space-y-2 sm:space-y-3">
+                  <h4 className="text-sm sm:text-base font-medium">Critical Improvements Needed</h4>
                   {aiResponse.suggestions
                     .filter(s => s.type === 'critical')
                     .map((suggestion, index) => (
-                      <div key={index} className="rounded-lg border bg-red-50 p-4 space-y-2">
+                      <div key={index} className="rounded-lg border bg-red-50 p-3 sm:p-4 space-y-2">
                         <div className="flex items-center space-x-2">
-                          <Badge variant="destructive">
-                    {categoryLabels[suggestion.category]}
-                  </Badge>
+                          <Badge variant="destructive" className="text-xs">
+                            {categoryLabels[suggestion.category]}
+                          </Badge>
                         </div>
-                        <p className="text-sm">{suggestion.suggestion}</p>
+                        <p className="text-xs sm:text-sm">{suggestion.suggestion}</p>
                         {suggestion.context && (
-                          <p className="text-sm text-muted-foreground italic">
+                          <p className="text-xs sm:text-sm text-muted-foreground italic">
                             Context: "{suggestion.context}"
                           </p>
                         )}
@@ -432,37 +432,38 @@ ${feedbackData.areas_for_improvement}`
                 </div>
 
                 {/* Enhancement Suggestions */}
-                <div className="space-y-3">
-                  <h4 className="font-medium text-sm">Suggested Enhancements</h4>
+                <div className="space-y-2 sm:space-y-3">
+                  <h4 className="text-sm sm:text-base font-medium">Suggested Enhancements</h4>
                   {aiResponse.suggestions
                     .filter(s => s.type === 'enhancement')
                     .map((suggestion, index) => (
-                      <div key={index} className="rounded-lg border bg-blue-50 p-4 space-y-2">
+                      <div key={index} className="rounded-lg border bg-blue-50 p-3 sm:p-4 space-y-2">
                         <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">
+                          <Badge variant="secondary" className="text-xs">
                             {categoryLabels[suggestion.category]}
-                    </Badge>
+                          </Badge>
+                        </div>
+                        <p className="text-xs sm:text-sm">{suggestion.suggestion}</p>
+                        {suggestion.context && (
+                          <p className="text-xs sm:text-sm text-muted-foreground italic">
+                            Context: "{suggestion.context}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
                 </div>
-                <p className="text-sm">{suggestion.suggestion}</p>
-                {suggestion.context && (
-                          <p className="text-sm text-muted-foreground italic">
-                    Context: "{suggestion.context}"
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
               </div>
             </TabsContent>
           </Tabs>
         )}
       </CardContent>
 
-      <CardFooter className="flex justify-end space-x-2">
+      <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
         <Button 
           variant="outline" 
           onClick={onRevise}
-          disabled={isLoading}>
+          disabled={isLoading}
+          className="w-full sm:w-auto">
           Revise
         </Button>
         <Button 
@@ -473,12 +474,14 @@ ${feedbackData.areas_for_improvement}`
             setSteps(prevSteps => prevSteps.map(step => ({ ...step, status: 'pending' })));
             void analyzeFeedback();
           }}
-          disabled={isLoading}>
+          disabled={isLoading}
+          className="w-full sm:w-auto">
           Analyze Again
         </Button>
         <Button 
           onClick={onSubmit}
-          disabled={isLoading || !aiResponse}>
+          disabled={isLoading || !aiResponse}
+          className="w-full sm:w-auto">
           Submit Feedback
         </Button>
       </CardFooter>

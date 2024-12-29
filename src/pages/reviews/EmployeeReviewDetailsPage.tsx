@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, ChevronUp, FileDown } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, ChevronUp, FileDown, Copy, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -18,6 +18,7 @@ import { generateAIReport } from '@/lib/openai';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { debounce } from 'lodash';
+import { cn } from '@/lib/utils';
 
 export function EmployeeReviewDetailsPage() {
   const { cycleId, employeeId } = useParams();
@@ -61,7 +62,7 @@ export function EmployeeReviewDetailsPage() {
     "Preparing final report..."
   ];
 
-  function getElapsedTime() {
+  function getElapsedTime(startTime: number | null) {
     if (!startTime) return '0s';
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     return `${elapsed}s`;
@@ -403,256 +404,235 @@ export function EmployeeReviewDetailsPage() {
   if (!reviewCycle || !feedbackRequest) return null;
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 py-4 space-y-4">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <Button 
             onClick={() => navigate(`/reviews/${cycleId}`)}
-            className="bg-gradient-to-r from-[#F87315] to-[#F83A15] text-white hover:opacity-90"
+            variant="ghost"
             size="icon"
+            className="h-8 w-8 shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{feedbackRequest.employee?.name}</h1>
-            <p className="text-muted-foreground">{feedbackRequest.employee?.role}</p>
+            <h1 className="text-xl font-bold">{feedbackRequest?.employee?.name}</h1>
+            <p className="text-sm text-muted-foreground">{feedbackRequest?.employee?.role}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleCopyLink}
-            className="gap-2"
+            className="h-8 text-xs flex items-center gap-1.5"
           >
-            <FileDown className="h-4 w-4" />
-            Copy Feedback Link
+            <Copy className="h-3.5 w-3.5" />
+            Copy Link
           </Button>
           <Button
-            onClick={handleGenerateReport}
-            disabled={isGeneratingReport || !feedbackRequest.feedback?.length}
-            className="hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
             variant="outline"
+            size="sm"
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
+            className="h-8 text-xs flex items-center gap-1.5"
           >
-            {isGeneratingReport ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="mr-2 h-4 w-4" />
-                {aiReport ? 'Re-Generate Report' : 'Generate Report'}
-              </>
-            )}
+            <Sparkles className="h-3.5 w-3.5" />
+            {isGeneratingReport ? 'Generating...' : aiReport ? 'Regenerate' : 'Generate'}
           </Button>
         </div>
       </div>
 
-      <div className="space-y-6">
-        <Card className="w-full">
-          <div 
-            className="flex items-center justify-between p-6 cursor-pointer"
-            onClick={() => !isReportExpanded && setIsReportExpanded(true)}
-          >
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Report</h2>
-              {aiReport && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent header click from triggering
-                    handleExportPDF();
-                  }}
-                  className="ml-2"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-              )}
+      {/* Report Section */}
+      {aiReport ? (
+        <Card>
+          <CardHeader className="border-b p-4">
+            <div className="flex items-center justify-between">
+              <CardTitle>Report</CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsReportExpanded(!isReportExpanded)}
+                className="h-8 w-8"
+              >
+                <ChevronDown className={cn(
+                  "h-5 w-5 transition-transform",
+                  isReportExpanded ? "transform rotate-180" : ""
+                )} />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent header click from triggering
-                setIsReportExpanded(!isReportExpanded);
-              }}
-            >
-              {isReportExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          </CardHeader>
           {isReportExpanded && (
-            <CardContent>
-              {isGeneratingReport ? (
-                <div className="flex flex-col items-center justify-center space-y-6 py-12">
-                  <div className="w-full max-w-md space-y-4">
-                    <div className="flex flex-col items-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                      <p className="text-lg font-medium text-primary">
-                        {generationSteps[generationStep]}
-                      </p>
-                    </div>
-                    
-                    <div className="w-full space-y-2">
-                      <Progress 
-                        value={((generationStep + 1) / generationSteps.length) * 100} 
-                        className="h-2"
-                      />
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Step {generationStep + 1} of {generationSteps.length}</span>
-                        <span>Time elapsed: {getElapsedTime()}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground text-center mt-4">
-                      This process typically takes 30-45 seconds to complete.
-                      We're using AI to carefully analyze all feedback and generate comprehensive insights.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {aiReport ? (
-                    <div id="report-content">
-                      <div className="flex justify-end mb-2">
-                        {isSaving ? (
-                          <div className="text-sm text-muted-foreground flex items-center">
-                            <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                            Saving...
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            All changes saved
-                          </div>
-                        )}
-                      </div>
-                      <MarkdownEditor
-                        value={aiReport}
-                        onChange={handleReportChange}
-                      />
+            <CardContent className="p-4">
+              <div id="report-content">
+                <div className="flex justify-end mb-4">
+                  {isSaving ? (
+                    <div className="text-sm text-muted-foreground flex items-center">
+                      <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      Saving...
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground mb-4">
-                        Generate a report to get comprehensive insights from all feedback responses.
-                      </p>
-                      <Button
-                        onClick={handleGenerateReport}
-                        disabled={!feedbackRequest?.feedback?.length}
-                      >
-                        Generate Report
-                      </Button>
+                    <div className="text-sm text-muted-foreground">
+                      All changes saved
                     </div>
                   )}
                 </div>
-              )}
+                <MarkdownEditor
+                  value={aiReport}
+                  onChange={handleReportChange}
+                />
+              </div>
             </CardContent>
           )}
         </Card>
+      ) : isGeneratingReport ? (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center space-y-6 py-8">
+              <div className="w-full max-w-md space-y-4">
+                <div className="flex flex-col items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                  <p className="text-lg font-medium text-primary">
+                    {generationSteps[generationStep]}
+                  </p>
+                </div>
 
-        <div className="grid gap-6 md:grid-cols-4">
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Overview</CardTitle>
+                <div className="w-full space-y-2">
+                  <Progress 
+                    value={((generationStep + 1) / generationSteps.length) * 100} 
+                    className="h-2"
+                  />
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Step {generationStep + 1} of {generationSteps.length}</span>
+                    <span>Time elapsed: {getElapsedTime(startTime)}</span>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  This process typically takes 30-45 seconds to complete.
+                  We're using AI to carefully analyze all feedback and generate comprehensive insights.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="text-center space-y-3 border border-primary/20 rounded-lg p-6 bg-primary/5">
+          <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
+            <FileText className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="text-base font-semibold">Generate AI-Powered Feedback Report</h3>
+          <p className="text-muted-foreground text-sm">
+            Create a comprehensive report that analyzes all feedback responses, identifies key themes, and provides actionable insights.
+          </p>
+          <Button
+            size="default"
+            onClick={handleGenerateReport}
+            disabled={!feedbackRequest?.feedback?.length}
+            className="mt-2"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+          {!feedbackRequest?.feedback?.length && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Waiting for feedback responses before a report can be generated
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Overview and Feedback Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Overview Panel */}
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-base">Overview</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Review Cycle
-                  </p>
-                  <p className="text-sm font-medium">{reviewCycle?.name}</p>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      Deadline: {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
-                    </p>
-                  </div>
-                </div>
+            <CardContent className="p-4 pt-0 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Review Cycle</p>
+                <p className="text-sm font-medium">{reviewCycle?.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
+                </p>
+              </div>
 
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Completion
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Completion</p>
+                <div className="space-y-2">
+                  <Progress 
+                    value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
                   </p>
-                  <div className="space-y-2">
-                    <Progress 
-                      value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
-                      className="h-2"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
-                    </p>
-                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
-                    Status
-                  </p>
-                  <Badge variant="secondary">
-                    {feedbackRequest?.status || 'Pending'}
-                  </Badge>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                <Badge variant="secondary" className="text-xs capitalize">
+                  {(feedbackRequest?.status || 'pending').replace('_', ' ')}
+                </Badge>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <CardTitle>Feedback Responses</CardTitle>
+        {/* Feedback Responses */}
+        <div className="lg:col-span-9">
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-base">Feedback Responses</CardTitle>
             </CardHeader>
-            <CardContent>
-              {feedbackRequest.feedback?.length ? (
-                <div className="space-y-4">
-                  {feedbackRequest.feedback.map((feedback) => (
-                    <div key={feedback.id} className="rounded-lg border bg-muted/50 p-4 space-y-2">
-                      <div className="flex items-center justify-between">
+            <CardContent className="p-0">
+              {feedbackRequest?.feedback?.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No feedback responses yet.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {feedbackRequest?.feedback?.map((feedback) => (
+                    <div key={feedback.id} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">
+                          <Badge variant="outline" className="text-xs capitalize">
                             {feedback.relationship.replace('_', ' ')}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(feedback.submitted_at).toLocaleDateString()}
                           </span>
                         </div>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteFeedback(feedback.id)}
                           disabled={deletingFeedbackId === feedback.id}
-                          className="h-8 w-8 p-0 hover:bg-gradient-to-r hover:from-[#F87315] hover:to-[#F83A15] hover:text-white"
+                          className="h-7 px-2 text-destructive hover:text-destructive-foreground"
                         >
                           {deletingFeedbackId === feedback.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           )}
                         </Button>
                       </div>
-                      {feedback.strengths && (
+                      <div className="space-y-2 text-sm">
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Strengths</p>
-                          <p className="text-sm">{feedback.strengths}</p>
+                          <span className="font-medium">Strengths: </span>
+                          <span className="text-muted-foreground">{feedback.strengths}</span>
                         </div>
-                      )}
-                      {feedback.areas_for_improvement && (
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            Areas for Improvement
-                          </p>
-                          <p className="text-sm">{feedback.areas_for_improvement}</p>
+                          <span className="font-medium">Areas for Improvement: </span>
+                          <span className="text-muted-foreground">{feedback.areas_for_improvement}</span>
                         </div>
-                      )}
+                      </div>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No feedback received yet
                 </div>
               )}
             </CardContent>

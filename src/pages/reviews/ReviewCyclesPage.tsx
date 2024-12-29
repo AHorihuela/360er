@@ -82,23 +82,10 @@ export function ReviewCyclesPage() {
             review_cycle_id,
             employee_id,
             unique_link,
-            page_views (
+            employees!inner (
               id,
-              created_at,
-              user_id,
-              session_id,
-              feedback_request_id,
-              page_url
-            ),
-            ai_reports!ai_reports_feedback_request_id_fkey (
-              id,
-              status,
-              is_final,
-              created_at,
-              updated_at,
-              error,
-              content,
-              feedback_request_id
+              name,
+              role
             ),
             feedback_responses!feedback_responses_feedback_request_id_fkey (
               id,
@@ -146,14 +133,7 @@ export function ReviewCyclesPage() {
                     console.error(`Invalid timestamp for response ${response.id}: timestamp mismatch`);
                   }
                   return isValid;
-                })
-                .map(response => ({
-                  ...response,
-                  relationship: response.relationship || 'equal_colleague',
-                  strengths: response.strengths || null,
-                  areas_for_improvement: response.areas_for_improvement || null,
-                  overall_rating: response.overall_rating || 0
-                }));
+                });
 
               // Calculate response counts and determine status
               const responseCount = validResponses.length;
@@ -168,23 +148,32 @@ export function ReviewCyclesPage() {
                 updateRequestStatus(request.id, correctStatus).catch(console.error);
               }
 
-              // Process page views
-              const pageViews = (request.page_views || []).map(view => ({
-                ...view,
-                feedback_request_id: request.id,
-                page_url: view.page_url || `${window.location.origin}/feedback/${request.unique_link}`
-              }));
-              const uniqueViewers = new Set(pageViews.map(view => view.session_id)).size;
+              const employeeData = request.employees?.[0] && {
+                id: request.employees[0].id,
+                name: request.employees[0].name,
+                role: request.employees[0].role
+              };
 
               return {
-                ...request,
+                id: request.id,
                 status: correctStatus,
+                target_responses: request.target_responses,
+                unique_link: request.unique_link,
+                employee_id: request.employee_id,
+                review_cycle_id: request.review_cycle_id,
+                created_at: request.created_at,
+                updated_at: request.updated_at,
+                manually_completed: request.manually_completed,
                 feedback_responses: validResponses,
-                page_views: pageViews,
+                employee: employeeData || {
+                  id: request.employee_id,
+                  name: 'Unknown',
+                  role: 'Unknown'
+                },
                 _count: {
-                  page_views: pageViews.length,
-                  unique_viewers: uniqueViewers,
-                  responses: responseCount
+                  responses: responseCount,
+                  page_views: 0,
+                  unique_viewers: 0
                 }
               } as FeedbackRequest;
             });
@@ -227,6 +216,8 @@ export function ReviewCyclesPage() {
 
   async function handleDelete(cycleId: string) {
     if (isDeletingId) return;
+    
+    if (!confirm('Are you sure you want to delete this review cycle?')) return;
 
     try {
       setIsDeletingId(cycleId);
@@ -279,41 +270,39 @@ export function ReviewCyclesPage() {
   }
 
   function calculateProgress(cycle: ReviewCycle): number {
-    const { completed, pending } = getResponseCounts(cycle);
-    const total = completed + pending;
+    if (!cycle.feedback_requests?.length) return 0;
     
-    return total > 0 
-      ? Math.round((completed / total) * 100)
+    const totalResponses = cycle.feedback_requests.reduce((acc, req) => 
+      acc + (req.feedback_responses?.length || 0), 0);
+    const totalTargetResponses = cycle.feedback_requests.reduce((acc, req) => 
+      acc + (req.target_responses || 0), 0);
+    
+    return totalTargetResponses > 0 
+      ? Math.round((totalResponses / totalTargetResponses) * 100)
       : 0;
   }
 
-  // Add helper function to get completed and pending counts for display
   function getResponseCounts(cycle: ReviewCycle): { completed: number; pending: number } {
     if (!cycle.feedback_requests?.length) return { completed: 0, pending: 0 };
     
-    let completedReviews = 0;
-    let totalReviews = 0;
-    
-    cycle.feedback_requests.forEach(request => {
-      const responses = request._count?.responses || 0;
-      const target = request.target_responses || 0;
-      completedReviews += responses;
-      totalReviews += target;
-    });
+    const totalResponses = cycle.feedback_requests.reduce((acc, req) => 
+      acc + (req.feedback_responses?.length || 0), 0);
+    const totalTargetResponses = cycle.feedback_requests.reduce((acc, req) => 
+      acc + (req.target_responses || 0), 0);
     
     return {
-      completed: completedReviews,
-      pending: totalReviews - completedReviews
+      completed: totalResponses,
+      pending: totalTargetResponses - totalResponses
     };
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
         <h1 className="text-2xl font-bold">Review Cycles</h1>
         <Button
           onClick={() => navigate('/reviews/new-cycle')}
-          className="gap-2"
+          className="w-full sm:w-auto gap-2"
         >
           <Plus className="h-4 w-4" />
           New Review Cycle
@@ -331,47 +320,50 @@ export function ReviewCyclesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center py-6">
-            <Button onClick={() => navigate('/reviews/new-cycle')}>
+            <Button 
+              onClick={() => navigate('/reviews/new-cycle')}
+              className="w-full sm:w-auto"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Review Cycle
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {reviewCycles.map((cycle) => (
             <Card 
               key={cycle.id} 
               className="relative cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => navigate(`/reviews/${cycle.id}`)}
             >
-              <CardHeader>
-                <div className="flex items-start justify-between">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                   <div>
-                    <CardTitle className="text-xl">{cycle.title}</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
                     <div className="mt-2 space-y-1">
-                      <span className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4" />
+                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
                         Due {formatDate(cycle.review_by_date)}
                       </span>
-                      <span className="flex items-center text-sm text-muted-foreground">
-                        <Users className="mr-2 h-4 w-4" />
+                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                        <Users className="mr-2 h-4 w-4 flex-shrink-0" />
                         {cycle._count?.feedback_requests || 0} reviewees
                       </span>
                     </div>
                   </div>
-                  <Badge variant={getStatusColor(cycle)}>
+                  <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
                     {getStatusText(cycle)}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pb-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span>Progress</span>
                     <span>{calculateProgress(cycle)}%</span>
                   </div>
-                  <Progress value={calculateProgress(cycle)} className="h-2" />
+                  <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     {(() => {
                       const { completed, pending } = getResponseCounts(cycle);
@@ -385,8 +377,8 @@ export function ReviewCyclesPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between">
-                <div className="flex items-center justify-between">
+              <CardFooter className="pt-0">
+                <div className="flex items-center justify-between w-full">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -404,7 +396,8 @@ export function ReviewCyclesPage() {
                     )}
                   </Button>
                   <Button
-                    onClick={() => navigate(`/reviews/${cycle.id}`)}
+                    variant="outline"
+                    size="sm"
                     className="gap-2"
                   >
                     Manage

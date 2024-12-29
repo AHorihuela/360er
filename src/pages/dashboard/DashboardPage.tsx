@@ -377,6 +377,8 @@ export function DashboardPage() {
   };
 
   async function handleDeleteFeedback(feedbackId: string) {
+    if (!confirm('Are you sure you want to delete this feedback?')) return;
+
     try {
       // Delete the feedback response
       const { error: deleteError } = await supabase

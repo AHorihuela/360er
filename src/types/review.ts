@@ -48,27 +48,31 @@ export interface RequestValidation {
   review_by_date: string;
 }
 
-export interface FeedbackRequest extends TimestampValidation {
+export interface FeedbackRequest {
   id: string;
-  review_cycle_id: string;
   employee_id: string;
   unique_link: string;
-  status: RequestStatus;
+  status: string;
   target_responses: number;
-  manually_completed: boolean;
   employee?: {
     id: string;
     name: string;
     role: string;
   };
-  feedback?: FeedbackResponse[];
-  ai_report?: AIReport;
-  page_views?: PageView[];
+  feedback?: Array<{
+    id: string;
+    status: string;
+    submitted_at: string;
+    relationship: string;
+    strengths: string | null;
+    areas_for_improvement: string | null;
+  }>;
   _count?: {
-    page_views: number;
-    unique_viewers: number;
     responses: number;
+    page_views?: number;
+    unique_viewers?: number;
   };
+  review_cycle?: ReviewCycle;
 }
 
 export interface FeedbackResponse extends TimestampValidation {
