@@ -1,31 +1,9 @@
 import { useMemo, useCallback, useEffect } from 'react';
-import { createEditor, BaseEditor, Descendant, Text, Node, Transforms, Editor, Range } from 'slate';
-import { Slate, Editable, withReact, ReactEditor } from 'slate-react';
+import { createEditor, Descendant, Text, Node, Transforms, Editor, Range, NodeEntry } from 'slate';
+import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
-
-type CustomElement = {
-  type: 'paragraph';
-  children: CustomText[];
-};
-
-type CustomText = {
-  text: string;
-  highlight?: {
-    type: 'critical' | 'enhancement';
-    category: 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness';
-    suggestion: string;
-  };
-};
-
-type CustomEditor = BaseEditor & ReactEditor;
-
-declare module 'slate' {
-  interface CustomTypes {
-    Editor: CustomEditor;
-    Element: CustomElement;
-    Text: CustomText;
-  }
-}
+import { withLists } from './plugins/withLists';
+import { CustomElement, CustomText } from './types';
 
 interface RichTextEditorProps {
   value: string;
@@ -38,82 +16,236 @@ interface RichTextEditorProps {
   }>;
 }
 
+const LIST_TYPES = ['numbered-list', 'bulleted-list'];
+const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'];
+
+// Helper function to create a list item
+const createListItem = (text: string): CustomElement => ({
+  type: 'list-item',
+  children: [{ text }] as CustomText[]
+});
+
+// Helper function to create a list
+const createList = (type: 'numbered-list' | 'bulleted-list'): CustomElement => ({
+  type,
+  children: [] as CustomElement[]
+});
+
+// Helper function to create a heading
+const createHeading = (type: 'heading-one' | 'heading-two' | 'heading-three', text: string): CustomElement => ({
+  type,
+  children: [{ text }] as CustomText[]
+});
+
 export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEditorProps) {
   const editor = useMemo(() => {
-    const e = withHistory(withReact(createEditor()));
+    const e = withLists(withHistory(withReact(createEditor())));
     
-    // Override the editor's normalizeNode function to prevent unwanted normalization
+    // Override the editor's normalizeNode function to handle lists and headings
     const { normalizeNode } = e;
-    e.normalizeNode = ([node, path]) => {
+    e.normalizeNode = ([node, path]: NodeEntry) => {
       if (path.length === 0) {
-        const element = node as CustomElement;
-        if (element.children.length === 0) {
-          const paragraph: CustomElement = {
+        // Ensure there's always at least one node
+        if ((node as CustomElement).children.length === 0) {
+          Transforms.insertNodes(e, {
             type: 'paragraph',
             children: [{ text: '' }],
-          };
-          Transforms.insertNodes(e, paragraph, { at: path.concat(0) });
+          } as CustomElement);
+          return;
+        }
+
+        // Ensure each top-level node has a valid type
+        for (const [child, childPath] of Node.children(e, path)) {
+          const type = (child as CustomElement).type;
+          if (!type) {
+            Transforms.setNodes(
+              e,
+              { type: 'paragraph' } as Partial<CustomElement>,
+              { at: childPath }
+            );
+            return;
+          }
+        }
+
+        // Prevent merging of different heading levels
+        const children = (node as CustomElement).children;
+        for (let i = 0; i < children.length - 1; i++) {
+          const current = children[i] as CustomElement;
+          const next = children[i + 1] as CustomElement;
+          if (current.type?.startsWith('heading-') && next.type?.startsWith('heading-') && current.type !== next.type) {
+            Transforms.insertNodes(
+              e,
+              { type: 'paragraph', children: [{ text: '' }] } as CustomElement,
+              { at: [i + 1] }
+            );
+            return;
+          }
+        }
+      }
+
+      // Handle list items
+      if ((node as CustomElement).type === 'list-item') {
+        const parent = Node.parent(e, path);
+        if (!LIST_TYPES.includes((parent as CustomElement).type)) {
+          Transforms.wrapNodes(
+            e,
+            { type: 'bulleted-list', children: [] } as CustomElement,
+            { at: path }
+          );
           return;
         }
       }
+
       normalizeNode([node, path]);
     };
     
     return e;
   }, []);
 
-  // Convert plain text to Slate's initial value
+  // Convert plain text to Slate's initial value with proper structure
   const initialValue = useMemo((): Descendant[] => {
-    return [{
-      type: 'paragraph',
-      children: [{ text: value || '' }]
-    }];
-  }, []);
+    const parseTextToBlocks = (text: string): Descendant[] => {
+      const lines = text.split('\n');
+      const blocks: Descendant[] = [];
+      let currentList: CustomElement | null = null;
+      let listItemNumber = 1;
+
+      for (const line of lines) {
+        // Handle headings with proper spacing
+        if (line.startsWith('# ')) {
+          if (currentList) {
+            blocks.push(currentList);
+            currentList = null;
+            listItemNumber = 1;
+          }
+          blocks.push(createHeading('heading-one', line.slice(2)));
+          // Add spacing after heading
+          blocks.push({ type: 'paragraph', children: [{ text: '' }] } as CustomElement);
+          continue;
+        }
+        if (line.startsWith('## ')) {
+          if (currentList) {
+            blocks.push(currentList);
+            currentList = null;
+            listItemNumber = 1;
+          }
+          blocks.push(createHeading('heading-two', line.slice(3)));
+          // Add spacing after heading
+          blocks.push({ type: 'paragraph', children: [{ text: '' }] } as CustomElement);
+          continue;
+        }
+        if (line.startsWith('### ')) {
+          if (currentList) {
+            blocks.push(currentList);
+            currentList = null;
+            listItemNumber = 1;
+          }
+          blocks.push(createHeading('heading-three', line.slice(4)));
+          // Add spacing after heading
+          blocks.push({ type: 'paragraph', children: [{ text: '' }] } as CustomElement);
+          continue;
+        }
+
+        // Handle numbered lists with proper numbering
+        const numberedMatch = line.match(/^\d+\.\s(.+)/);
+        if (numberedMatch) {
+          if (!currentList || currentList.type !== 'numbered-list') {
+            if (currentList) {
+              blocks.push(currentList);
+            }
+            currentList = createList('numbered-list');
+            listItemNumber = 1;
+          }
+          currentList.children.push(createListItem(numberedMatch[1]));
+          listItemNumber++;
+          continue;
+        }
+
+        // Handle bullet lists
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+          if (!currentList || currentList.type !== 'bulleted-list') {
+            if (currentList) {
+              blocks.push(currentList);
+            }
+            currentList = createList('bulleted-list');
+          }
+          currentList.children.push(createListItem(line.slice(2)));
+          continue;
+        }
+
+        // Handle line breaks and list termination
+        if (!line.trim()) {
+          if (currentList) {
+            blocks.push(currentList);
+            currentList = null;
+            listItemNumber = 1;
+          }
+          blocks.push({ type: 'paragraph', children: [{ text: '' }] } as CustomElement);
+          continue;
+        }
+
+        // Handle regular paragraphs
+        if (currentList) {
+          blocks.push(currentList);
+          currentList = null;
+          listItemNumber = 1;
+        }
+        if (line.trim()) {
+          blocks.push({ type: 'paragraph', children: [{ text: line }] } as CustomElement);
+        }
+      }
+
+      // Don't forget to add the last list if it exists
+      if (currentList) {
+        blocks.push(currentList);
+      }
+
+      return blocks.length ? blocks : [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
+    };
+
+    return parseTextToBlocks(value || '');
+  }, [value]);
 
   // Update content when value prop changes
   useEffect(() => {
+    if (!editor || !value) return;
+
     const content = Node.string(editor);
     if (content !== value) {
       try {
-        const point = editor.selection && Range.isRange(editor.selection) 
-          ? Range.start(editor.selection) 
+        const point = editor.selection && Range.isRange(editor.selection)
+          ? Range.start(editor.selection)
           : { path: [0, 0], offset: 0 };
 
         Editor.withoutNormalizing(editor, () => {
-          // First ensure we have at least one paragraph
-          if (editor.children.length === 0) {
-            Transforms.insertNodes(editor, {
-              type: 'paragraph',
-              children: [{ text: '' }]
-            });
-          }
-
-          // Then update the text content
+          // Preserve selection and formatting
+          const currentSelection = editor.selection;
+          
+          // Update content while preserving structure
+          const blocks = initialValue;
           Transforms.delete(editor, {
             at: {
               anchor: Editor.start(editor, []),
               focus: Editor.end(editor, []),
             },
           });
+          
+          Transforms.insertNodes(editor, blocks);
 
-          Transforms.insertText(editor, value || '', {
-            at: Editor.start(editor, [])
-          });
-
-          // Try to restore cursor position
-          try {
-            if (point.offset <= (value || '').length) {
+          // Restore selection if possible
+          if (currentSelection && point.offset <= value.length) {
+            try {
               Transforms.select(editor, point);
+            } catch (e) {
+              // Ignore cursor restoration errors
             }
-          } catch (e) {
-            // Ignore cursor restoration errors
           }
         });
       } catch (error) {
         console.error('Error updating editor content:', error);
       }
     }
-  }, [value, editor]);
+  }, [value, editor, initialValue]);
 
   // Decorate text with highlights
   const decorate = useCallback(
@@ -189,6 +321,28 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
     return <span {...attributes}>{children}</span>;
   }, []);
 
+  // Render element with proper formatting
+  const renderElement = useCallback((props: any) => {
+    const { attributes, children, element } = props;
+
+    switch (element.type) {
+      case 'heading-one':
+        return <h1 {...attributes} className="text-2xl font-bold my-4">{children}</h1>;
+      case 'heading-two':
+        return <h2 {...attributes} className="text-xl font-bold my-3">{children}</h2>;
+      case 'heading-three':
+        return <h3 {...attributes} className="text-lg font-bold my-2">{children}</h3>;
+      case 'numbered-list':
+        return <ol {...attributes} className="list-decimal pl-6 my-4">{children}</ol>;
+      case 'bulleted-list':
+        return <ul {...attributes} className="list-disc pl-6 my-4">{children}</ul>;
+      case 'list-item':
+        return <li {...attributes} className="my-1">{children}</li>;
+      default:
+        return <p {...attributes} className="my-2">{children}</p>;
+    }
+  }, []);
+
   return (
     <div className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2">
       <Slate
@@ -205,9 +359,10 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
           className="min-h-[200px] w-full resize-none focus:outline-none"
           decorate={decorate}
           renderLeaf={renderLeaf}
+          renderElement={renderElement}
           placeholder="Enter your feedback here..."
           onKeyDown={(event) => {
-            // Handle special key combinations if needed
+            // Handle special key combinations
             if (event.key === 'Enter' && event.shiftKey) {
               event.preventDefault();
               editor.insertText('\n');
