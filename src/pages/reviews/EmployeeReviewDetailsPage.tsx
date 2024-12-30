@@ -36,8 +36,6 @@ export function EmployeeReviewDetailsPage() {
   const [aiReport, setAiReport] = useState<AIReport | null>(null);
   const [generationStep, setGenerationStep] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [isReportExpanded, setIsReportExpanded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   const handleCopyLink = async () => {
@@ -335,7 +333,6 @@ export function EmployeeReviewDetailsPage() {
           .eq('feedback_request_id', feedbackRequest.id);
 
         if (error) throw error;
-        setIsSaving(false);
       } catch (error) {
         console.error('Error saving report:', error);
         toast({
@@ -343,13 +340,12 @@ export function EmployeeReviewDetailsPage() {
           description: "Failed to save report changes",
           variant: "destructive",
         });
-        setIsSaving(false);
       }
     }, 1000),
     [feedbackRequest]
   );
 
-  // Update the onChange handler
+  // Update the onChange handler for the MarkdownEditor
   function handleReportChange(value: string) {
     // Clean up markdown formatting while preserving line breaks between sections
     const cleanValue = value
@@ -357,11 +353,10 @@ export function EmployeeReviewDetailsPage() {
       .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
       .trim();
     
-    setAiReport({
+    setAiReport(prev => ({
       content: cleanValue,
-      created_at: new Date().toISOString()
-    });
-    setIsSaving(true);
+      created_at: prev?.created_at || new Date().toISOString()
+    }));
     debouncedSave(cleanValue);
   }
 
@@ -645,7 +640,7 @@ export function EmployeeReviewDetailsPage() {
                   <div className="prose prose-gray dark:prose-invert max-w-none">
                     <MarkdownEditor
                       value={aiReport.content}
-                      onChange={() => {}} // Read-only, so empty handler
+                      onChange={handleReportChange}
                     />
                   </div>
                 </CardContent>

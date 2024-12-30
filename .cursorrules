@@ -267,3 +267,10 @@ After deploying:
    - Anonymous feedback links
 4. Monitor Supabase logs for database issues
 5. Check environment variables are properly set
+
+## IMPORTANT REMINDERS:
+## - NEVER remove functionality when fixing TypeScript errors
+## - Instead, fix type definitions, add proper type annotations, or handle null checks
+## - If unsure about a function's purpose, keep it and add proper typing
+## - Always test functionality after fixing TypeScript errors
+## - Document any type changes that might affect other parts of the codebase

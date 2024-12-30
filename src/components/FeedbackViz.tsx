@@ -1,5 +1,15 @@
 import { useEffect, useRef } from 'react';
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+}
+
+const NUM_PARTICLES = 100;
+
 export function FeedbackViz() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -7,106 +17,73 @@ export function FeedbackViz() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const ctx = context;
-    let width = canvas.offsetWidth;
-    let height = canvas.offsetHeight;
-    let dpr = window.devicePixelRatio || 1;
+    // Set up canvas dimensions
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
 
-    // Set canvas size with high DPI support
-    const resize = () => {
-      if (!canvas) return;
-      dpr = window.devicePixelRatio || 1;
-      width = canvas.offsetWidth * dpr;
-      height = canvas.offsetHeight * dpr;
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = `${canvas.offsetWidth}px`;
-      canvas.style.height = `${canvas.offsetHeight}px`;
-      ctx.scale(dpr, dpr);
-    };
-    resize();
-
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(canvas);
-
-    // Initialize particles with more coverage
-    const colors = ['#FF501C', '#FF8C42', '#FFB980'];
-    const particles = Array.from({ length: 100 }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      baseVx: (Math.random() - 0.5) * 0.4,
-      baseVy: (Math.random() - 0.5) * 0.4,
-      size: Math.random() * 3 + 2,
-      color: colors[Math.floor(Math.random() * colors.length)]
-    }));
-
-    let lastTime = 0;
+    // Create particles
+    const particles: Particle[] = [];
+    for (let i = 0; i < NUM_PARTICLES; i++) {
+      particles.push({
+        x: Math.random() * rect.width,
+        y: Math.random() * rect.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 3 + 2
+      });
+    }
 
     // Animation loop
-    function animate(currentTime: number) {
-      ctx.clearRect(0, 0, width, height);
+    function animate() {
+      if (!ctx) return;
+      
+      ctx.clearRect(0, 0, rect.width, rect.height);
 
-      // Calculate wave factor for smooth velocity variation
-      const waveFactor = Math.sin(currentTime * 0.001) * 0.3 + 0.7;
-
-      particles.forEach(particle => {
-        // Apply wave motion to velocity
-        particle.vx = particle.baseVx * waveFactor;
-        particle.vy = particle.baseVy * waveFactor;
-
-        // Update position
+      // Update and draw particles
+      particles.forEach((particle, i) => {
         particle.x += particle.vx;
         particle.y += particle.vy;
 
-        // Wrap around edges with padding
-        if (particle.x < -50) particle.x = width + 50;
-        if (particle.x > width + 50) particle.x = -50;
-        if (particle.y < -50) particle.y = height + 50;
-        if (particle.y > height + 50) particle.y = -50;
+        // Wrap around edges
+        if (particle.x < 0) particle.x = rect.width;
+        if (particle.x > rect.width) particle.x = 0;
+        if (particle.y < 0) particle.y = rect.height;
+        if (particle.y > rect.height) particle.y = 0;
 
-        // Draw particle with glow
-        ctx.save();
+        // Draw particle
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color;
-        ctx.shadowColor = particle.color;
-        ctx.shadowBlur = 15;
-        ctx.globalAlpha = 0.7;
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 140, 50, 0.7)';
         ctx.fill();
-        ctx.restore();
 
         // Draw connections
-        particles.forEach(other => {
-          const dx = other.x - particle.x;
-          const dy = other.y - particle.y;
+        particles.forEach((otherParticle, j) => {
+          if (i === j) return;
+          const dx = particle.x - otherParticle.x;
+          const dy = particle.y - otherParticle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 150) {
             ctx.beginPath();
             ctx.moveTo(particle.x, particle.y);
-            ctx.lineTo(other.x, other.y);
-            const alpha = Math.max(0, (150 - distance) / 150 * 0.2);
-            ctx.strokeStyle = `rgba(255, 80, 28, ${alpha})`;
+            ctx.lineTo(otherParticle.x, otherParticle.y);
+            ctx.strokeStyle = `rgba(255, 140, 50, ${0.2 * (1 - distance / 150)})`;
             ctx.lineWidth = 1.5;
             ctx.stroke();
           }
         });
       });
 
-      lastTime = currentTime;
       requestAnimationFrame(animate);
     }
 
-    animate(0);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
+    animate();
   }, []);
 
   return (

@@ -61,10 +61,10 @@ function HomePage() {
       {/* Hero Section */}
       <section className="flex-1 relative overflow-hidden">
         {/* Original background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5" />
         
-        {/* Background animation with reduced opacity */}
-        <div className="absolute inset-0 opacity-100">
+        {/* Background animation with reduced opacity on mobile */}
+        <div className="absolute inset-0 opacity-30 sm:opacity-100">
           <FeedbackViz />
         </div>
         
@@ -72,7 +72,7 @@ function HomePage() {
         <div className="container max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8 py-8 relative">
           {/* Left column - Content */}
           <div className="flex-1 space-y-8 pt-12 lg:pt-24">
-            <div className="inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium bg-background/80 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer">
+            <div className="inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium bg-background/95 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer">
               <span className="relative flex h-2 w-2 mr-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
@@ -81,7 +81,7 @@ function HomePage() {
             </div>
             <div className="space-y-6">
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
-                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">Transform peer feedback into growth</span>
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Transform peer feedback into growth</span>
               </h1>
               <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
                 Collect, analyze, and deliver meaningful 360° feedback that drives professional development using AI-powered insights.
