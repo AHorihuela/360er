@@ -220,11 +220,6 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
           // Store the current selection state
           const currentSelection = editor.selection;
           
-          // Store any existing highlights
-          const existingHighlights = Editor.nodes(editor, {
-            match: n => Text.isText(n) && n.highlight !== undefined,
-          });
-          
           // Update content while preserving structure
           const blocks = initialValue;
           Transforms.delete(editor, {
