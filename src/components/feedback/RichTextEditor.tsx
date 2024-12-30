@@ -17,7 +17,6 @@ interface RichTextEditorProps {
 }
 
 const LIST_TYPES = ['numbered-list', 'bulleted-list'];
-const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'];
 
 // Helper function to create a list item
 const createListItem = (text: string): CustomElement => ({
@@ -218,8 +217,13 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
           : { path: [0, 0], offset: 0 };
 
         Editor.withoutNormalizing(editor, () => {
-          // Preserve selection and formatting
+          // Store the current selection state
           const currentSelection = editor.selection;
+          
+          // Store any existing highlights
+          const existingHighlights = Editor.nodes(editor, {
+            match: n => Text.isText(n) && n.highlight !== undefined,
+          });
           
           // Update content while preserving structure
           const blocks = initialValue;
@@ -249,8 +253,8 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
 
   // Decorate text with highlights
   const decorate = useCallback(
-    ([node, path]: any) => {
-      const ranges: any[] = [];
+    ([node, path]: NodeEntry<Node>): Range[] => {
+      const ranges: Range[] = [];
 
       if (!Text.isText(node) || !node.text) {
         return ranges;
@@ -274,7 +278,7 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
               category: highlight.category,
               suggestion: highlight.suggestion,
             },
-          });
+          } as Range);
 
           start = index + context.length;
           index = text.indexOf(context, start);
@@ -287,7 +291,15 @@ export function RichTextEditor({ value, onChange, highlights = [] }: RichTextEdi
   );
 
   // Render leaf with highlight styles
-  const renderLeaf = useCallback((props: any) => {
+  const renderLeaf = useCallback((props: {
+    attributes: Record<string, unknown>;
+    children: React.ReactNode;
+    leaf: CustomText & { highlight?: {
+      type: 'critical' | 'enhancement';
+      category: 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness';
+      suggestion: string;
+    }};
+  }) => {
     const { attributes, children, leaf } = props;
 
     if (leaf.highlight) {
