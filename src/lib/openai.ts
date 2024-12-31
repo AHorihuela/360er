@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { FeedbackResponse } from '@/types/review';
 
-const openai = new OpenAI({
+export const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true
 });

@@ -48,39 +48,11 @@ export interface RequestValidation {
   review_by_date: string;
 }
 
-export interface FeedbackRequest {
+export interface Employee {
   id: string;
-  employee_id: string;
-  unique_link: string;
-  status: string;
-  target_responses: number;
-  employee?: {
-    id: string;
-    name: string;
-    role: string;
-  };
-  feedback?: Array<{
-    id: string;
-    status: string;
-    submitted_at: string;
-    relationship: string;
-    strengths: string | null;
-    areas_for_improvement: string | null;
-  }>;
-  feedback_responses?: Array<{
-    id: string;
-    status: string;
-    submitted_at: string;
-    relationship: string;
-    strengths: string | null;
-    areas_for_improvement: string | null;
-  }>;
-  _count?: {
-    responses: number;
-    page_views?: number;
-    unique_viewers?: number;
-  };
-  review_cycle?: ReviewCycle;
+  name: string;
+  role: string;
+  user_id: string;
 }
 
 export interface FeedbackResponse {
@@ -90,9 +62,22 @@ export interface FeedbackResponse {
   relationship: string;
   strengths: string | null;
   areas_for_improvement: string | null;
-  overall_rating?: number;
-  feedback_request_id?: string;
-  created_at?: string;
+}
+
+export interface FeedbackRequest {
+  id: string;
+  employee_id: string;
+  review_cycle_id: string;
+  status: string;
+  target_responses: number;
+  unique_link: string | null;
+  employee?: Employee;
+  feedback?: FeedbackResponse[];
+  _count?: {
+    responses: number;
+    page_views: number;
+    unique_viewers: number;
+  };
 }
 
 export interface CreateReviewCycleInput {
