@@ -42,17 +42,6 @@ interface Props {
   feedbackRequestId: string;
 }
 
-interface CachedAnalytics {
-  feedbackHash: string;
-  insights: RelationshipInsight[];
-}
-
-interface AnalyticsMetadata {
-  insights: RelationshipInsight[];
-  feedback_hash: string;
-  last_analyzed_at: string;
-}
-
 interface CompetencyAssessment {
   score: number | null;  // Allow null for insufficient data
   confidence: 'low' | 'medium' | 'high';
@@ -225,32 +214,6 @@ const ANALYSIS_STAGES = [
   "Analyzing junior feedback",
   "Generating final insights"
 ] as const;
-
-// Add validation function
-function validateConfidenceLevel(responseCount: number, confidence: string): string {
-  if (responseCount <= 1) return 'low';
-  if (responseCount <= 3) return 'medium';
-  return 'high';
-}
-
-function validateCompetencyAssessment(comp: CompetencyAssessment, responseCount: number): CompetencyAssessment {
-  // Mark as insufficient data if:
-  // 1. Single response with low confidence
-  // 2. Zero or very low evidence count
-  // 3. Score is 0 or null from AI
-  const isInsufficientData = 
-    (responseCount <= 1 && comp.confidence === 'low') ||
-    comp.evidenceCount === 0 ||
-    comp.score === null ||
-    comp.score === 0;
-
-  return {
-    ...comp,
-    isInsufficientData,
-    // If insufficient data, force confidence to low
-    confidence: isInsufficientData ? 'low' : comp.confidence
-  };
-}
 
 export function CompetencyScore({ 
   name, 
@@ -633,16 +596,9 @@ STRICT SCORING RULES (MUST BE FOLLOWED):
    - Cannot clearly map to competency
    - Only general or non-specific praise
 
-${Object.entries(CORE_COMPETENCIES).map(([key, comp]) => `
-${comp.name}:
-Key aspects: ${comp.aspects.join(', ')}
-
-Scoring Rubric:
-1 = ${comp.rubric[1]}
-2 = ${comp.rubric[2]}
-3 = ${comp.rubric[3]}
-4 = ${comp.rubric[4]}
-5 = ${comp.rubric[5]}
+${Object.entries(CORE_COMPETENCIES).map(([_key, comp]) => `
+  ${comp.name}:
+  Key aspects: ${comp.aspects.join(', ')}
 `).join('\n\n')}
 
 Return a JSON response with this structure:

@@ -37,11 +37,6 @@ interface Props {
   feedbackRequestId: string;
 }
 
-interface CachedAnalytics {
-  feedbackHash: string;
-  insights: RelationshipInsight[];
-}
-
 interface AnalyticsMetadata {
   insights: RelationshipInsight[];
   feedback_hash: string;
@@ -437,16 +432,9 @@ IMPORTANT VALIDATION RULES:
 
 For each relationship type AND the aggregate view, evaluate these core competencies using the following detailed rubrics:
 
-${Object.entries(CORE_COMPETENCIES).map(([key, comp]) => `
-${comp.name}:
-Key aspects: ${comp.aspects.join(', ')}
-
-Scoring Rubric:
-1 = ${comp.rubric[1]}
-2 = ${comp.rubric[2]}
-3 = ${comp.rubric[3]}
-4 = ${comp.rubric[4]}
-5 = ${comp.rubric[5]}
+${Object.entries(CORE_COMPETENCIES).map(([_key, comp]) => `
+  ${comp.name}:
+  Key aspects: ${comp.aspects.join(', ')}
 `).join('\n\n')}
 
 Analysis Guidelines:
@@ -858,9 +846,6 @@ Important:
                               )} />
                               <p className="text-sm capitalize">{competency.confidence} Confidence</p>
                             </div>
-                            <p className="text-sm">
-                              Based on evidence from {competency.evidenceCount || 0} {(competency.evidenceCount || 0) === 1 ? 'reviewer' : 'reviewers'}
-                            </p>
                           </div>
                           <div>
                             <p className="font-medium mb-1">Key Aspects:</p>

@@ -22,12 +22,8 @@ import { cn } from '@/lib/utils';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
 
-interface PageStats {
-  responses: number;
-  page_views: number;
-}
-
-interface AIReport {
+// Add interface for AIReport
+interface AIReportType {
   content: string;
   created_at: string;
 }
@@ -37,14 +33,19 @@ export function EmployeeReviewDetailsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [aiReport, setAiReport] = useState<AIReport | null>(null);
+  const [aiReport, setAiReport] = useState<AIReportType | null>(null);
   const [generationStep, setGenerationStep] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
+
+  // Fix type annotations in callbacks
+  const handleGenerationStep = (prev: number) => prev + 1;
+  const handleArrayIteration = (_: unknown, num: number) => num + 1;
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;

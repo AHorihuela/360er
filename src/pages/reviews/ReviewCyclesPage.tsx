@@ -151,7 +151,8 @@ export function ReviewCyclesPage() {
               const employeeData = request.employees?.[0] && {
                 id: request.employees[0].id,
                 name: request.employees[0].name,
-                role: request.employees[0].role
+                role: request.employees[0].role,
+                user_id: request.employees[0].id
               };
 
               return {
@@ -168,14 +169,15 @@ export function ReviewCyclesPage() {
                 employee: employeeData || {
                   id: request.employee_id,
                   name: 'Unknown',
-                  role: 'Unknown'
+                  role: 'Unknown',
+                  user_id: request.employee_id
                 },
                 _count: {
                   responses: responseCount,
                   page_views: 0,
                   unique_viewers: 0
                 }
-              } as FeedbackRequest;
+              } as unknown as FeedbackRequest;
             });
 
           return {
