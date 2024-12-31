@@ -21,6 +21,7 @@ import { ReviewCycle, FeedbackRequest, REQUEST_STATUS } from '@/types/review';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
+import { CycleAnalytics } from '@/components/review-cycle/CycleAnalytics';
 
 function determineRequestStatus(request: FeedbackRequest): string {
   if (!request.target_responses) return REQUEST_STATUS.PENDING;
@@ -76,6 +77,10 @@ export function ReviewCycleDetailsPage() {
               id,
               submitted_at,
               relationship
+            ),
+            analytics:feedback_analytics!feedback_request_id (
+              id,
+              insights
             )
           )
         `)
@@ -85,12 +90,9 @@ export function ReviewCycleDetailsPage() {
       if (cycleError) throw cycleError;
 
       // Process feedback requests
-      const processedRequests = cycleData.feedback_requests.map((request: any) => {
+      const processedRequests = cycleData.feedback_requests.map((request: FeedbackRequest) => {
         const responseCount = request.feedback_responses?.length || 0;
-        const status = determineRequestStatus(
-          request
-        );
-
+        const status = determineRequestStatus(request);
         return {
           ...request,
           status,
@@ -429,6 +431,13 @@ export function ReviewCycleDetailsPage() {
           </Card>
         ))}
       </div>
+
+      {/* Cycle Analytics */}
+      {reviewCycle && (
+        <div className="mt-8">
+          <CycleAnalytics reviewCycle={reviewCycle} />
+        </div>
+      )}
 
       <Dialog open={showAddEmployeesDialog} onOpenChange={setShowAddEmployeesDialog}>
         <DialogContent className="max-w-[400px] p-0 gap-0">

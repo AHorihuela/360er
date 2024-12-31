@@ -70,13 +70,25 @@ export interface FeedbackRequest {
   review_cycle_id: string;
   status: string;
   target_responses: number;
-  unique_link: string | null;
+  unique_link: string;
+  created_at?: string;
   employee?: Employee;
-  feedback?: FeedbackResponse[];
+  feedback_responses?: FeedbackResponse[];
+  analytics?: {
+    id: string;
+    insights: Array<{
+      competencies: Array<{
+        name: string;
+        score: number;
+        confidence: 'low' | 'medium' | 'high';
+        description: string;
+        evidenceCount: number;
+      }>;
+      relationship: string;
+    }>;
+  };
   _count?: {
     responses: number;
-    page_views: number;
-    unique_viewers: number;
   };
 }
 
