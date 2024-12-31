@@ -237,52 +237,62 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                         <TooltipTrigger className="cursor-help">
                           <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                         </TooltipTrigger>
-                        <TooltipContent side="right" align="start" className="max-w-[280px] p-3">
-                          <div className="space-y-2">
-                            <div>
-                              <p className="font-medium mb-1">Team Score Components:</p>
-                              <p className="text-sm">
-                                • Based on {data.sampleSize} team {data.sampleSize === 1 ? 'member' : 'members'} with reviews
-                                <br/>
-                                • Evidence: {data.evidenceCount || 0} {(data.evidenceCount || 0) === 1 ? 'reviewer' : 'reviewers'} provided specific feedback
-                                <br/>
-                                • Confidence: {data.confidence} ({
+                        <TooltipContent side="right" align="start" className="max-w-[280px] p-4 space-y-4">
+                          <div>
+                            <h4 className="font-semibold mb-2">Team Score Components</h4>
+                            <ul className="space-y-1.5 text-sm">
+                              <li className="flex gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                Based on {data.sampleSize} team {data.sampleSize === 1 ? 'member' : 'members'} with reviews
+                              </li>
+                              <li className="flex gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                {data.evidenceCount || 0} {(data.evidenceCount || 0) === 1 ? 'reviewer' : 'reviewers'} provided specific feedback
+                              </li>
+                              <li className="flex gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                Confidence: {data.confidence} ({
                                   data.isInsufficientData ? 'Insufficient data' :
                                   (data.evidenceCount || 0) <= 2 ? '0-2 reviewers provided evidence' :
                                   (data.evidenceCount || 0) === 3 ? '3 reviewers provided evidence' :
                                   '4+ reviewers provided evidence'
                                 })
-                                {(data.evidenceCount || 0) === 0 && data.score !== null && (
-                                  <>
-                                    <br/>
-                                    • Note: Score is based on general feedback without specific evidence
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium mb-1">Key Aspects Evaluated:</p>
-                              <p className="text-sm whitespace-pre-line">
-                                {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                              </li>
+                              {(data.evidenceCount || 0) === 0 && data.score !== null && (
+                                <li className="flex gap-2 text-muted-foreground/80 italic">
+                                  <span className="text-muted-foreground">•</span>
+                                  Score is derived from general feedback patterns rather than specific examples
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+
+                          <div>
+                            <h4 className="font-semibold mb-2">Key Aspects Evaluated</h4>
+                            <ul className="space-y-1.5 text-sm">
+                              {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                                comp.name === name
+                              )?.[1]?.aspects?.map(aspect => (
+                                <li key={aspect} className="flex gap-2">
+                                  <span className="text-muted-foreground">•</span>
+                                  {aspect}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div>
+                            <h4 className="font-semibold mb-2">Score Meaning ({data.score}/5)</h4>
+                            <p className="text-sm">
+                              {(() => {
+                                const foundComp = Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
                                   comp.name === name
-                                )?.[1]?.aspects?.map(aspect => 
-                                  `• ${aspect}`
-                                ).join('\n')}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium mb-1">Score Meaning ({data.score}/5):</p>
-                              <p className="text-sm">
-                                {(() => {
-                                  const foundComp = Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
-                                    comp.name === name
-                                  )?.[1];
-                                  return data.score && foundComp?.rubric ? 
-                                    foundComp.rubric[Math.round(data.score) as keyof typeof foundComp.rubric] : 
-                                    'Insufficient data to provide score meaning';
-                                })()}
-                              </p>
-                            </div>
+                                )?.[1];
+                                return data.score && foundComp?.rubric ? 
+                                  foundComp.rubric[Math.round(data.score) as keyof typeof foundComp.rubric] : 
+                                  'Insufficient data to provide score meaning';
+                              })()}
+                            </p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
