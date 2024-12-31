@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Employee {
   id: string;
@@ -23,7 +24,12 @@ interface FeedbackRequest {
   unique_link: string;
   status: string;
   target_responses: number;
-  feedback_responses: { id: string; status: string; submitted_at: string }[];
+  feedback_responses?: Array<{
+    id: string;
+    status: string;
+    submitted_at: string;
+    relationship: string;
+  }>;
 }
 
 interface ReviewCycle {
@@ -34,11 +40,19 @@ interface ReviewCycle {
   completed_requests: number;
 }
 
-interface ReviewCycleWithFeedback {
-  id: string;
-  title: string;
-  review_by_date: string;
+interface ReviewCycleWithFeedback extends ReviewCycle {
   feedback_requests: FeedbackRequest[];
+}
+
+interface FeedbackResponse {
+  id: string;
+  status: string;
+  submitted_at: string;
+  relationship: string;
+  strengths: string | null;
+  areas_for_improvement: string | null;
+  employee?: Employee;
+  request_id: string;
 }
 
 export function DashboardPage(): JSX.Element {
@@ -108,7 +122,10 @@ export function DashboardPage(): JSX.Element {
             feedback_responses (
               id,
               status,
-              submitted_at
+              submitted_at,
+              relationship,
+              strengths,
+              areas_for_improvement
             )
           )
         `)
@@ -126,7 +143,26 @@ export function DashboardPage(): JSX.Element {
       }
 
       if (reviewCycles && reviewCycles.length > 0) {
-        const currentCycle = reviewCycles[0] as ReviewCycleWithFeedback;
+        const currentCycle = reviewCycles[0] as unknown as {
+          id: string;
+          title: string;
+          review_by_date: string;
+          feedback_requests: Array<{
+            id: string;
+            status: string;
+            employee_id: string;
+            target_responses: number;
+            unique_link: string;
+            feedback_responses: Array<{
+              id: string;
+              status: string;
+              submitted_at: string;
+              relationship: string;
+              strengths: string | null;
+              areas_for_improvement: string | null;
+            }>;
+          }>;
+        };
         
         // Calculate total completed requests across all employees
         const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
@@ -134,13 +170,16 @@ export function DashboardPage(): JSX.Element {
         const completedRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
           acc + (fr.feedback_responses?.length ?? 0), 0);
 
-        setActiveReviewCycle({
+        const reviewCycleWithFeedback: ReviewCycleWithFeedback = {
           id: currentCycle.id,
           title: currentCycle.title,
           review_by_date: currentCycle.review_by_date,
           total_requests: totalRequests,
-          completed_requests: completedRequests
-        });
+          completed_requests: completedRequests,
+          feedback_requests: currentCycle.feedback_requests
+        };
+
+        setActiveReviewCycle(reviewCycleWithFeedback);
 
         // Process employees with their review status
         const employeesWithStatus = employeesData?.map(employee => {
@@ -370,6 +409,78 @@ export function DashboardPage(): JSX.Element {
                   </CardContent>
                 </Card>
               ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Reviews */}
+      {activeReviewCycle && (
+        <div className="space-y-4 mt-8">
+          <h2 className="text-xl font-semibold">Recent Reviews</h2>
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+            {(activeReviewCycle as ReviewCycleWithFeedback).feedback_requests?.flatMap(request => 
+              request.feedback_responses?.map(response => ({
+                ...response,
+                employee: employees.find(e => e.id === request.employee_id),
+                request_id: request.id
+              } as FeedbackResponse))
+            )
+            .filter((response): response is FeedbackResponse => 
+              response !== undefined && 
+              Boolean(response.strengths?.trim() || response.areas_for_improvement?.trim())
+            )
+            .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+            .slice(0, 4)
+            .map((response) => (
+              <Card 
+                key={response.id}
+                className="hover:shadow-lg transition-all duration-300 cursor-pointer"
+                onClick={() => response.employee && navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee.id}`)}
+              >
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                        <AvatarFallback>
+                          {response.employee?.name.split(' ').map((n: string) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-sm sm:text-base">{response.employee?.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs sm:text-sm text-muted-foreground">{response.employee?.role}</p>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {response.relationship.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(response.submitted_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3 mt-4">
+                    {response.strengths && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Strengths</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {response.strengths}
+                        </p>
+                      </div>
+                    )}
+                    {response.areas_for_improvement && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Areas for Improvement</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {response.areas_for_improvement}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       )}
