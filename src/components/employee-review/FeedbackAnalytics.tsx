@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronDown, RefreshCw } from 'lucide-react';
+import { Loader2, ChevronDown, RefreshCw, Info } from 'lucide-react';
 import { openai } from '@/lib/openai';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -235,6 +235,7 @@ export function FeedbackAnalytics({
   }));
   const [isForceRerun, setIsForceRerun] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
+  const [existingAnalysis, setExistingAnalysis] = useState<AnalyticsMetadata | null>(null);
 
   // Group feedback by normalized relationship type
   const groupedFeedback = useMemo(() => {
@@ -276,36 +277,33 @@ export function FeedbackAnalytics({
       if (feedbackResponses.length === 0) return;
       
       try {
-        // Always check for existing analysis first
-        const { data: existingAnalysis, error: fetchError } = await supabase
+        const { data: existing, error: fetchError } = await supabase
           .from('feedback_analytics')
           .select('insights, feedback_hash, last_analyzed_at')
           .eq('feedback_request_id', feedbackRequestId)
           .single();
 
-        // Only proceed if component is still mounted
         if (!isMounted) return;
 
-        if (fetchError && fetchError.code !== 'PGRST116') { // Not found error
+        if (fetchError && fetchError.code !== 'PGRST116') {
           console.error('Error fetching existing analysis:', fetchError);
           return;
         }
 
+        // Store the existing analysis
+        setExistingAnalysis(existing);
+
         // If we have a valid cached analysis and we're not forcing a rerun, use it
-        if (existingAnalysis && existingAnalysis.feedback_hash === currentFeedbackHash && !isForceRerun) {
-          console.log('Using cached analysis from:', existingAnalysis.last_analyzed_at);
-          setInsights(existingAnalysis.insights);
-          setLastAnalyzedAt(existingAnalysis.last_analyzed_at);
+        if (existing && existing.feedback_hash === currentFeedbackHash && !isForceRerun) {
+          console.log('Using cached analysis from:', existing.last_analyzed_at);
+          setInsights(existing.insights);
+          setLastAnalyzedAt(existing.last_analyzed_at);
           return;
         }
 
-        // Only run new analysis if needed
-        if (!existingAnalysis || existingAnalysis.feedback_hash !== currentFeedbackHash || isForceRerun) {
-          console.log('Running new analysis. Reason:', 
-            !existingAnalysis ? 'No existing analysis' :
-            existingAnalysis.feedback_hash !== currentFeedbackHash ? 'Feedback changed' :
-            'Force rerun requested'
-          );
+        // Only run new analysis if explicitly requested
+        if (isForceRerun) {
+          console.log('Running new analysis - Force rerun requested');
           await analyzeFeedback(currentFeedbackHash);
         }
       } catch (error) {
@@ -654,12 +652,21 @@ Important:
           size="sm"
           onClick={handleRerunAnalysis}
           disabled={isAnalyzing || feedbackResponses.length === 0}
-          className="h-8 text-xs flex items-center gap-1.5"
+          className={cn(
+            "h-8 text-xs flex items-center gap-1.5",
+            // Add subtle highlight when updates available
+            existingAnalysis?.feedback_hash !== currentFeedbackHash && "border-primary"
+          )}
         >
           {isAnalyzing ? (
             <>
               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               Analyzing...
+            </>
+          ) : existingAnalysis?.feedback_hash !== currentFeedbackHash ? (
+            <>
+              <RefreshCw className="h-3.5 w-3.5 text-primary" />
+              Update Available
             </>
           ) : (
             <>
@@ -672,14 +679,14 @@ Important:
 
       {/* Aggregate Analysis Section */}
       {insights.find(i => i.relationship === 'aggregate') && (
-        <Card>
+        <Card className="border-2">
           <CardHeader 
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            className="cursor-pointer hover:bg-muted/50 transition-colors bg-muted/30"
             onClick={() => toggleSection('aggregate')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CardTitle className="text-lg">
+                <CardTitle className="text-xl">
                   Overall Analysis
                 </CardTitle>
                 <Badge variant="outline" className="capitalize">
@@ -698,37 +705,40 @@ Important:
         </Card>
       )}
 
-      {RELATIONSHIP_ORDER.map((relationshipType) => {
-        const insight = insights.find(i => normalizeRelationship(i.relationship) === relationshipType);
-        const responseCount = groupedFeedback[relationshipType]?.length || 0;
-        const isExpanded = expandedSections[relationshipType] || false;
+      {/* Perspective Sections */}
+      <div className="grid grid-cols-1 gap-4 mt-6">
+        {RELATIONSHIP_ORDER.map((relationshipType) => {
+          const insight = insights.find(i => normalizeRelationship(i.relationship) === relationshipType);
+          const responseCount = groupedFeedback[relationshipType]?.length || 0;
+          const isExpanded = expandedSections[relationshipType] || false;
 
-        return (
-          <Card key={relationshipType}>
-            <CardHeader 
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSection(relationshipType)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CardTitle className="text-lg">
-                    {relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Perspective
-                  </CardTitle>
-                  <Badge variant="outline" className="capitalize">
-                    {responseCount} {responseCount === 1 ? 'response' : 'responses'}
-                  </Badge>
+          return (
+            <Card key={relationshipType} className="border border-muted">
+              <CardHeader 
+                className="cursor-pointer hover:bg-muted/50 transition-colors py-3"
+                onClick={() => toggleSection(relationshipType)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-base">
+                      {relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Perspective
+                    </CardTitle>
+                    <Badge variant="outline" className="capitalize">
+                      {responseCount} {responseCount === 1 ? 'response' : 'responses'}
+                    </Badge>
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
                 </div>
-                <ChevronDown className={cn("h-5 w-5 transition-transform", isExpanded && "rotate-180")} />
-              </div>
-            </CardHeader>
-            {isExpanded && insight && (
-              <CardContent className="space-y-6">
-                {renderInsightContent(insight)}
-              </CardContent>
-            )}
-          </Card>
-        );
-      })}
+              </CardHeader>
+              {isExpanded && insight && (
+                <CardContent className="space-y-6 pt-0">
+                  {renderInsightContent(insight)}
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -769,7 +779,21 @@ Important:
           {insight.competencies.map((competency, i) => (
             <div key={i} className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{competency.name}</span>
+                <div className="flex items-center gap-2">
+                  <span>{competency.name}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-help">
+                        <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" align="start" className="max-w-[280px] p-3">
+                        <p className="text-sm">
+                          {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => comp.name === competency.name)?.[1].aspects.join(', ')}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="flex items-center gap-2">
                   <Badge 
                     variant={competency.confidence === 'low' ? 'destructive' : 
