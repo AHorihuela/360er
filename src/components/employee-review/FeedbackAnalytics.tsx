@@ -17,6 +17,9 @@ interface Competency {
   description: string;
   roleSpecificNotes?: string;
   evidenceCount?: number;
+  evidenceQuotes?: string[];
+  scoreJustification?: string;
+  isInsufficientData?: boolean;
 }
 
 interface RelationshipInsight {
@@ -210,11 +213,12 @@ const ANALYSIS_STAGES = [
   "Generating final insights"
 ] as const;
 
-// Add validation function
-function validateConfidenceLevel(responseCount: number, confidence: string): string {
-  if (responseCount <= 1) return 'low';
-  if (responseCount <= 3) return 'medium';
-  return 'high';
+// Update validation function
+function validateConfidenceLevel(evidenceCount: number): string {
+  // Evidence count should be based on number of unique reviewers who provided evidence
+  if (evidenceCount <= 2) return 'low';     // 0-2 reviewers = low
+  if (evidenceCount === 3) return 'medium'; // exactly 3 reviewers = medium
+  return 'high';                            // 4+ reviewers = high
 }
 
 export function FeedbackAnalytics({ 
@@ -236,6 +240,64 @@ export function FeedbackAnalytics({
   const [isForceRerun, setIsForceRerun] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
   const [existingAnalysis, setExistingAnalysis] = useState<AnalyticsMetadata | null>(null);
+
+  const MINIMUM_REVIEWS_REQUIRED = 5;
+  const hasMinimumReviews = feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED;
+
+  // If there aren't enough reviews, show a message instead of the analysis
+  if (!hasMinimumReviews) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-start gap-6">
+            <div className="rounded-full bg-primary/10 p-4 shrink-0">
+              <Info className="h-6 w-6 text-primary" />
+            </div>
+            
+            <div className="flex-1">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold">AI-Powered Feedback Analysis</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Once {MINIMUM_REVIEWS_REQUIRED} reviews are collected, our AI will analyze the feedback to provide detailed insights.
+                </p>
+              </div>
+
+              <div className="bg-muted/30 rounded-lg px-4 py-3">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium">Collection Progress</p>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-2xl font-semibold">{feedbackResponses.length}</span>
+                      <span className="text-sm text-muted-foreground">of {MINIMUM_REVIEWS_REQUIRED} reviews</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-primary">
+                      {Math.round((feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {MINIMUM_REVIEWS_REQUIRED - feedbackResponses.length} more needed
+                    </div>
+                  </div>
+                </div>
+                <Progress 
+                  value={(feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100} 
+                  className="h-2"
+                />
+              </div>
+
+              {feedbackResponses.length > 0 && (
+                <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full bg-primary/50" />
+                  <span>Analysis will automatically unlock at {MINIMUM_REVIEWS_REQUIRED} reviews</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Group feedback by normalized relationship type
   const groupedFeedback = useMemo(() => {
@@ -511,11 +573,8 @@ Important:
           ...insight,
           competencies: insight.competencies.map((comp: Competency) => ({
             ...comp,
-            // Override confidence based on actual response count
-            confidence: validateConfidenceLevel(
-              comp.evidenceCount || insight.responseCount || 0,
-              comp.confidence
-            )
+            // Override confidence based on actual evidence count
+            confidence: validateConfidenceLevel(comp.evidenceCount || 0)
           }))
         }));
 
@@ -780,16 +839,54 @@ Important:
             <div key={i} className="space-y-2">
               <div className="flex justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <span>{competency.name}</span>
+                  <span className="font-medium">{competency.name}</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger className="cursor-help">
                         <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent side="right" align="start" className="max-w-[280px] p-3">
-                        <p className="text-sm">
-                          {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => comp.name === competency.name)?.[1].aspects.join(', ')}
-                        </p>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="font-medium mb-1">Score Components:</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full",
+                                competency.confidence === 'low' ? "bg-destructive/50" :
+                                competency.confidence === 'medium' ? "bg-yellow-500" :
+                                "bg-primary"
+                              )} />
+                              <p className="text-sm capitalize">{competency.confidence} Confidence</p>
+                            </div>
+                            <p className="text-sm">
+                              Based on evidence from {competency.evidenceCount || 0} {(competency.evidenceCount || 0) === 1 ? 'reviewer' : 'reviewers'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-medium mb-1">Key Aspects:</p>
+                            <div className="grid gap-1">
+                              {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                                comp.name === competency.name
+                              )?.[1].aspects.map((aspect, i) => (
+                                <div key={i} className="flex items-baseline gap-2 text-sm">
+                                  <div className="w-1 h-1 rounded-full bg-primary/50 mt-1.5" />
+                                  <span>{aspect}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium mb-1">Score Meaning ({competency.score}/5):</p>
+                            <p className="text-sm">
+                              {(() => {
+                                const foundComp = Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                                  comp.name === competency.name
+                                )?.[1];
+                                return foundComp?.rubric[competency.score as keyof typeof foundComp.rubric];
+                              })()}
+                            </p>
+                          </div>
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -799,20 +896,35 @@ Important:
                     variant={competency.confidence === 'low' ? 'destructive' : 
                            competency.confidence === 'medium' ? 'outline' : 
                            'default'}
-                    className="text-xs capitalize"
+                    className={cn(
+                      "text-xs capitalize",
+                      competency.confidence === 'medium' && "bg-yellow-50 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-700"
+                    )}
                   >
                     {competency.confidence}
                   </Badge>
-                  <span className="font-medium">{competency.score}/5</span>
+                  <span className="font-medium w-8 text-right">{competency.score}/5</span>
                 </div>
               </div>
-              <Progress 
-                value={(competency.score / 5) * 100} 
-                className="h-2 bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">{competency.description}</p>
+              <div className="relative">
+                <Progress 
+                  value={(competency.score / 5) * 100} 
+                  className={cn(
+                    "h-2",
+                    competency.confidence === 'low' ? "bg-destructive/10 [&>div]:bg-destructive/50" :
+                    competency.confidence === 'medium' ? "bg-yellow-100 [&>div]:bg-yellow-500" :
+                    "bg-primary/10 [&>div]:bg-primary"
+                  )}
+                />
+                <div className="absolute inset-0 grid grid-cols-5 -mx-[1px]">
+                  {[1,2,3,4,5].map(n => (
+                    <div key={n} className="border-l border-muted last:border-r" />
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">{competency.description}</p>
               {competency.roleSpecificNotes && (
-                <p className="text-xs text-muted-foreground italic mt-1">
+                <p className="text-sm text-muted-foreground italic mt-1">
                   Note: {competency.roleSpecificNotes}
                 </p>
               )}

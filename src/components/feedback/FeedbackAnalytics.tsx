@@ -15,6 +15,8 @@ interface Competency {
   description: string;
   roleSpecificNotes?: string;
   evidenceCount?: number;
+  evidenceQuotes?: string[];
+  scoreJustification?: string;
 }
 
 interface RelationshipInsight {
@@ -51,28 +53,36 @@ interface AnalyticsMetadata {
   last_analyzed_at: string;
 }
 
+interface CompetencyAssessment {
+  score: number | null;  // Allow null for insufficient data
+  confidence: 'low' | 'medium' | 'high';
+  description: string;
+  evidenceCount: number;
+  isInsufficientData?: boolean;
+}
+
 // Update relationship type constants
 const RELATIONSHIP_TYPES = {
-  SENIOR: 'senior',
-  PEER: 'peer',
-  JUNIOR: 'junior'
+  senior: 'senior',
+  peer: 'peer',
+  junior: 'junior'
 } as const;
 
 // Add relationship display order
 const RELATIONSHIP_ORDER = [
-  RELATIONSHIP_TYPES.SENIOR,
-  RELATIONSHIP_TYPES.PEER,
-  RELATIONSHIP_TYPES.JUNIOR
+  RELATIONSHIP_TYPES.senior,
+  RELATIONSHIP_TYPES.peer,
+  RELATIONSHIP_TYPES.junior
 ];
 
 // Update relationship normalization function
 function normalizeRelationship(relationship: string): string {
   const normalized = relationship.toLowerCase().replace(/[_\s]+/g, '');
-  if (normalized.includes('senior')) return RELATIONSHIP_TYPES.SENIOR;
-  if (normalized.includes('peer') || normalized.includes('equal')) return RELATIONSHIP_TYPES.PEER;
-  if (normalized.includes('junior')) return RELATIONSHIP_TYPES.JUNIOR;
+  if (normalized.includes('senior')) return RELATIONSHIP_TYPES.senior;
+  if (normalized.includes('peer') || normalized.includes('equal')) return RELATIONSHIP_TYPES.peer;
+  if (normalized.includes('junior')) return RELATIONSHIP_TYPES.junior;
   // Default to peer if relationship is unclear
-  return RELATIONSHIP_TYPES.PEER;
+  return RELATIONSHIP_TYPES.peer;
 }
 
 // Create a hash of feedback responses to detect changes
@@ -223,6 +233,226 @@ function validateConfidenceLevel(responseCount: number, confidence: string): str
   return 'high';
 }
 
+function validateCompetencyAssessment(comp: CompetencyAssessment, responseCount: number): CompetencyAssessment {
+  // Mark as insufficient data if:
+  // 1. Single response with low confidence
+  // 2. Zero or very low evidence count
+  // 3. Score is 0 or null from AI
+  const isInsufficientData = 
+    (responseCount <= 1 && comp.confidence === 'low') ||
+    comp.evidenceCount === 0 ||
+    comp.score === null ||
+    comp.score === 0;
+
+  return {
+    ...comp,
+    isInsufficientData,
+    // If insufficient data, force confidence to low
+    confidence: isInsufficientData ? 'low' : comp.confidence
+  };
+}
+
+export function CompetencyScore({ 
+  name, 
+  score, 
+  confidence, 
+  isInsufficientData 
+}: { 
+  name: string; 
+  score: number | null; 
+  confidence: string;
+  isInsufficientData?: boolean;
+}) {
+  if (isInsufficientData) {
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-medium text-sm text-muted-foreground">{name}</h3>
+            <Badge variant="outline" className="text-xs">
+              Insufficient Data
+            </Badge>
+          </div>
+        </div>
+        <div className="h-2 bg-gray-200 rounded">
+          <div className="h-full bg-gray-400 rounded" style={{ width: '0%' }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-medium text-sm">{name}</h3>
+          <Badge 
+            variant={confidence === 'high' ? 'default' : 
+                    confidence === 'medium' ? 'secondary' : 'outline'}
+            className={cn(
+              'text-xs',
+              confidence === 'low' && 'text-muted-foreground'
+            )}
+          >
+            {confidence} confidence
+          </Badge>
+        </div>
+        <span className="font-semibold">
+          {score?.toFixed(1) || 'N/A'}/5
+        </span>
+      </div>
+      <Progress 
+        value={score ? score * 20 : 0} 
+        className={cn(
+          'h-2',
+          confidence === 'low' && 'bg-gray-200 [&>div]:bg-gray-400'
+        )}
+      />
+    </div>
+  );
+}
+
+// Add helper function for mathematical aggregation
+function calculateAggregateAnalysis(relationshipAnalyses: RelationshipInsight[]): RelationshipInsight {
+  // Initialize aggregate structure
+  const aggregate: RelationshipInsight = {
+    relationship: 'aggregate',
+    themes: [],
+    uniquePerspectives: [],
+    competencies: [],
+    responseCount: relationshipAnalyses.reduce((sum, analysis) => sum + (analysis.responseCount || 0), 0)
+  };
+
+  // Collect all themes and perspectives with their sources
+  const themesWithSources = relationshipAnalyses.flatMap(a => 
+    a.themes.map(theme => ({
+      theme,
+      relationship: a.relationship,
+      weight: a.responseCount || 0
+    }))
+  );
+
+  const perspectivesWithSources = relationshipAnalyses.flatMap(a => 
+    a.uniquePerspectives.map(perspective => ({
+      perspective,
+      relationship: a.relationship,
+      weight: a.responseCount || 0
+    }))
+  );
+
+  // Sort by weight and take top themes/perspectives
+  aggregate.themes = [...new Set(
+    themesWithSources
+      .sort((a, b) => b.weight - a.weight)
+      .map(t => t.theme)
+  )];
+
+  aggregate.uniquePerspectives = [...new Set(
+    perspectivesWithSources
+      .sort((a, b) => b.weight - a.weight)
+      .map(p => p.perspective)
+  )];
+
+  // Get all unique competency names
+  const competencyNames = [...new Set(relationshipAnalyses.flatMap(a => 
+    a.competencies.map(c => c.name)
+  ))];
+
+  // Calculate weighted averages for each competency
+  aggregate.competencies = competencyNames.map(name => {
+    const competencyData = relationshipAnalyses
+      .map(analysis => {
+        const comp = analysis.competencies.find(c => c.name === name);
+        if (!comp) return null;
+        
+        return {
+          score: comp.score,
+          confidence: comp.confidence,
+          evidenceCount: comp.evidenceCount || 0,
+          responseCount: analysis.responseCount || 0,
+          description: comp.description,
+          relationship: analysis.relationship,
+          evidenceQuotes: comp.evidenceQuotes || [],
+          scoreJustification: comp.scoreJustification || ''
+        };
+      })
+      .filter((data): data is NonNullable<typeof data> => data !== null);
+
+    // Calculate weighted score based on response count
+    const totalResponses = competencyData.reduce((sum, data) => sum + data.responseCount, 0);
+    const weightedScore = competencyData.reduce((sum, data) => 
+      sum + (data.score * (data.responseCount / totalResponses)), 0
+    );
+
+    // Determine aggregate confidence
+    let confidence: 'low' | 'medium' | 'high';
+    if (totalResponses <= 2) confidence = 'low';
+    else if (totalResponses <= 4) confidence = 'medium';
+    else confidence = 'high';
+
+    // Combine insights from different perspectives
+    const insightsByRelationship = competencyData.reduce((acc, data) => {
+      if (!acc[data.relationship]) {
+        acc[data.relationship] = {
+          score: data.score,
+          responseCount: data.responseCount,
+          evidenceQuotes: data.evidenceQuotes,
+          justification: data.scoreJustification
+        };
+      }
+      return acc;
+    }, {} as Record<string, { score: number; responseCount: number; evidenceQuotes: string[]; justification: string; }>);
+
+    // Create a comprehensive description that includes relationship-specific insights
+    const description = Object.entries(insightsByRelationship)
+      .sort((a, b) => b[1].responseCount - a[1].responseCount) // Sort by response count
+      .map(([relationship, data]) => {
+        const relationshipType = relationship.charAt(0).toUpperCase() + relationship.slice(1);
+        if (data.responseCount === 0) return '';
+        return `${relationshipType} perspective (${data.responseCount} ${data.responseCount === 1 ? 'review' : 'reviews'}): ${data.justification}`;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+
+    // Collect all evidence quotes
+    const evidenceQuotes = [...new Set(
+      competencyData.flatMap(data => data.evidenceQuotes)
+    )];
+
+    return {
+      name,
+      score: Number(weightedScore.toFixed(2)),
+      confidence,
+      description,
+      evidenceCount: competencyData.reduce((sum, data) => sum + data.evidenceCount, 0),
+      evidenceQuotes,
+      scoreJustification: `Score based on weighted average across ${totalResponses} reviews, with stronger emphasis on perspectives with more responses.`
+    };
+  });
+
+  return aggregate;
+}
+
+// Add helper function to create empty relationship insight
+function createEmptyRelationshipInsight(relationship: string): RelationshipInsight {
+  return {
+    relationship,
+    responseCount: 0,
+    themes: [],
+    uniquePerspectives: [],
+    competencies: Object.values(CORE_COMPETENCIES).map(comp => ({
+      name: comp.name,
+      score: 0,
+      confidence: 'low',
+      description: 'No feedback received from this relationship level.',
+      evidenceCount: 0,
+      isInsufficientData: true,
+      evidenceQuotes: [],
+      scoreJustification: 'No feedback available for analysis.'
+    }))
+  };
+}
+
 export function FeedbackAnalytics({ 
   feedbackResponses, 
   employeeName, 
@@ -235,9 +465,9 @@ export function FeedbackAnalytics({
   const [analysisStage, setAnalysisStage] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => ({
     aggregate: true,
-    [RELATIONSHIP_TYPES.SENIOR]: false,
-    [RELATIONSHIP_TYPES.PEER]: false,
-    [RELATIONSHIP_TYPES.JUNIOR]: false
+    [RELATIONSHIP_TYPES.senior]: false,
+    [RELATIONSHIP_TYPES.peer]: false,
+    [RELATIONSHIP_TYPES.junior]: false
   }));
   const [isForceRerun, setIsForceRerun] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
@@ -340,48 +570,68 @@ export function FeedbackAnalytics({
     setAnalysisStage(0);
     
     try {
-      let progressText = '';
-      let startTime = Date.now();
-
-      // Move to stage 1 after a brief delay to show preparation
-      setTimeout(() => {
-        if (Date.now() - startTime < 30000) { // Only advance if we haven't finished
-          setAnalysisStage(1);
+      const allInsights: RelationshipInsight[] = [];
+      
+      // First analyze each relationship type separately
+      for (const relationship of Object.keys(groupedFeedback)) {
+        // Skip OpenAI request if no feedback for this relationship
+        if (groupedFeedback[relationship].length === 0) {
+          console.log(`No feedback for ${relationship} relationship, skipping analysis`);
+          allInsights.push(createEmptyRelationshipInsight(relationship));
+          continue;
         }
-      }, 1000);
+        
+        // Only set analysis stage for non-empty groups
+        const stageIndex = RELATIONSHIP_ORDER.indexOf(relationship as keyof typeof RELATIONSHIP_TYPES);
+        if (stageIndex !== -1) {
+          setAnalysisStage(stageIndex + 2);
+        }
+        
+        console.log(`Analyzing ${relationship} feedback with ${groupedFeedback[relationship].length} responses`);
+        
+        const relationshipCompletion = await openai.chat.completions.create({
+          model: "gpt-4-1106-preview",
+          messages: [
+            {
+              role: "system",
+              content: `Analyze the ${relationship} feedback for ${employeeName} (${employeeRole}). Focus only on feedback from ${relationship} relationships.
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4-1106-preview",
-        messages: [
-          {
-            role: "system",
-            content: `Analyze the 360-degree feedback for ${employeeName} (${employeeRole}). First create an aggregate analysis across all relationships, then group insights by organizational relationship (senior, peer, junior) and provide structured analysis using our competency framework.
+STRICT SCORING RULES (MUST BE FOLLOWED):
+1. Default Score: Start at 1/5 for each competency
+2. Evidence Requirements:
+   - Must have EXPLICIT examples/evidence to increase score
+   - Vague or general statements DO NOT count as evidence
+   - Each piece of evidence can only increase score by 0.5-1 point
+   - Maximum score without multiple concrete examples: 3/5
+   - Score of 4+ requires multiple specific, high-impact examples
+   - Score of 5 requires exceptional evidence across multiple reviews
 
-Note: 'Equal' and 'Peer' relationships should be analyzed together under the 'Peer' category.
+3. Confidence Level Rules:
+   LOW confidence (must use if any apply):
+   - Single response mentioning competency
+   - Vague or unclear feedback
+   - Contradictory feedback
+   - No specific examples
+   - Less than 3 responses mentioning competency
 
-STRICT Confidence Level Rules (MUST BE FOLLOWED):
-1. LOW confidence:
-   - When there is only 1 response mentioning the competency
-   - When a competency is not explicitly mentioned in any responses
-   - Default to LOW if unsure about evidence count
+   MEDIUM confidence (all must apply):
+   - 3-4 responses with clear mentions
+   - Some specific examples
+   - Consistent feedback across responses
+   - Clear evidence of impact
 
-2. MEDIUM confidence:
-   - When 2-3 responses explicitly mention or provide evidence for the competency
-   - Must have clear examples from different responses
+   HIGH confidence (all must apply):
+   - 5+ responses with explicit mentions
+   - Multiple detailed examples
+   - Strong consistency across responses
+   - Clear, measurable impact
 
-3. HIGH confidence:
-   - Only when 4 or more responses explicitly mention or provide evidence
-   - Must have multiple concrete examples from different responses
-
-IMPORTANT VALIDATION RULES:
-- Count each response only ONCE per competency
-- A response must EXPLICITLY mention or demonstrate the competency to be counted
-- General or vague mentions do not count as evidence
-- If a response doesn't mention a competency, it CANNOT contribute to that competency's confidence
-- Single response groups CANNOT have HIGH confidence ratings
-- Confidence must be based on ACTUAL evidence count, not interpretation quality
-
-For each relationship type AND the aggregate view, evaluate these core competencies using the following detailed rubrics:
+4. Insufficient Data Criteria (must mark as insufficient if any apply):
+   - No concrete examples
+   - Single vague mention
+   - Contradictory or unclear feedback
+   - Cannot clearly map to competency
+   - Only general or non-specific praise
 
 ${Object.entries(CORE_COMPETENCIES).map(([key, comp]) => `
 ${comp.name}:
@@ -395,152 +645,68 @@ Scoring Rubric:
 5 = ${comp.rubric[5]}
 `).join('\n\n')}
 
-Analysis Guidelines:
-1. Role Context: 
-   - For Managers: Emphasize formal leadership, delegation, mentoring, driving team goals
-   - For ICs: Focus on informal leadership, individual ownership, professional growth
-
-2. Sample Size Handling:
-   - Mark ratings with "Low Confidence" if fewer than 2 references exist
-   - Group feedback by role (senior, peer, junior) for clearer patterns
-   - Note when feedback is mixed or contradictory
-
-3. Bias Detection:
-   - Flag significant outliers for investigation
-   - Note if one role's feedback differs notably from others
-   - Identify potential patterns in feedback discrepancies
-
-4. Evidence Requirements:
-   - Each score must be supported by specific examples
-   - Count only explicit mentions of competencies
-   - Track the exact number of responses supporting each rating
-
 Return a JSON response with this structure:
 {
-  "insights": [
-    {
-      "relationship": "aggregate" | "senior" | "peer" | "junior",
-      "responseCount": number,
-      "themes": string[],
-      "uniquePerspectives": string[],
-      "competencies": [
-        {
-          "name": string (must match one of our core competencies),
-          "score": number (1-5),
-          "confidence": "low" | "medium" | "high",
-          "description": string (explain the score with specific evidence),
-          "roleSpecificNotes": string (if significant differences exist between reviewer roles),
-          "evidenceCount": number (exact count of responses that mentioned this competency)
-        }
-      ]
-    }
-  ]
-}
-
-Important:
-- Base scores ONLY on concrete evidence from feedback
-- Consider role context when interpreting feedback
-- Provide specific examples to justify each score
-- STRICTLY follow the confidence level rules
-- Include exact evidence count for each competency
-- Flag any potential biases or outliers
-- Note role-specific differences in perception`
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              employeeRole: employeeRole,
-              relationships: Object.entries(groupedFeedback).map(([relationship, responses]) => ({
-                relationship,
-                responseCount: responses.length,
-                feedback: responses.map(r => ({
-                  strengths: r.strengths,
-                  areas_for_improvement: r.areas_for_improvement
+  "insights": {
+    "relationship": "${relationship}",
+    "responseCount": number,
+    "themes": string[],
+    "uniquePerspectives": string[],
+    "competencies": [
+      {
+        "name": string,
+        "score": number,
+        "confidence": "low" | "medium" | "high",
+        "description": string,
+        "evidenceCount": number,
+        "evidenceQuotes": string[],
+        "scoreJustification": string
+      }
+    ]
+  }
+}`
+            },
+            {
+              role: "user",
+              content: JSON.stringify({
+                employeeRole: employeeRole,
+                feedback: groupedFeedback[relationship].map(r => ({
+                  strengths: r.strengths || '',
+                  areas_for_improvement: r.areas_for_improvement || ''
                 }))
-              }))
-            })
-          }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-        stream: true
-      });
+              })
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7
+        });
 
-      let lastProgressUpdate = Date.now();
-      let responseStarted = false;
-      let aggregateFound = false;
-      let seniorFound = false;
-      let peerFound = false;
-
-      for await (const chunk of completion) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        progressText += content;
-        
-        // Only process progress updates every 500ms to avoid too frequent updates
-        if (Date.now() - lastProgressUpdate < 500) continue;
-        lastProgressUpdate = Date.now();
-
-        // Start of response detection
-        if (!responseStarted && content.includes('{')) {
-          responseStarted = true;
-          setAnalysisStage(2);
+        const content = relationshipCompletion.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('Invalid response from OpenAI');
         }
 
-        // Detect different sections being processed
-        if (!aggregateFound && progressText.includes('"relationship": "aggregate"')) {
-          aggregateFound = true;
-          setAnalysisStage(2);
-        } else if (!seniorFound && progressText.includes('"relationship": "senior"')) {
-          seniorFound = true;
-          setAnalysisStage(3);
-        } else if (!peerFound && progressText.includes('"relationship": "peer"')) {
-          peerFound = true;
-          setAnalysisStage(4);
-        } else if (progressText.includes('"relationship": "junior"')) {
-          setAnalysisStage(5);
-        }
-
-        // Detect completion
-        if (content.includes('}]}')){
-          setAnalysisStage(ANALYSIS_STAGES.length - 1);
-        }
+        const relationshipAnalysis = JSON.parse(content);
+        allInsights.push(relationshipAnalysis.insights);
       }
 
-      // Parse and validate the response
-      let analysis;
-      try {
-        analysis = JSON.parse(progressText);
-        if (!analysis.insights || !Array.isArray(analysis.insights)) {
-          throw new Error('Invalid response format');
-        }
-
-        // Validate and correct confidence levels
-        analysis.insights = analysis.insights.map((insight: RelationshipInsight) => ({
-          ...insight,
-          competencies: insight.competencies.map((comp: Competency) => ({
-            ...comp,
-            // Override confidence based on actual response count
-            confidence: validateConfidenceLevel(
-              comp.evidenceCount || insight.responseCount || 0,
-              comp.confidence
-            )
-          }))
-        }));
-
-      } catch (parseError) {
-        console.error('Error parsing analysis response:', parseError);
-        throw new Error('Failed to parse analysis results');
+      // Calculate aggregate analysis only if we have any insights with data
+      if (allInsights.some(insight => (insight.responseCount || 0) > 0)) {
+        const aggregateAnalysis = calculateAggregateAnalysis(allInsights);
+        allInsights.unshift(aggregateAnalysis);
+      } else {
+        // If no insights have data, create an empty aggregate
+        allInsights.unshift(createEmptyRelationshipInsight('aggregate'));
       }
 
-      const timestamp = new Date().toISOString();
-      
       // Store results
+      const timestamp = new Date().toISOString();
       const { error: upsertError } = await supabase
         .from('feedback_analytics')
         .upsert(
           {
             feedback_request_id: feedbackRequestId,
-            insights: analysis.insights,
+            insights: allInsights,
             feedback_hash: currentHash,
             last_analyzed_at: timestamp,
             updated_at: timestamp,
@@ -552,14 +718,10 @@ Important:
           }
         );
 
-      if (upsertError) {
-        console.error('Error storing analysis:', upsertError);
-        throw new Error('Failed to store analysis results');
-      }
+      if (upsertError) throw new Error('Failed to store analysis results');
 
-      setInsights(analysis.insights);
+      setInsights(allInsights);
       setLastAnalyzedAt(timestamp);
-      console.log('Successfully stored analysis in database');
       
     } catch (err) {
       console.error('Error analyzing feedback:', err);
