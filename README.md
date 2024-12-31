@@ -200,22 +200,23 @@ The migration handles:
 
 ```
 src/
-├── components/     # Shared React components
-│   ├── employee-review/  # Employee review components
-│   ├── feedback/        # Feedback components
-│   ├── layout/         # Layout components
-│   └── ui/            # UI components from shadcn
-├── hooks/          # Custom React hooks
+├── api/           # API endpoints and handlers
+├── assets/        # Static assets and resources
+├── components/    # Shared React components
+├── features/      # Feature-specific components and logic
+├── hooks/         # Custom React hooks
 ├── lib/           # Shared libraries and utilities
 ├── pages/         # Page components
-│   ├── auth/     # Authentication pages
-│   ├── feedback/ # Feedback pages
-│   └── reviews/  # Review management pages
-├── types/         # TypeScript types
+├── server/        # Server-side code
+├── types/         # TypeScript type definitions
 └── utils/         # Helper functions
 
 public/           # Static assets
-supabase/         # Supabase configuration and migrations
+supabase/
+├── functions/    # Supabase Edge Functions
+└── migrations/   # Database migrations
+
+vite/            # Vite configuration
 ```
 
 ## Deployment
