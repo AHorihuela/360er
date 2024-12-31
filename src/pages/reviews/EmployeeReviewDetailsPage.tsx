@@ -2,50 +2,90 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, FileText, Loader2, Trash2, ChevronDown, Copy, Sparkles, RefreshCw, FileDown } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
+import { FeedbackRequest } from '@/types/feedback';
 import { ReviewCycle } from '@/types/review';
-import { FeedbackRequest, FeedbackResponse } from '@/types/feedback';
 import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
-import { cn } from '@/lib/utils';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
 
-// Add interface for AIReport
+// Types for report generation steps and progress
+type GenerationStep = 0 | 1 | 2 | 3;
+type GenerationSteps = readonly [string, string, string, string];
+
+// Interface for AI Report
 interface AIReportType {
   content: string;
   created_at: string;
 }
 
 export function EmployeeReviewDetailsPage() {
-  const { cycleId, employeeId } = useParams();
+  const params = useParams<{ cycleId: string; employeeId: string }>();
+  const cycleId = params.cycleId;
+  const employeeId = params.employeeId;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Error state for async operations and data fetching
   const [error, setError] = useState<string | null>(null);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<AIReportType | null>(null);
-  const [generationStep, setGenerationStep] = useState(0);
+  
+  // Report generation progress tracking
+  const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [isReportOpen, setIsReportOpen] = useState(false);
 
-  // Fix type annotations in callbacks
-  const handleGenerationStep = (prev: number) => prev + 1;
-  const handleArrayIteration = (_: unknown, num: number) => num + 1;
+  // Generation steps for the UI progress display
+  const generationSteps: GenerationSteps = [
+    "Analyzing feedback responses...",
+    "Identifying key themes and patterns...",
+    "Generating comprehensive insights...",
+    "Preparing final report..."
+  ] as const;
+
+  // Utility functions for report generation
+  const getNextStep = (current: GenerationStep): GenerationStep => {
+    switch (current) {
+      case 0: return 1;
+      case 1: return 2;
+      case 2: return 3;
+      case 3: return 3;
+      default: return current;
+    }
+  };
+
+  /** @preserve Used in UI for elapsed time display */
+  const getElapsedTime = useCallback((startTime: number | null): string => {
+    if (!startTime) return '0s';
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    return `${elapsed}s`;
+  }, []);
+
+  /** @preserve Used in UI for timestamp formatting */
+  const formatLastAnalyzed = useCallback((timestamp: string): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    });
+  }, []);
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -67,31 +107,6 @@ export function EmployeeReviewDetailsPage() {
     }
   };
 
-  const generationSteps = [
-    "Analyzing feedback responses...",
-    "Identifying key themes and patterns...",
-    "Generating comprehensive insights...",
-    "Preparing final report..."
-  ];
-
-  function getElapsedTime(startTime: number | null) {
-    if (!startTime) return '0s';
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    return `${elapsed}s`;
-  }
-
-  // Format timestamp
-  function formatLastAnalyzed(timestamp: string) {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    });
-  }
-
   useEffect(() => {
     fetchData();
   }, [cycleId, employeeId]);
@@ -101,6 +116,7 @@ export function EmployeeReviewDetailsPage() {
 
     try {
       setIsLoading(true);
+      setError(null); // Reset error state before fetching
 
       // Fetch review cycle and feedback request data
       const { data: cycleData, error: cycleError } = await supabase
@@ -152,8 +168,9 @@ export function EmployeeReviewDetailsPage() {
       if (request.ai_reports?.[0]?.content) {
         setAiReport(request.ai_reports[0]);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load employee review details'); // Set error message
       toast({
         title: "Error",
         description: "Failed to load employee review details",
@@ -213,17 +230,12 @@ export function EmployeeReviewDetailsPage() {
     setIsGeneratingReport(true);
     setGenerationStep(0);
     setStartTime(Date.now());
-    // Expand the Report panel if not already expanded
-    setIsReportOpen(true);
     let reportId: string | null = null;
     
-    // Start step progression
+    // Start step progression with type-safe step updates
     const stepInterval = setInterval(() => {
-      setGenerationStep(prev => {
-        if (prev < generationSteps.length - 1) return prev + 1;
-        return prev;
-      });
-    }, 8000); // Change step every 8 seconds
+      setGenerationStep(currentStep => getNextStep(currentStep));
+    }, 8000);
     
     try {
       console.log('Checking for existing report...');
@@ -305,9 +317,10 @@ export function EmployeeReviewDetailsPage() {
         title: "Success",
         description: "AI report generated successfully",
       });
-    } catch (error: unknown) {
+    } catch (err) {
       clearInterval(stepInterval);
-      console.error('Error generating report:', error);
+      setError('Failed to generate AI report');
+      console.error('Error generating report:', err);
       
       // Update report with error if we have a report ID
       if (reportId) {
@@ -315,7 +328,7 @@ export function EmployeeReviewDetailsPage() {
           .from('ai_reports')
           .update({
             status: 'error',
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
+            error: err instanceof Error ? err.message : 'Unknown error occurred',
             is_final: false,
             updated_at: new Date().toISOString()
           })
@@ -345,7 +358,7 @@ export function EmployeeReviewDetailsPage() {
           .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2') // Clean up only extra hashes while preserving heading level
           .trim();
 
-        const { error } = await supabase
+        const { error: saveError } = await supabase
           .from('ai_reports')
           .update({
             content: cleanContent,
@@ -353,9 +366,12 @@ export function EmployeeReviewDetailsPage() {
           })
           .eq('feedback_request_id', feedbackRequest.id);
 
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error saving report:', error);
+        if (saveError) {
+          setError('Failed to save report changes');
+          throw saveError;
+        }
+      } catch (err) {
+        console.error('Error saving report:', err);
         toast({
           title: "Error",
           description: "Failed to save report changes",
@@ -363,11 +379,14 @@ export function EmployeeReviewDetailsPage() {
         });
       }
     }, 1000),
-    [feedbackRequest]
+    [feedbackRequest, toast, setError]
   );
 
-  // Update the onChange handler for the MarkdownEditor
-  function handleReportChange(value: string) {
+  /** 
+   * Handles changes to the AI report content and saves them to the database.
+   * Used by the MarkdownEditor component in AIReport.tsx.
+   */
+  const handleReportChange = useCallback((value: string) => {
     // Clean up markdown formatting while preserving line breaks between sections
     const cleanValue = value
       .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2\n') // Add newline after headings
@@ -379,7 +398,7 @@ export function EmployeeReviewDetailsPage() {
       created_at: prev?.created_at || new Date().toISOString()
     }));
     debouncedSave(cleanValue);
-  }
+  }, [debouncedSave]);
 
   // Add interval for real-time elapsed time updates
   useEffect(() => {
@@ -606,9 +625,41 @@ export function EmployeeReviewDetailsPage() {
 
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">AI Report</h2>
+            {aiReport && (
+              <p className="text-sm text-muted-foreground">
+                Last updated: {formatLastAnalyzed(aiReport.created_at)}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
+            className="h-8 text-xs flex items-center gap-1.5"
+          >
+            {isGeneratingReport ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                {generationSteps[generationStep]} ({getElapsedTime(startTime)})
+              </>
+            ) : (
+              'Generate Report'
+            )}
+          </Button>
+        </div>
+        {error && (
+          <div className="text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <AIReport 
           feedbackRequest={feedbackRequest}
           onExportPDF={handleExportPDF}
+          onReportChange={handleReportChange}
         />
       </section>
 

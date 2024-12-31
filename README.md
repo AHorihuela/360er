@@ -167,6 +167,12 @@ npm install
 
 # Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
 ### Database Setup
@@ -190,74 +196,121 @@ The migration handles:
 - Security policies
 - Anonymous feedback submission
 
-## Usage
-
-1. **Authentication**:
-   - Sign up/login with your email
-   - Verify your email address
-
-2. **Initial Setup**:
-   - Follow the guided onboarding process
-   - Add your first team members
-   - Create your first review cycle
-
-3. **Employee Management**:
-   - Add employees with their name and role
-   - Edit or remove employees as needed
-
-4. **Review Cycles**:
-   - Create a new review cycle with title and deadline
-   - Add employees to the review cycle
-   - Generate and share anonymous feedback links
-
-5. **Feedback Collection**:
-   - Reviewers receive unique links
-   - Submit anonymous feedback about strengths and areas for improvement
-   - Specify their relationship to the reviewee
-
-6. **Review Management**:
-   - Track feedback collection progress
-   - View and manage submitted feedback
-   - Generate AI-powered feedback reports
-   - Export reports in PDF or text format
-   - Use Command+S to quickly save report changes
-
-## Security Features
-
-- Row Level Security (RLS) policies for data protection
-- Anonymous feedback submission
-- Secure authentication flow
-- Protected API endpoints
-- Secure report storage and access control
-
 ## Project Structure
 
 ```
 src/
-├── components/     # Reusable React components
-│   ├── feedback/  # Feedback-related components
-│   ├── layout/    # Layout components
-│   ├── reviews/   # Review management components
-│   └── ui/        # UI components
+├── components/     # Shared React components
+│   ├── employee-review/  # Employee review components
+│   ├── feedback/        # Feedback components
+│   ├── layout/         # Layout components
+│   └── ui/            # UI components from shadcn
+├── hooks/          # Custom React hooks
+├── lib/           # Shared libraries and utilities
 ├── pages/         # Page components
-│   ├── auth/      # Authentication pages
-│   ├── feedback/  # Feedback pages
-│   └── reviews/   # Review management pages
-├── lib/           # Utilities and configurations
-├── types/         # TypeScript type definitions
-└── hooks/         # Custom React hooks
+│   ├── auth/     # Authentication pages
+│   ├── feedback/ # Feedback pages
+│   └── reviews/  # Review management pages
+├── types/         # TypeScript types
+└── utils/         # Helper functions
 
-supabase/
-└── migrations/    # Database migration files
+public/           # Static assets
+supabase/         # Supabase configuration and migrations
 ```
+
+## Deployment
+
+### Production Environment
+
+The application is deployed on Vercel with the following configuration:
+
+- **Production URL**: squad360-no2ery2py-ahorihuelas-projects.vercel.app
+- **Database**: Supabase (vwckinhujlyviulpmtjo.supabase.co)
+
+### Environment Variables
+
+Required in Vercel dashboard:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_OPENAI_API_KEY`
+- `PORT=3000`
+
+### Deployment Process
+
+1. Ensure all changes are committed to git
+2. Run build locally to verify no TypeScript errors:
+   ```bash
+   npm run build
+   ```
+3. Deploy to production:
+   ```bash
+   vercel --prod
+   ```
+4. Verify deployment at Vercel dashboard
+5. Check deployment logs at: https://vercel.com/ahorihuelas-projects/squad360/_logs
+
+### Vercel Configuration
+
+```json
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "public": true,
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    { 
+      "src": "/feedback/(.*)", 
+      "dest": "/index.html",
+      "headers": {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "X-XSS-Protection": "1; mode=block",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "*"
+      },
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "github": {
+    "silent": true
+  }
+}
+```
+
+## Security Features
+
+- Row Level Security (RLS) policies for data protection
+- Anonymous feedback submission through unique links
+- Secure authentication flow with Supabase Auth
+- Protected API endpoints with proper CORS configuration
+- Secure report storage and access control
+- XSS protection through proper content sanitization
+- CSRF protection through secure token handling
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 

@@ -13,8 +13,7 @@ export function FeedbackAnalytics({
     <Card>
       <CardContent className="p-6">
         <div className="space-y-4">
-          {/* Preserve existing functionality */}
-          {feedbackResponses.map((response, index) => (
+          {feedbackResponses.map((_response, index) => (
             <div key={index} className="space-y-2">
               <Progress value={0} className="h-2" />
               <Badge variant="outline">Feedback {index + 1}</Badge>

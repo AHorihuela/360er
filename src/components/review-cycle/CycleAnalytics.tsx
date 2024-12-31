@@ -28,20 +28,12 @@ interface AggregateAnalytics {
   [key: string]: CompetencyScore;
 }
 
-interface Competency {
+export interface Competency {
   name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
-}
-
-interface FeedbackAnalytics {
-  id: string;
-  insights: Array<{
-    competencies: Array<Competency>;
-    relationship: string;
-  }>;
 }
 
 export function CycleAnalytics({ reviewCycle }: Props) {

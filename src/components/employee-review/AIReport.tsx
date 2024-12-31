@@ -25,6 +25,7 @@ interface Props {
     }>;
   };
   onExportPDF: () => void;
+  onReportChange?: (value: string) => void;
 }
 
 const generationSteps = [
@@ -41,7 +42,7 @@ function getElapsedTime(startTime: number | null): string {
   return `${elapsed}s`;
 }
 
-export function AIReport({ feedbackRequest, onExportPDF }: Props) {
+export function AIReport({ feedbackRequest, onExportPDF, onReportChange }: Props) {
   const { toast } = useToast();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
@@ -299,7 +300,10 @@ export function AIReport({ feedbackRequest, onExportPDF }: Props) {
                   <div className="prose prose-gray dark:prose-invert max-w-none">
                     <MarkdownEditor
                       value={aiReport.content}
-                      onChange={handleReportChange}
+                      onChange={(value) => {
+                        handleReportChange(value);
+                        onReportChange?.(value);
+                      }}
                     />
                   </div>
                 </CardContent>

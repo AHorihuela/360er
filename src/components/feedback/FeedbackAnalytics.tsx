@@ -42,14 +42,6 @@ interface Props {
   feedbackRequestId: string;
 }
 
-interface CompetencyAssessment {
-  score: number | null;  // Allow null for insufficient data
-  confidence: 'low' | 'medium' | 'high';
-  description: string;
-  evidenceCount: number;
-  isInsufficientData?: boolean;
-}
-
 // Update relationship type constants
 const RELATIONSHIP_TYPES = {
   senior: 'senior',
