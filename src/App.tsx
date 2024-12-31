@@ -64,7 +64,7 @@ function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5" />
         
         {/* Background animation with reduced opacity on mobile */}
-        <div className="absolute inset-0 opacity-30 sm:opacity-100">
+        <div className="absolute inset-0 opacity-20 sm:opacity-30">
           <FeedbackViz />
         </div>
         
@@ -77,14 +77,14 @@ function HomePage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
               </span>
-              Now with AI-powered insights
+              Advanced AI Analytics with Confidence Scoring
             </div>
             <div className="space-y-6">
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Transform peer feedback into growth</span>
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Transform peer feedback into actionable insights</span>
               </h1>
               <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
-                Collect, analyze, and deliver meaningful 360° feedback that drives professional development using AI-powered insights.
+                Collect and analyze 360° feedback with confidence-rated insights, competency scoring, and detailed growth recommendations powered by AI.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -105,17 +105,21 @@ function HomePage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-6 sm:gap-8 text-sm text-muted-foreground pt-4">
-              <div className="flex items-center gap-2 hover:text-primary transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
                 100% Anonymous
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Free to Use
+              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                Confidence-Rated Analysis
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                AI-Powered Insights
+              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                Visual Progress Tracking
+              </div>
+              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                Competency Framework
               </div>
             </div>
           </div>
@@ -216,9 +220,9 @@ function HomePage() {
                     </div>
                   </div>
                   <div className="text-center space-y-2">
-                    <h3 className="text-xl font-semibold">Get Insights</h3>
+                    <h3 className="text-xl font-semibold">Get Detailed Insights</h3>
                     <p className="text-muted-foreground">
-                      Receive AI-powered analysis and actionable insights from feedback
+                      Receive confidence-rated analysis, competency scoring, and actionable growth recommendations
                     </p>
                   </div>
                 </div>
@@ -247,9 +251,9 @@ function HomePage() {
         <div className="container mx-auto py-24 space-y-16">
           {/* Main Features */}
           <div className="text-center space-y-4 mb-24">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Built for High-Performance Teams</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Built for Data-Driven Growth</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get the insights you need to build stronger teams and drive better performance
+              Comprehensive feedback analysis with confidence scoring and visual insights
             </p>
           </div>
 
