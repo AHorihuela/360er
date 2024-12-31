@@ -9,50 +9,49 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { FeedbackResponse } from '@/types/feedback';
 
 interface Employee {
   id: string;
   name: string;
   role: string;
+  user_id: string;
   completed_reviews: number;
   total_reviews: number;
 }
 
-interface FeedbackRequest {
-  id: string;
-  employee_id: string;
-  unique_link: string;
-  status: string;
-  target_responses: number;
-  feedback_responses?: Array<{
-    id: string;
-    status: string;
-    submitted_at: string;
-    relationship: string;
-  }>;
-}
-
-interface ReviewCycle {
-  id: string;
-  title: string;
-  review_by_date: string;
-  total_requests: number;
-  completed_requests: number;
-}
-
-interface ReviewCycleWithFeedback extends ReviewCycle {
-  feedback_requests: FeedbackRequest[];
-}
-
-interface FeedbackResponse {
+interface DbFeedbackResponse {
   id: string;
   status: string;
   submitted_at: string;
   relationship: string;
   strengths: string | null;
   areas_for_improvement: string | null;
-  employee?: Employee;
-  request_id: string;
+}
+
+interface DbFeedbackRequest {
+  id: string;
+  employee_id: string;
+  status: string;
+  target_responses: number;
+  unique_link: string;
+  feedback_responses?: DbFeedbackResponse[];
+}
+
+interface DbReviewCycle {
+  id: string;
+  title: string;
+  review_by_date: string;
+  feedback_requests: DbFeedbackRequest[];
+}
+
+interface ReviewCycleWithFeedback {
+  id: string;
+  title: string;
+  review_by_date: string;
+  total_requests: number;
+  completed_requests: number;
+  feedback_requests: DbFeedbackRequest[];
 }
 
 export function DashboardPage(): JSX.Element {
@@ -61,7 +60,7 @@ export function DashboardPage(): JSX.Element {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [hasEmployees, setHasEmployees] = useState(false);
-  const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycle | null>(null);
+  const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycleWithFeedback | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   const startRealtimeSubscription = (userId: string) => {
@@ -143,26 +142,7 @@ export function DashboardPage(): JSX.Element {
       }
 
       if (reviewCycles && reviewCycles.length > 0) {
-        const currentCycle = reviewCycles[0] as unknown as {
-          id: string;
-          title: string;
-          review_by_date: string;
-          feedback_requests: Array<{
-            id: string;
-            status: string;
-            employee_id: string;
-            target_responses: number;
-            unique_link: string;
-            feedback_responses: Array<{
-              id: string;
-              status: string;
-              submitted_at: string;
-              relationship: string;
-              strengths: string | null;
-              areas_for_improvement: string | null;
-            }>;
-          }>;
-        };
+        const currentCycle = reviewCycles[0] as unknown as DbReviewCycle;
         
         // Calculate total completed requests across all employees
         const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
@@ -419,11 +399,19 @@ export function DashboardPage(): JSX.Element {
           <h2 className="text-xl font-semibold">Recent Reviews</h2>
           <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             {(activeReviewCycle as ReviewCycleWithFeedback).feedback_requests?.flatMap(request => 
-              request.feedback_responses?.map(response => ({
-                ...response,
-                employee: employees.find(e => e.id === request.employee_id),
-                request_id: request.id
-              } as FeedbackResponse))
+              request.feedback_responses?.map(response => {
+                const feedbackResponse: FeedbackResponse = {
+                  id: response.id,
+                  feedback_request_id: request.id,
+                  relationship: response.relationship,
+                  strengths: response.strengths,
+                  areas_for_improvement: response.areas_for_improvement,
+                  submitted_at: response.submitted_at,
+                  status: response.status,
+                  employee: employees.find(e => e.id === request.employee_id)
+                };
+                return feedbackResponse;
+              })
             )
             .filter((response): response is FeedbackResponse => 
               response !== undefined && 

@@ -14,11 +14,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
-import { ReviewCycle, FeedbackRequest } from '@/types/review';
+import { ReviewCycle } from '@/types/review';
+import { FeedbackRequest, FeedbackResponse } from '@/types/feedback';
 import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
 import { cn } from '@/lib/utils';
-import { FeedbackAnalytics } from '@/components/feedback/FeedbackAnalytics';
+import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
+
+interface PageStats {
+  responses: number;
+  page_views: number;
+}
 
 interface AIReport {
   content: string;
@@ -70,6 +76,18 @@ export function EmployeeReviewDetailsPage() {
     if (!startTime) return '0s';
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     return `${elapsed}s`;
+  }
+
+  // Format timestamp
+  function formatLastAnalyzed(timestamp: string) {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    });
   }
 
   useEffect(() => {
@@ -548,39 +566,27 @@ export function EmployeeReviewDetailsPage() {
             variant="outline"
             size="sm"
             onClick={handleCopyLink}
-            className="h-8 text-xs flex items-center gap-1.5 w-full sm:w-auto"
+            className="h-8 text-xs flex items-center gap-1.5"
           >
             <Copy className="h-3.5 w-3.5" />
             Copy Link
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={handleGenerateReport}
-            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
-            className="h-8 text-xs flex items-center gap-1.5 w-full sm:w-auto"
+            onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
+            className="h-8 text-xs"
           >
-            {isGeneratingReport ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3.5 w-3.5" />
-                {aiReport ? 'Regenerate' : 'Generate'}
-              </>
-            )}
+            AI Report
           </Button>
-          {isGeneratingReport && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground animate-in fade-in w-full sm:w-auto">
-              <Progress 
-                value={((generationStep + 1) / generationSteps.length) * 100} 
-                className="w-full sm:w-32 h-1.5"
-              />
-              <span className="hidden sm:inline">{generationSteps[generationStep]}</span>
-            </div>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
+            className="h-8 text-xs"
+          >
+            Detailed Feedback
+          </Button>
         </div>
       </div>
 
@@ -597,7 +603,16 @@ export function EmployeeReviewDetailsPage() {
       )}
 
       {/* Report Section */}
-      <div className="space-y-4">
+      <div id="ai-report" className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">AI-Generated Report</h2>
+          {aiReport?.created_at && (
+            <p className="text-sm text-muted-foreground">
+              Generated {formatLastAnalyzed(aiReport.created_at)}
+            </p>
+          )}
+        </div>
+
         <Card>
           <CardHeader 
             onClick={() => setIsReportOpen(!isReportOpen)}
@@ -605,7 +620,7 @@ export function EmployeeReviewDetailsPage() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CardTitle className="text-lg">Feedback Summary</CardTitle>
+                <CardTitle className="text-lg">Performance Summary</CardTitle>
               </div>
               <ChevronDown className={cn("h-5 w-5 transition-transform", isReportOpen && "rotate-180")} />
             </div>
@@ -748,100 +763,110 @@ export function EmployeeReviewDetailsPage() {
         </Card>
       </div>
 
-      {/* Overview and Feedback Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Overview Panel */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader className="p-4">
-              <CardTitle className="text-base">Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Review Cycle</p>
-                <p className="text-sm font-medium">{reviewCycle?.title}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Completion</p>
-                <div className="space-y-2">
-                  <Progress 
-                    value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
-                    className="h-2"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-                <Badge variant="secondary" className="text-xs capitalize">
-                  {(feedbackRequest?.status || 'pending').replace('_', ' ')}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Detailed Reviews Section */}
+      <div id="detailed-feedback" className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">Detailed Feedback Responses</h2>
+          <p className="text-sm text-muted-foreground">
+            Individual feedback responses from all reviewers
+          </p>
         </div>
 
-        {/* Feedback Responses */}
-        <div className="lg:col-span-9">
-          <Card>
-            <CardHeader className="p-4">
-              <CardTitle className="text-base">Feedback Responses</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {feedbackRequest?.feedback?.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No feedback responses yet.
+        {/* Overview and Feedback Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Overview Panel */}
+          <div className="lg:col-span-3">
+            <Card>
+              <CardHeader className="p-4">
+                <CardTitle className="text-base">Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Review Cycle</p>
+                  <p className="text-sm font-medium">{reviewCycle?.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
+                  </p>
                 </div>
-              ) : (
-                <div className="divide-y">
-                  {feedbackRequest?.feedback?.map((feedback) => (
-                    <div key={feedback.id} className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {feedback.relationship.replace('_', ' ')}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(feedback.submitted_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteFeedback(feedback.id)}
-                          disabled={deletingFeedbackId === feedback.id}
-                          className="h-7 px-2 text-destructive hover:text-destructive-foreground"
-                        >
-                          {deletingFeedbackId === feedback.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="font-medium">Strengths: </span>
-                          <span className="text-muted-foreground">{feedback.strengths}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium">Areas for Improvement: </span>
-                          <span className="text-muted-foreground">{feedback.areas_for_improvement}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Completion</p>
+                  <div className="space-y-2">
+                    <Progress 
+                      value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
+                    </p>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                  <Badge variant="secondary" className="text-xs capitalize">
+                    {(feedbackRequest?.status || 'pending').replace('_', ' ')}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Feedback Responses */}
+          <div className="lg:col-span-9">
+            <Card>
+              <CardHeader className="p-4">
+                <CardTitle className="text-base">Feedback Responses</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {feedbackRequest?.feedback?.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No feedback responses yet.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {feedbackRequest?.feedback?.map((feedback) => (
+                      <div key={feedback.id} className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {feedback.relationship.replace('_', ' ')}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(feedback.submitted_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFeedback(feedback.id)}
+                            disabled={deletingFeedbackId === feedback.id}
+                            className="h-7 px-2 text-destructive hover:text-destructive-foreground"
+                          >
+                            {deletingFeedbackId === feedback.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="font-medium">Strengths: </span>
+                            <span className="text-muted-foreground">{feedback.strengths}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Areas for Improvement: </span>
+                            <span className="text-muted-foreground">{feedback.areas_for_improvement}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -7,6 +7,8 @@ import { Loader2, ChevronDown, RefreshCw } from 'lucide-react';
 import { openai } from '@/lib/openai';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { FeedbackResponse } from '@/types/feedback';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Competency {
   name: string;
@@ -23,14 +25,6 @@ interface RelationshipInsight {
   uniquePerspectives: string[];
   competencies: Competency[];
   responseCount?: number;
-}
-
-interface FeedbackResponse {
-  id: string;
-  relationship: string;
-  strengths: string | null;
-  areas_for_improvement: string | null;
-  submitted_at: string;
 }
 
 interface Props {
@@ -632,7 +626,23 @@ Important:
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold">Feedback Analytics</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Feedback Analytics</h2>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="text-xs font-normal bg-black text-white hover:bg-black/90 cursor-help transition-colors border-black">
+                    Beta
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={5} className="max-w-[220px] p-3">
+                  <p className="text-sm">
+                    This experimental feature uses AI to analyze feedback patterns and provide insights.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           {lastAnalyzedAt && (
             <p className="text-sm text-muted-foreground">
               Last analyzed {formatLastAnalyzed(lastAnalyzedAt)}
@@ -713,59 +723,7 @@ Important:
             </CardHeader>
             {isExpanded && insight && (
               <CardContent className="space-y-6">
-                {/* Key Themes */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Key Themes</h4>
-                  <div className="grid gap-2">
-                    {insight.themes.map((theme, i) => (
-                      <div key={i} className="text-sm text-muted-foreground">
-                        • {theme}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Unique Perspectives */}
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Unique Insights</h4>
-                  <div className="grid gap-2">
-                    {insight.uniquePerspectives.map((perspective, i) => (
-                      <div key={i} className="text-sm text-muted-foreground">
-                        • {perspective}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Competencies */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Competency Assessment</h4>
-                  {insight.competencies.map((competency, i) => (
-                    <div key={i} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>{competency.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={competency.confidence === 'low' ? 'destructive' : 
-                                   competency.confidence === 'medium' ? 'outline' : 
-                                   'default'}
-                            className="text-xs capitalize"
-                          >
-                            {competency.confidence}
-                          </Badge>
-                          <span className="font-medium">{competency.score}/5</span>
-                        </div>
-                      </div>
-                      <Progress value={(competency.score / 5) * 100} className="h-2" />
-                      <p className="text-xs text-muted-foreground">{competency.description}</p>
-                      {competency.roleSpecificNotes && (
-                        <p className="text-xs text-muted-foreground italic mt-1">
-                          Note: {competency.roleSpecificNotes}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {renderInsightContent(insight)}
               </CardContent>
             )}
           </Card>
@@ -778,32 +736,35 @@ Important:
   function renderInsightContent(insight: RelationshipInsight) {
     return (
       <>
-        {/* Key Themes */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Key Themes</h4>
-          <div className="grid gap-2">
-            {insight.themes.map((theme, i) => (
-              <div key={i} className="text-sm text-muted-foreground">
-                • {theme}
-              </div>
-            ))}
+        {/* Key Themes and Unique Insights in a grid */}
+        <div className="grid grid-cols-2 gap-8">
+          {/* Key Themes Column */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Key Themes</h4>
+            <div className="grid gap-2">
+              {insight.themes.map((theme, i) => (
+                <div key={i} className="text-sm text-muted-foreground">
+                  • {theme}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Unique Perspectives */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Unique Insights</h4>
-          <div className="grid gap-2">
-            {insight.uniquePerspectives.map((perspective, i) => (
-              <div key={i} className="text-sm text-muted-foreground">
-                • {perspective}
-              </div>
-            ))}
+          {/* Unique Insights Column */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Unique Insights</h4>
+            <div className="grid gap-2">
+              {insight.uniquePerspectives.map((perspective, i) => (
+                <div key={i} className="text-sm text-muted-foreground">
+                  • {perspective}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Competencies */}
-        <div className="space-y-3">
+        <div className="space-y-4 mt-8">
           <h4 className="text-sm font-medium">Competency Assessment</h4>
           {insight.competencies.map((competency, i) => (
             <div key={i} className="space-y-2">
@@ -821,7 +782,10 @@ Important:
                   <span className="font-medium">{competency.score}/5</span>
                 </div>
               </div>
-              <Progress value={(competency.score / 5) * 100} className="h-2" />
+              <Progress 
+                value={(competency.score / 5) * 100} 
+                className="h-2 bg-muted"
+              />
               <p className="text-xs text-muted-foreground">{competency.description}</p>
               {competency.roleSpecificNotes && (
                 <p className="text-xs text-muted-foreground italic mt-1">
