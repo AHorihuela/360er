@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { LoginPage } from './pages/auth/LoginPage';
+import { SignupPage } from './pages/auth/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EmployeesPage } from './pages/employees/EmployeesPage';
 import { ReviewCyclesPage } from './pages/reviews/ReviewCyclesPage';
@@ -44,7 +45,7 @@ function HomePage() {
     <div className="flex min-h-screen flex-col dark:bg-gray-950">
       {/* Navigation */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
-        <div className="container mx-auto flex h-14 items-center justify-between">
+        <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             Squad360
           </span>
@@ -72,16 +73,18 @@ function HomePage() {
         <div className="container max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8 py-8 relative">
           {/* Left column - Content */}
           <div className="flex-1 space-y-8 pt-12 lg:pt-24">
-            <div className="inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium bg-background/95 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer">
-              <span className="relative flex h-2 w-2 mr-2">
+            <div className="inline-flex items-center rounded-full border px-6 py-2 text-sm font-medium bg-background/95 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer w-auto sm:w-auto md:w-auto lg:w-auto">
+              <span className="relative flex h-2.5 w-2.5 mr-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary"></span>
               </span>
-              Advanced AI Analytics with Confidence Scoring
+              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-[length:200%_100%] bg-clip-text text-transparent animate-gradient">
+                Advanced AI Analytics with Confidence Scoring
+              </span>
             </div>
             <div className="space-y-6">
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Transform peer feedback into actionable insights</span>
+                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-[length:200%_100%] bg-clip-text text-transparent animate-gradient">Transform peer feedback into actionable insights</span>
               </h1>
               <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
                 Collect and analyze 360° feedback with confidence-rated insights, competency scoring, and detailed growth recommendations powered by AI.
@@ -90,7 +93,7 @@ function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button 
                 size="lg" 
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/signup')}
                 className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-12 px-8"
               >
                 Get Started for Free
@@ -104,22 +107,18 @@ function HomePage() {
                 See How It Works
               </Button>
             </div>
-            <div className="flex flex-wrap items-center gap-6 sm:gap-8 text-sm text-muted-foreground pt-4">
-              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+            <div className="flex items-center gap-6 sm:gap-8 text-sm text-muted-foreground pt-4 overflow-x-auto">
+              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
                 <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                100% Anonymous
+                AI-Powered Insights
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
                 <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Confidence-Rated Analysis
+                Track Your Progress
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
+              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
                 <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Visual Progress Tracking
-              </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors min-w-[180px]">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                Competency Framework
+                Complete Feedback System
               </div>
             </div>
           </div>
@@ -141,7 +140,10 @@ function HomePage() {
 
           <div className="relative">
             {/* Connecting Line */}
-            <div className="hidden md:block absolute top-[45px] left-[10%] right-[10%] h-0.5 bg-primary/10 -z-10" />
+            <div className="hidden md:block absolute top-[45px] left-[10%] right-[10%] h-1 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20">
+              {/* Animated gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-accent opacity-20 animate-pulse" />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-6 relative">
               {/* Step 1 */}
@@ -150,8 +152,8 @@ function HomePage() {
                 <div className="relative space-y-6">
                   <div className="relative flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
-                      <div className="absolute inset-0 rounded-full bg-primary/5" />
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20" />
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 flex items-center justify-center text-2xl font-bold text-primary relative group-hover:scale-110 transition-transform">
                         1
                       </div>
                     </div>
@@ -171,8 +173,8 @@ function HomePage() {
                 <div className="relative space-y-6">
                   <div className="relative flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
-                      <div className="absolute inset-0 rounded-full bg-primary/5" />
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20" />
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 flex items-center justify-center text-2xl font-bold text-primary relative group-hover:scale-110 transition-transform">
                         2
                       </div>
                     </div>
@@ -192,8 +194,8 @@ function HomePage() {
                 <div className="relative space-y-6">
                   <div className="relative flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
-                      <div className="absolute inset-0 rounded-full bg-primary/5" />
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20" />
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 flex items-center justify-center text-2xl font-bold text-primary relative group-hover:scale-110 transition-transform">
                         3
                       </div>
                     </div>
@@ -213,8 +215,8 @@ function HomePage() {
                 <div className="relative space-y-6">
                   <div className="relative flex justify-center">
                     <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center relative">
-                      <div className="absolute inset-0 rounded-full bg-primary/5" />
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary relative">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20" />
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 flex items-center justify-center text-2xl font-bold text-primary relative group-hover:scale-110 transition-transform">
                         4
                       </div>
                     </div>
@@ -234,7 +236,7 @@ function HomePage() {
           <div className="text-center mt-16">
             <Button
               size="lg"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/signup')}
               className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-12 px-8"
             >
               Get Started Now
@@ -319,7 +321,7 @@ function HomePage() {
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <Button 
                     size="lg" 
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/signup')}
                     className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300"
                   >
                     Get Started for Free
@@ -327,10 +329,10 @@ function HomePage() {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    onClick={() => window.open('mailto:support@squad360.com')}
+                    onClick={() => navigate('/login')}
                     className="border-primary text-primary hover:bg-primary/10 transition-all duration-300"
                   >
-                    Contact Sales
+                    Login
                   </Button>
                 </div>
               </div>
@@ -396,6 +398,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/feedback/thank-you" element={<ThankYouPage />} />
           <Route path="/feedback/:uniqueLink" element={<FeedbackFormPage />} />
           <Route
