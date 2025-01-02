@@ -328,11 +328,11 @@ export function DashboardPage(): JSX.Element {
               <div className="flex justify-between text-sm">
                 <span>Overall Completion</span>
                 <span className="font-medium">
-                  {Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100)}%
+                  {activeReviewCycle.total_requests === 0 ? '0' : Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100)}%
                 </span>
               </div>
               <Progress 
-                value={(activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100} 
+                value={activeReviewCycle.total_requests === 0 ? 0 : (activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100} 
                 className="h-3"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
@@ -375,11 +375,11 @@ export function DashboardPage(): JSX.Element {
                       <div className="flex justify-between text-xs sm:text-sm">
                         <span>Feedback Progress</span>
                         <span className="font-medium">
-                          {Math.round((employee.completed_reviews / employee.total_reviews) * 100)}%
+                          {employee.total_reviews === 0 ? '0' : Math.round((employee.completed_reviews / employee.total_reviews) * 100)}%
                         </span>
                       </div>
                       <Progress 
-                        value={(employee.completed_reviews / employee.total_reviews) * 100} 
+                        value={employee.total_reviews === 0 ? 0 : (employee.completed_reviews / employee.total_reviews) * 100} 
                         className="h-2 sm:h-3"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">

@@ -625,41 +625,14 @@ export function EmployeeReviewDetailsPage() {
 
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold">AI Report</h2>
-            {aiReport && (
-              <p className="text-sm text-muted-foreground">
-                Last updated: {formatLastAnalyzed(aiReport.created_at)}
-              </p>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGenerateReport}
-            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
-            className="h-8 text-xs flex items-center gap-1.5"
-          >
-            {isGeneratingReport ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                {generationSteps[generationStep]} ({getElapsedTime(startTime)})
-              </>
-            ) : (
-              'Generate Report'
-            )}
-          </Button>
-        </div>
-        {error && (
-          <div className="text-sm text-destructive">
-            {error}
-          </div>
-        )}
         <AIReport 
           feedbackRequest={feedbackRequest}
           onExportPDF={handleExportPDF}
           onReportChange={handleReportChange}
+          onGenerateReport={handleGenerateReport}
+          isGeneratingReport={isGeneratingReport}
+          generationStep={generationStep}
+          startTime={startTime}
         />
       </section>
 

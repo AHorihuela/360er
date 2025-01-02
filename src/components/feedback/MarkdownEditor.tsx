@@ -74,7 +74,7 @@ export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
     editable: true,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl max-w-none focus:outline-none min-h-[400px] w-full rounded-md border border-input bg-background p-4 [&>h1]:text-2xl [&>h1]:mt-8 [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:mt-6 [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:mt-4 [&>h3]:mb-2'
+        class: 'prose prose-sm max-w-none focus:outline-none min-h-[400px] w-full rounded-md border border-input bg-background p-4 [&>h1]:text-xl [&>h1]:mt-6 [&>h1]:mb-4 [&>h2]:text-lg [&>h2]:mt-4 [&>h2]:mb-2 [&>h3]:text-base [&>h3]:mt-3 [&>h3]:mb-2 [&>p]:text-base [&>p]:leading-relaxed [&>ul]:pl-6 [&>ol]:pl-6'
       }
     },
     onUpdate: ({ editor }) => {
