@@ -139,24 +139,19 @@ export function EmployeesPage() {
 
       const { data, error } = await supabase
         .from('employees')
-        .select(`
-          *,
-          latest_feedback_request:feedback_requests(
-            id,
-            review_cycle_id
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const processedData = data?.map(employee => ({
+
+      // Set employees without feedback data for now
+      const processedData = data.map(employee => ({
         ...employee,
-        latest_feedback_request: employee.latest_feedback_request?.[0] || null
+        latest_feedback_request: null
       }));
       
-      setEmployees(processedData || []);
+      setEmployees(processedData);
     } catch (error) {
       const supabaseError = error as { message: string };
       setError(supabaseError.message);

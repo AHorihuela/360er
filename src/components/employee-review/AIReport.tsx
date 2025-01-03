@@ -153,7 +153,7 @@ export function AIReport({
                       variant="outline"
                       size="sm"
                       onClick={onExportPDF}
-                      disabled={isGeneratingReport}
+                      disabled={isGeneratingReport || !aiReport.content}
                       className="flex-1 sm:flex-initial"
                     >
                       <FileDown className="h-4 w-4 mr-2" />
@@ -180,15 +180,21 @@ export function AIReport({
                     </Button>
                   </div>
                 </div>
-                <div className="w-full">
-                  <MarkdownEditor
-                    value={aiReport.content}
-                    onChange={(value) => {
-                      handleReportChange(value);
-                      onReportChange?.(value);
-                    }}
-                  />
-                </div>
+                {aiReport.content ? (
+                  <div className="w-full">
+                    <MarkdownEditor
+                      value={aiReport.content}
+                      onChange={(value) => {
+                        handleReportChange(value);
+                        onReportChange?.(value);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No report content available. Try regenerating the report.
+                  </div>
+                )}
               </div>
             ) : isGeneratingReport ? (
               <div className="flex flex-col items-center justify-center space-y-6 py-8">
@@ -222,19 +228,38 @@ export function AIReport({
                 <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
                   <FileText className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-base font-semibold">Generate AI-Powered Feedback Report</h3>
-                <p className="text-muted-foreground text-sm px-2">
-                  Create a comprehensive report that analyzes all feedback responses, identifies key themes, and provides actionable insights.
-                </p>
-                <Button
-                  size="default"
-                  onClick={onGenerateReport}
-                  disabled={!feedbackRequest?.feedback?.length || isGeneratingReport}
-                  className="mt-2 w-full sm:w-auto"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate Report
-                </Button>
+                {feedbackRequest?.feedback?.length ? (
+                  <>
+                    <h3 className="text-base font-semibold">Ready to Generate Report</h3>
+                    <p className="text-muted-foreground text-sm px-2">
+                      {feedbackRequest.feedback.length} {feedbackRequest.feedback.length === 1 ? 'review' : 'reviews'} collected. 
+                      Click below to generate an AI-powered analysis of the feedback.
+                    </p>
+                    <Button
+                      size="default"
+                      onClick={onGenerateReport}
+                      className="mt-2 w-full sm:w-auto"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-base font-semibold">Waiting for Reviews</h3>
+                    <p className="text-muted-foreground text-sm px-2">
+                      No reviews have been submitted yet. The AI report will be available once feedback is collected.
+                    </p>
+                    <Button
+                      size="default"
+                      disabled
+                      className="mt-2 w-full sm:w-auto"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </CardContent>

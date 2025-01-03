@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -46,6 +56,8 @@ export function ReviewCycleDetailsPage() {
   const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
   const [newEmployee, setNewEmployee] = useState({ name: '', role: '' });
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [employeeToRemove, setEmployeeToRemove] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -134,19 +146,24 @@ export function ReviewCycleDetailsPage() {
     }
   }
 
-  async function handleRemoveEmployee(requestId: string) {
-    if (!confirm('Are you sure you want to remove this employee from the review cycle?')) return;
+  async function handleRemoveEmployee(requestId: string, employeeName: string) {
+    setEmployeeToRemove({ id: requestId, name: employeeName });
+    setShowRemoveDialog(true);
+  }
 
-    setRemovingEmployeeId(requestId);
+  async function confirmRemoveEmployee() {
+    if (!employeeToRemove || removingEmployeeId) return;
+
+    setRemovingEmployeeId(employeeToRemove.id);
     try {
       const { error } = await supabase
         .from('feedback_requests')
         .delete()
-        .eq('id', requestId);
+        .eq('id', employeeToRemove.id);
 
       if (error) throw error;
 
-      setFeedbackRequests(prev => prev.filter(req => req.id !== requestId));
+      setFeedbackRequests(prev => prev.filter(req => req.id !== employeeToRemove.id));
       toast({
         title: "Success",
         description: "Employee removed from review cycle",
@@ -160,6 +177,8 @@ export function ReviewCycleDetailsPage() {
       });
     } finally {
       setRemovingEmployeeId(null);
+      setShowRemoveDialog(false);
+      setEmployeeToRemove(null);
     }
   }
 
@@ -411,7 +430,7 @@ export function ReviewCycleDetailsPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRemoveEmployee(request.id);
+                            handleRemoveEmployee(request.id, request.employee?.name || 'this employee');
                           }}
                           disabled={removingEmployeeId === request.id}
                           className="h-7 px-2 text-destructive hover:text-destructive-foreground"
@@ -549,6 +568,23 @@ export function ReviewCycleDetailsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {employeeToRemove?.name || 'this employee'} from the review cycle? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveEmployee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

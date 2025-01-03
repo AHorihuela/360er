@@ -15,7 +15,11 @@ export function NewReviewCyclePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<CreateReviewCycleInput, 'user_id'>>({
     title: '',
-    review_by_date: '',
+    review_by_date: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 30);
+      return date.toISOString().split('T')[0];
+    })(),
     status: 'active'
   });
 

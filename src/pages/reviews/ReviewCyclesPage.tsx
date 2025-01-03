@@ -14,6 +14,16 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
 
 function determineRequestStatus(
@@ -49,6 +59,8 @@ export function ReviewCyclesPage() {
   const [reviewCycles, setReviewCycles] = useState<ReviewCycle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -218,19 +230,23 @@ export function ReviewCyclesPage() {
 
   async function handleDelete(cycleId: string) {
     if (isDeletingId) return;
-    
-    if (!confirm('Are you sure you want to delete this review cycle?')) return;
+    setCycleToDelete(cycleId);
+    setShowDeleteDialog(true);
+  }
 
+  async function confirmDelete() {
+    if (!cycleToDelete || isDeletingId) return;
+    
     try {
-      setIsDeletingId(cycleId);
+      setIsDeletingId(cycleToDelete);
       const { error } = await supabase
         .from('review_cycles')
         .delete()
-        .eq('id', cycleId);
+        .eq('id', cycleToDelete);
 
       if (error) throw error;
 
-      setReviewCycles(reviewCycles.filter(cycle => cycle.id !== cycleId));
+      setReviewCycles(reviewCycles.filter(cycle => cycle.id !== cycleToDelete));
       toast({
         title: "Success",
         description: "Review cycle deleted successfully",
@@ -244,6 +260,8 @@ export function ReviewCyclesPage() {
       });
     } finally {
       setIsDeletingId(null);
+      setShowDeleteDialog(false);
+      setCycleToDelete(null);
     }
   }
 
@@ -299,118 +317,137 @@ export function ReviewCyclesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-        <h1 className="text-2xl font-bold">Review Cycles</h1>
-        <Button
-          onClick={() => navigate('/reviews/new-cycle')}
-          className="w-full sm:w-auto gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Review Cycle
-        </Button>
-      </div>
+    <>
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+          <h1 className="text-2xl font-bold">Review Cycles</h1>
+          <Button
+            onClick={() => navigate('/reviews/new-cycle')}
+            className="w-full sm:w-auto gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Review Cycle
+          </Button>
+        </div>
 
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : reviewCycles.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Review Cycles</CardTitle>
-            <CardDescription>
-              Get started by creating your first review cycle
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Button 
-              onClick={() => navigate('/reviews/new-cycle')}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Review Cycle
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {reviewCycles.map((cycle) => (
-            <Card 
-              key={cycle.id} 
-              className="relative cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => navigate(`/reviews/${cycle.id}`)}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
-                    <div className="mt-2 space-y-1">
-                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                        Due {formatDate(cycle.review_by_date)}
-                      </span>
-                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                        <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                        {cycle._count?.feedback_requests || 0} reviewees
-                      </span>
+        {isLoading ? (
+          <div>Loading...</div>
+        ) : reviewCycles.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>No Review Cycles</CardTitle>
+              <CardDescription>
+                Get started by creating your first review cycle
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center py-6">
+              <Button 
+                onClick={() => navigate('/reviews/new-cycle')}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Review Cycle
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {reviewCycles.map((cycle) => (
+              <Card 
+                key={cycle.id} 
+                className="relative cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => navigate(`/reviews/${cycle.id}`)}
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
+                      <div className="mt-2 space-y-1">
+                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                          Due {formatDate(cycle.review_by_date)}
+                        </span>
+                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                          {cycle._count?.feedback_requests || 0} reviewees
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
+                      {getStatusText(cycle)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <span>Progress</span>
+                      <span>{calculateProgress(cycle)}%</span>
+                    </div>
+                    <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      {(() => {
+                        const { completed, pending } = getResponseCounts(cycle);
+                        return (
+                          <>
+                            <span>{completed} reviews completed</span>
+                            <span>{pending} pending</span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
-                  <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
-                    {getStatusText(cycle)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span>Progress</span>
-                    <span>{calculateProgress(cycle)}%</span>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <div className="flex items-center justify-between w-full">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(cycle.id);
+                      }}
+                      disabled={isDeletingId === cycle.id}
+                      className="text-destructive hover:text-destructive-foreground"
+                    >
+                      {isDeletingId === cycle.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      Manage
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    {(() => {
-                      const { completed, pending } = getResponseCounts(cycle);
-                      return (
-                        <>
-                          <span>{completed} reviews completed</span>
-                          <span>{pending} pending</span>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0">
-                <div className="flex items-center justify-between w-full">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(cycle.id);
-                    }}
-                    disabled={isDeletingId === cycle.id}
-                    className="text-destructive hover:text-destructive-foreground"
-                  >
-                    {isDeletingId === cycle.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    Manage
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Review Cycle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this review cycle? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 } 
