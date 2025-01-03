@@ -99,11 +99,8 @@ export function FeedbackAnalytics({
 
   // Group feedback by normalized relationship type
   const groupedFeedback = useMemo(() => {
-    console.log('Grouping feedback responses:', feedbackResponses);
-    
     const grouped = feedbackResponses.reduce((acc, response) => {
       const relationship = normalizeRelationship(response.relationship);
-      console.log(`Normalizing relationship: ${response.relationship} -> ${relationship}`);
       
       if (!acc[relationship]) {
         acc[relationship] = [];
@@ -119,7 +116,6 @@ export function FeedbackAnalytics({
       }
     });
 
-    console.log('Grouped feedback:', grouped);
     return grouped;
   }, [feedbackResponses]);
 

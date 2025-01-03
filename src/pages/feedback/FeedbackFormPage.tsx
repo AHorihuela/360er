@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validateFeedback } from '@/utils/feedbackValidation';
 import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
+import { FeedbackForm } from '@/components/feedback/FeedbackForm';
+import { useFeedbackSubmission } from '@/hooks/useFeedbackSubmission';
 
 interface FeedbackRequest {
   id: string;
@@ -29,24 +29,10 @@ interface FeedbackFormData {
   areas_for_improvement: string;
 }
 
-interface ValidationState {
-  strengths: {
-    isValid: boolean;
-    message: string;
-    warnings?: string[];
-    showLengthWarning: boolean;
-  };
-  areas_for_improvement: {
-    isValid: boolean;
-    message: string;
-    warnings?: string[];
-    showLengthWarning: boolean;
-  };
-}
-
 interface FeedbackFormState {
   step: 'editing' | 'ai_review' | 'submitting';
   aiAnalysisAttempted: boolean;
+  draftId?: string;
 }
 
 function generateSessionId() {
@@ -58,7 +44,6 @@ export function FeedbackFormPage() {
   const { uniqueLink } = useParams();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNames, setShowNames] = useState(true);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
   const [formData, setFormData] = useState<FeedbackFormData>({
@@ -67,15 +52,12 @@ export function FeedbackFormPage() {
     areas_for_improvement: ''
   });
   const [sessionId] = useState(() => generateSessionId());
-  const [validation, setValidation] = useState<ValidationState>({
-    strengths: { isValid: true, message: '', showLengthWarning: false },
-    areas_for_improvement: { isValid: true, message: '', showLengthWarning: false }
-  });
-  const [showLengthRequirements, setShowLengthRequirements] = useState(false);
   const [formState, setFormState] = useState<FeedbackFormState>({
     step: 'editing',
     aiAnalysisAttempted: false
   });
+
+  const { submitFeedback, isSubmitting } = useFeedbackSubmission();
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -123,280 +105,209 @@ export function FeedbackFormPage() {
     fetchData();
   }, [uniqueLink]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    const trackPageView = async () => {
-      if (!feedbackRequest) return;
-
-      try {
-        const { error } = await supabase
-          .from('page_views')
-          .insert([{
-            feedback_request_id: feedbackRequest.id,
-            session_id: sessionId,
-            page_url: window.location.href
-          }]);
-
-        if (error) {
-          console.error('Error tracking page view:', error);
-        }
-      } catch (error) {
-        console.error('Error tracking page view:', error);
-      }
-    };
-
-    // Track initial page view
-    trackPageView();
-
-    // Update page view every minute to show active session
-    interval = setInterval(trackPageView, 60000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [feedbackRequest, sessionId]);
-
-  // Update validation effect
-  useEffect(() => {
-    setValidation({
-      strengths: validateFeedback(formData.strengths, showLengthRequirements),
-      areas_for_improvement: validateFeedback(formData.areas_for_improvement, showLengthRequirements)
-    });
-  }, [formData.strengths, formData.areas_for_improvement, showLengthRequirements]);
-
   async function fetchFeedbackRequest() {
-    try {
-      console.log('Starting fetchFeedbackRequest for link:', uniqueLink);
-      
-      if (!uniqueLink) {
-        throw new Error('No feedback link provided');
-      }
+    if (!uniqueLink) {
+      throw new Error('No feedback link provided');
+    }
 
-      // First, get the feedback request
-      const { data: requestData, error: requestError } = await supabase
-        .from('feedback_requests')
-        .select(`
+    // First, get the feedback request
+    const { data: requestData, error: requestError } = await supabase
+      .from('feedback_requests')
+      .select(`
+        id,
+        review_cycle_id,
+        employee_id,
+        status,
+        unique_link,
+        feedback:feedback_responses (
           id,
-          review_cycle_id,
-          employee_id,
-          status,
-          unique_link,
-          feedback:feedback_responses (
-            id,
-            submitted_at
-          )
-        `)
-        .eq('unique_link', uniqueLink)
-        .single();
+          submitted_at,
+          is_draft,
+          session_id,
+          strengths,
+          areas_for_improvement,
+          relationship
+        )
+      `)
+      .eq('unique_link', uniqueLink)
+      .single();
 
-      if (requestError) {
-        console.error('Error fetching feedback request:', requestError);
-        throw requestError;
+    if (requestError) {
+      console.error('Error fetching feedback request:', requestError);
+      throw requestError;
+    }
+
+    if (!requestData) {
+      console.error('No feedback request found for link:', uniqueLink);
+      throw new Error('No feedback request found');
+    }
+
+    // Check for existing draft
+    if (requestData.feedback) {
+      const existingDraft = requestData.feedback.find(
+        (f: any) => f.is_draft && f.session_id === sessionId
+      );
+
+      if (existingDraft) {
+        console.log('Found existing draft:', existingDraft);
+        setFormState(prev => ({
+          ...prev,
+          draftId: existingDraft.id,
+          aiAnalysisAttempted: true
+        }));
+        setFormData({
+          relationship: existingDraft.relationship || 'equal_colleague',
+          strengths: existingDraft.strengths || '',
+          areas_for_improvement: existingDraft.areas_for_improvement || ''
+        });
       }
+    }
 
-      if (!requestData) {
-        console.error('No feedback request found for link:', uniqueLink);
-        throw new Error('No feedback request found');
-      }
+    // Get the employee data
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('id', requestData.employee_id)
+      .single();
 
-      console.log('Feedback request data:', {
-        id: requestData.id,
-        status: requestData.status,
-        feedback_count: requestData.feedback?.length
-      });
+    if (employeeError) throw employeeError;
+    if (!employeeData) throw new Error('Employee not found');
 
-      // Check if this browser has already submitted feedback
-      try {
-        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-        if (uniqueLink && submittedFeedbacks[uniqueLink]) {
-          console.log('Previous submission found in localStorage');
-          navigate('/feedback/thank-you');
-          return;
+    // Get the review cycle data
+    const { data: cycleData, error: cycleError } = await supabase
+      .from('review_cycles')
+      .select('*')
+      .eq('id', requestData.review_cycle_id)
+      .single();
+
+    if (cycleError) throw cycleError;
+    if (!cycleData) throw new Error('Review cycle not found');
+
+    // Combine the data
+    const combinedData = {
+      ...requestData,
+      employee: employeeData,
+      review_cycle: cycleData
+    };
+
+    setFeedbackRequest(combinedData);
+  }
+
+  async function saveFeedbackResponse(isDraft: boolean = true): Promise<string | null> {
+    if (!feedbackRequest || !uniqueLink) return null;
+
+    try {
+      // First check if we already have a draft for this session
+      if (!formState.draftId) {
+        const { data: existingDrafts, error: searchError } = await supabase
+          .from('feedback_responses')
+          .select('id')
+          .eq('feedback_request_id', feedbackRequest.id)
+          .eq('session_id', sessionId)
+          .eq('is_draft', true);
+
+        if (!searchError && existingDrafts && existingDrafts.length > 0) {
+          console.log('Found existing draft:', existingDrafts[0]);
+          setFormState(prev => ({
+            ...prev,
+            draftId: existingDrafts[0].id
+          }));
+          return existingDrafts[0].id;
         }
-      } catch (e) {
-        console.log('No localStorage submission found');
       }
 
-      // Then get the employee data
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', requestData.employee_id)
-        .single();
-
-      if (employeeError) throw employeeError;
-      if (!employeeData) throw new Error('Employee not found');
-
-      // Then get the review cycle data
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('review_cycles')
-        .select('*')
-        .eq('id', requestData.review_cycle_id)
-        .single();
-
-      if (cycleError) throw cycleError;
-      if (!cycleData) throw new Error('Review cycle not found');
-
-      console.log('Review cycle data:', {
-        id: cycleData.id,
-        title: cycleData.title,
-        review_by_date: cycleData.review_by_date,
-        current_date: new Date().toISOString()
-      });
-
-      // Check if the review cycle is past its review_by_date
-      if (cycleData.review_by_date) {
-        const reviewByDate = new Date(cycleData.review_by_date);
-        const currentDate = new Date();
-        
-        // Set times to midnight for consistent comparison
-        reviewByDate.setHours(23, 59, 59, 999);
-        currentDate.setHours(0, 0, 0, 0);
-
-        if (reviewByDate < currentDate) {
-          console.log('Review cycle ended:', {
-            review_by_date: reviewByDate.toISOString(),
-            current_date: currentDate.toISOString()
-          });
-          throw new Error('This review cycle has ended');
-        }
-      }
-
-      // Combine the data
-      const combinedData = {
-        ...requestData,
-        employee: employeeData,
-        review_cycle: cycleData
+      const currentTime = new Date().toISOString();
+      const feedbackData = {
+        feedback_request_id: feedbackRequest.id,
+        session_id: sessionId,
+        relationship: formData.relationship,
+        strengths: formData.strengths,
+        areas_for_improvement: formData.areas_for_improvement,
+        is_draft: isDraft,
+        submitted_at: currentTime
       };
 
-      setFeedbackRequest(combinedData);
+      // If we have a draft ID, update it
+      if (formState.draftId) {
+        const { error: updateError } = await supabase
+          .from('feedback_responses')
+          .update(feedbackData)
+          .eq('id', formState.draftId)
+          .eq('session_id', sessionId)
+          .eq('is_draft', true);
+
+        if (updateError) {
+          console.error('Error updating feedback:', updateError);
+          throw updateError;
+        }
+        return formState.draftId;
+      }
+
+      // Otherwise create a new draft
+      const { data, error: insertError } = await supabase
+        .from('feedback_responses')
+        .insert([feedbackData])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting feedback:', insertError);
+        throw insertError;
+      }
+
+      return data.id;
     } catch (error) {
-      console.error('Error in fetchFeedbackRequest:', error);
+      console.error('Error saving feedback:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Invalid or expired feedback link",
+        description: "Failed to save draft. Please try again.",
         variant: "destructive",
       });
-      navigate('/');
+      return null;
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) {
+      e.preventDefault();
+    }
     if (!feedbackRequest || !uniqueLink) return;
 
-    // Show length requirements if not already showing
-    if (!showLengthRequirements) {
-      setShowLengthRequirements(true);
-      // Revalidate with length requirements
-      const strengthsValidation = validateFeedback(formData.strengths, true);
-      const improvementValidation = validateFeedback(formData.areas_for_improvement, true);
-      
-      // If either field is invalid, prevent submission
-      if (!strengthsValidation.isValid || !improvementValidation.isValid) {
-        return;
+    // If we're in the editing state and haven't done AI analysis yet
+    if (formState.step === 'editing' && !formState.aiAnalysisAttempted) {
+      try {
+        const draftId = await saveFeedbackResponse(true);
+        if (draftId) {
+          setFormState(prev => ({
+            ...prev,
+            step: 'ai_review',
+            aiAnalysisAttempted: true,
+            draftId
+          }));
+        }
+      } catch (error) {
+        console.error('Error saving draft:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save draft. Please try again.",
+          variant: "destructive",
+        });
       }
-    }
-
-    // If we haven't tried AI analysis yet, show the AI review step
-    if (!formState.aiAnalysisAttempted) {
-      setFormState({
-        step: 'ai_review',
-        aiAnalysisAttempted: true
-      });
       return;
     }
 
-    // If we're here, either AI analysis was attempted or skipped
-    await submitFeedback();
-  }
-
-  async function submitFeedback() {
-    if (!feedbackRequest || !uniqueLink) return;
-    
+    // If we're in AI review or have already done AI analysis, proceed to submission
     setFormState(prev => ({ ...prev, step: 'submitting' }));
-    setIsSubmitting(true);
     
-    try {
-        console.log('Starting feedback submission...', {
-            feedback_request_id: feedbackRequest.id,
-            relationship: formData.relationship,
-            strengths: formData.strengths?.length,
-            areas_for_improvement: formData.areas_for_improvement?.length,
-            request_status: feedbackRequest.status,
-            unique_link: uniqueLink
-        });
+    const success = await submitFeedback(formData, {
+      feedbackRequestId: feedbackRequest.id,
+      uniqueLink,
+      sessionId,
+      draftId: formState.draftId
+    });
 
-        const { error: responseError } = await supabase
-            .from('feedback_responses')
-            .insert({
-                feedback_request_id: feedbackRequest.id,
-                relationship: formData.relationship,
-                strengths: formData.strengths,
-                areas_for_improvement: formData.areas_for_improvement,
-                submitted_at: new Date().toISOString(),
-                session_id: sessionId
-            });
-
-        if (responseError) {
-            // If it's a duplicate submission, treat it as a success
-            if (responseError.code === '23505' && responseError.message?.includes('unique_feedback_per_session')) {
-                console.log('Duplicate submission detected, proceeding to thank you page');
-                navigate('/feedback/thank-you');
-                return;
-            }
-            
-            console.error('Error submitting feedback:', {
-                code: responseError.code,
-                message: responseError.message,
-                details: responseError.details,
-                hint: responseError.hint
-            });
-            throw responseError;
-        }
-
-        // Store submission in localStorage
-        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-        submittedFeedbacks[uniqueLink] = {
-            submittedAt: new Date().toISOString(),
-            employeeName: feedbackRequest.employee.name
-        };
-        localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
-
-        // Clear the draft after successful submission
-        localStorage.removeItem(`feedback_draft_${uniqueLink}`);
-
-        toast({
-            title: "Success",
-            description: "Thank you for your feedback!",
-        });
-        navigate('/feedback/thank-you');
-    } catch (error) {
-        console.error('Error submitting feedback:', error);
-        if (feedbackRequest) {
-          console.error('Feedback request details:', {
-              id: feedbackRequest.id,
-              status: feedbackRequest.status,
-              review_cycle: {
-                  id: feedbackRequest.review_cycle_id,
-                  review_by_date: feedbackRequest.review_cycle.review_by_date
-              }
-          });
-        }
-
-        // Check if it's a Supabase error with a specific message
-        const supabaseError = error as { message?: string; details?: string; hint?: string };
-        const errorMessage = supabaseError.message || supabaseError.details || 'Failed to submit feedback';
-
-        toast({
-            title: "Error",
-            description: errorMessage,
-            variant: "destructive",
-        });
-    } finally {
-        setIsSubmitting(false);
-        setFormState(prev => ({ ...prev, step: 'editing' }));
+    if (!success) {
+      setFormState(prev => ({ ...prev, step: 'ai_review' }));
     }
   }
 
@@ -419,15 +330,6 @@ export function FeedbackFormPage() {
     new Date(feedbackRequest.review_cycle.review_by_date) < new Date();
 
   if (isRequestClosed) {
-    console.log('Review cycle has ended:', {
-      id: feedbackRequest.id,
-      review_cycle: {
-        id: feedbackRequest.review_cycle_id,
-        review_by_date: feedbackRequest.review_cycle.review_by_date,
-        current_date: new Date().toISOString()
-      }
-    });
-
     return (
       <div className="mx-auto max-w-3xl space-y-8 p-6">
         <div className="text-center">
@@ -443,8 +345,6 @@ export function FeedbackFormPage() {
     );
   }
 
-  const displayName = showNames ? feedbackRequest.employee.name : 'Employee';
-
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <div className="relative text-center">
@@ -456,12 +356,21 @@ export function FeedbackFormPage() {
         >
           {showNames ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
-        <h1 className="text-2xl sm:text-3xl font-bold">Feedback Form for {displayName}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          Feedback Form for {showNames ? feedbackRequest.employee.name : 'Employee'}
+        </h1>
         <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-          Providing feedback for {displayName} - {feedbackRequest.employee.role}
+          Providing feedback for {showNames ? feedbackRequest.employee.name : 'Employee'} - {feedbackRequest.employee.role}
         </p>
         <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
           Review cycle: {feedbackRequest.review_cycle.title}
+        </p>
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+          Due by: {new Date(feedbackRequest.review_cycle.review_by_date).toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })}
         </p>
         {(formData.strengths || formData.areas_for_improvement) && (
           <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
@@ -470,140 +379,63 @@ export function FeedbackFormPage() {
         )}
       </div>
 
-      {formState.step === 'ai_review' ? (
+      {formState.step === 'submitting' ? (
+        <div className="flex min-h-[300px] items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-lg">Submitting your feedback...</p>
+          </div>
+        </div>
+      ) : formState.step === 'ai_review' ? (
         <AiFeedbackReview
           feedbackData={formData}
-          onSubmit={submitFeedback}
+          onSubmit={handleSubmit}
           onRevise={handleRevise}
           isLoading={isSubmitting}
-          onFeedbackChange={(field, value) => {
+          onFeedbackChange={async (field, value) => {
             setFormData(prev => ({
               ...prev,
               [field]: value
             }));
-            if (uniqueLink) {
-              localStorage.setItem(`feedback_draft_${uniqueLink}`, JSON.stringify({
-                ...formData,
-                [field]: value
-              }));
+            
+            if (formState.draftId) {
+              try {
+                const { error: updateError } = await supabase
+                  .from('feedback_responses')
+                  .update({
+                    [field]: value,
+                    submitted_at: new Date().toISOString()
+                  })
+                  .eq('id', formState.draftId)
+                  .eq('session_id', sessionId)
+                  .eq('is_draft', true);
+
+                if (updateError) throw updateError;
+              } catch (error) {
+                console.error('Error saving changes:', error);
+                setFormData(prev => ({
+                  ...prev,
+                  [field]: prev[field]
+                }));
+                toast({
+                  title: "Error",
+                  description: "Failed to save changes. Please try again.",
+                  variant: "destructive",
+                });
+              }
             }
           }}
         />
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-3">
-            <label className="text-base sm:text-lg font-medium">Your relationship to {showNames ? feedbackRequest?.employee.name : 'the reviewee'}</label>
-            <ToggleGroup 
-              type="single" 
-              value={formData.relationship}
-              onValueChange={(value: string) => {
-                if (value) setFormData({ ...formData, relationship: value as FeedbackFormData['relationship'] });
-              }}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
-            >
-              <ToggleGroupItem 
-                value="senior_colleague" 
-                className="group relative flex h-[72px] sm:h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-4 sm:px-6 py-2 sm:py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
-              >
-                <span className="text-sm sm:text-base font-medium">Senior Colleague</span>
-                <span className="mt-1 text-xs sm:text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am more senior</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="equal_colleague" 
-                className="group relative flex h-[72px] sm:h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-4 sm:px-6 py-2 sm:py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
-              >
-                <span className="text-sm sm:text-base font-medium">Equal Colleague</span>
-                <span className="mt-1 text-xs sm:text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am at the same level</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="junior_colleague" 
-                className="group relative flex h-[72px] sm:h-[88px] flex-col items-center justify-center rounded-xl border bg-background px-4 sm:px-6 py-2 sm:py-3 shadow-sm outline-none transition-all hover:bg-accent/5 data-[state=on]:border-transparent data-[state=on]:bg-[#6366f1] data-[state=on]:text-white"
-              >
-                <span className="text-sm sm:text-base font-medium">Junior Colleague</span>
-                <span className="mt-1 text-xs sm:text-sm text-muted-foreground group-data-[state=on]:text-white/80">I am less senior</span>
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-base sm:text-lg font-medium">Strengths</label>
-            <div className="space-y-1">
-              <textarea
-                className={`min-h-[120px] w-full rounded-lg border ${
-                  !validation.strengths.isValid && validation.strengths.showLengthWarning
-                    ? 'border-red-500'
-                    : validation.strengths.isValid && formData.strengths.length > 0
-                    ? validation.strengths.warnings?.length ? 'border-yellow-500' : 'border-green-500'
-                    : 'border-input'
-                } bg-background px-3 py-2 text-sm sm:text-base`}
-                value={formData.strengths}
-                onChange={(e) => setFormData({ ...formData, strengths: e.target.value })}
-                placeholder={`What does ${displayName} do well? What are their key strengths?`}
-                required
-              />
-              <div className="space-y-1">
-                {validation.strengths.showLengthWarning && (
-                  <p className={`text-xs sm:text-sm ${
-                    !validation.strengths.isValid ? 'text-red-500' : 'text-muted-foreground'
-                  }`}>
-                    {validation.strengths.message}
-                  </p>
-                )}
-                {validation.strengths.warnings?.map((warning, index) => (
-                  <p key={index} className="text-xs sm:text-sm text-yellow-500">
-                    ⚠️ {warning}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-base sm:text-lg font-medium">Areas for Improvement</label>
-            <div className="space-y-1">
-              <textarea
-                className={`min-h-[120px] w-full rounded-lg border ${
-                  !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
-                    ? 'border-red-500'
-                    : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
-                    ? validation.areas_for_improvement.warnings?.length ? 'border-yellow-500' : 'border-green-500'
-                    : 'border-input'
-                } bg-background px-3 py-2 text-sm sm:text-base`}
-                value={formData.areas_for_improvement}
-                onChange={(e) => setFormData({ ...formData, areas_for_improvement: e.target.value })}
-                placeholder={`What could ${displayName} improve? What suggestions do you have for their development?`}
-                required
-              />
-              <div className="space-y-1">
-                {validation.areas_for_improvement.showLengthWarning && (
-                  <p className={`text-xs sm:text-sm ${
-                    !validation.areas_for_improvement.isValid ? 'text-red-500' : 'text-muted-foreground'
-                  }`}>
-                    {validation.areas_for_improvement.message}
-                  </p>
-                )}
-                {validation.areas_for_improvement.warnings?.map((warning, index) => (
-                  <p key={index} className="text-xs sm:text-sm text-yellow-500">
-                    ⚠️ {warning}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button 
-              type="submit" 
-              className="w-full sm:w-auto"
-              disabled={
-                isSubmitting || 
-                (showLengthRequirements && (!validation.strengths.isValid || !validation.areas_for_improvement.isValid))
-              }
-            >
-              {isSubmitting ? 'Submitting...' : 'Review Feedback'}
-            </Button>
-          </div>
-        </form>
+        <FeedbackForm
+          employeeName={feedbackRequest.employee.name}
+          employeeRole={feedbackRequest.employee.role}
+          showNames={showNames}
+          formData={formData}
+          onFormDataChange={setFormData}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
       )}
     </div>
   );

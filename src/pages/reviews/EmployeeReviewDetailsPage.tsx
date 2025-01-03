@@ -191,8 +191,22 @@ export function EmployeeReviewDetailsPage() {
   }
 
   async function handleDeleteFeedback(feedbackId: string) {
+    if (!feedbackRequest) return;
+    
     setDeletingFeedbackId(feedbackId);
+    
     try {
+      // First, update any feedback responses that reference this one
+      const { error: updateError } = await supabase
+        .from('feedback_responses')
+        .update({ previous_version_id: null })
+        .eq('previous_version_id', feedbackId);
+
+      if (updateError) {
+        console.error('Error updating references:', updateError);
+      }
+
+      // Then delete the feedback
       const { error } = await supabase
         .from('feedback_responses')
         .delete()
