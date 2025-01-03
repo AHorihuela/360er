@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -8,13 +8,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Brain } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Brain, CheckCircle2, Loader2 } from 'lucide-react';
+import { RichTextEditor } from './RichTextEditor';
+import { debounce } from 'lodash';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import OpenAI from 'openai';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RichTextEditor } from './RichTextEditor';
+import { AnalysisSteps } from './AnalysisSteps';
+import { useAnalysisSteps } from '@/hooks/useAnalysisSteps';
+import { useSuggestionFiltering } from '@/hooks/useSuggestionFiltering';
+
+interface FeedbackFormData {
+  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
+  strengths: string;
+  areas_for_improvement: string;
+}
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -42,7 +53,7 @@ interface Props {
     areas_for_improvement: string;
     relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
   };
-  onSubmit: () => void;
+  onSubmit: (e?: React.FormEvent) => void | Promise<void>;
   onRevise: () => void;
   isLoading: boolean;
   onFeedbackChange?: (field: 'strengths' | 'areas_for_improvement', value: string) => void;
@@ -69,28 +80,6 @@ interface AnalysisStep {
   status: 'pending' | 'in_progress' | 'completed' | 'error';
 }
 
-// Helper function for fuzzy text matching
-function fuzzyMatch(text: string, pattern: string): boolean {
-  if (!pattern) return false;
-  
-  const cleanText = text.toLowerCase().replace(/\s+/g, ' ');
-  const cleanPattern = pattern.toLowerCase().replace(/\s+/g, ' ');
-  
-  // Try exact match first
-  if (cleanText.includes(cleanPattern)) return true;
-  
-  // Try matching with some flexibility
-  const words = cleanPattern.split(' ');
-  let lastIndex = -1;
-  
-  return words.every(word => {
-    const index = cleanText.indexOf(word, lastIndex + 1);
-    if (index === -1) return false;
-    lastIndex = index;
-    return true;
-  });
-}
-
 export function AiFeedbackReview({ 
   feedbackData, 
   onSubmit, 
@@ -108,54 +97,67 @@ export function AiFeedbackReview({
     }
   });
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [steps, setSteps] = useState<AnalysisStep[]>([
-    { id: 'init', label: 'Initializing analysis...', status: 'pending' },
-    { id: 'review', label: 'Reviewing feedback content...', status: 'pending' },
-    { id: 'evaluate', label: 'Evaluating quality and actionability...', status: 'pending' },
-    { id: 'suggest', label: 'Generating improvement suggestions...', status: 'pending' },
-    { id: 'finalize', label: 'Finalizing analysis...', status: 'pending' }
-  ]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { 
+    steps, 
+    progressToNextStep,
+    completeAllSteps, 
+    markStepsAsError, 
+    resetSteps 
+  } = useAnalysisSteps(isAnalyzing);
 
+  // Only start analysis if we don't have a saved response
   useEffect(() => {
-    let stepInterval: NodeJS.Timeout;
-    let currentStepIndex = 0;
-
-    // Only start analysis if we don't have a saved response
-    if (!aiResponse) {
-      stepInterval = setInterval(() => {
-      if (currentStepIndex < steps.length) {
-        setSteps(prevSteps => prevSteps.map((step, index) => ({
-          ...step,
-          status: index === currentStepIndex ? 'in_progress' 
-                 : index < currentStepIndex ? 'completed' 
-                 : 'pending'
-        })));
-        currentStepIndex++;
-      } else {
-        clearInterval(stepInterval);
-      }
-      }, 1500);
-
-    // Start the analysis
-      void analyzeFeedback();
-    } else {
-      // If we have a saved response, mark all steps as completed
-      setSteps(prevSteps => prevSteps.map(step => ({
-        ...step,
-        status: 'completed'
-      })));
+    const shouldStartAnalysis = !aiResponse && 
+                              !localStorage.getItem('last_feedback_analysis') && 
+                              !isAnalyzing;
+    
+    if (shouldStartAnalysis) {
+      console.log('Starting initial analysis');
+      setIsAnalyzing(true);
     }
+  }, []); // Only run on mount
 
-    return () => {
-      if (stepInterval) {
-        clearInterval(stepInterval);
+  // Start analysis when isAnalyzing is set to true
+  useEffect(() => {
+    if (isAnalyzing) {
+      void analyzeFeedback();
+    }
+  }, [isAnalyzing]);
+
+  // Update steps when AI response changes
+  useEffect(() => {
+    if (aiResponse) {
+      console.log('AI response received, marking all steps as completed');
+      completeAllSteps();
+      setIsAnalyzing(false);
+    }
+  }, [aiResponse, completeAllSteps]);
+
+  // Debounce feedback changes
+  const debouncedFeedbackChange = useCallback(
+    debounce(async (field: 'strengths' | 'areas_for_improvement', value: string) => {
+      console.log('Saving feedback change:', { field, value });
+      if (onFeedbackChange) {
+        await onFeedbackChange(field, value);
       }
-    };
-  }, [aiResponse, steps.length]);
+    }, 1000), // Increased debounce time to reduce database writes
+    [onFeedbackChange]
+  );
+
+  // Handle feedback changes
+  const handleFeedbackChange = useCallback((field: 'strengths' | 'areas_for_improvement', value: string) => {
+    console.log('Handling feedback change:', { field, value });
+    debouncedFeedbackChange(field, value);
+  }, [debouncedFeedbackChange]);
 
   const analyzeFeedback = async () => {
     try {
       console.log('Starting feedback analysis...');
+      
+      // Step 1: Initialize
+      progressToNextStep();
+      
       const completion = await openai.chat.completions.create({
         model: "gpt-4-1106-preview",
         messages: [
@@ -172,7 +174,7 @@ When analyzing feedback, consider:
 3. Understand that specific improvement suggestions are optional and depend on:
    - The reviewer's role relative to the reviewee
    - The reviewer's area of expertise
-//    - The nature of their working relationship
+   - The nature of their working relationship
 4. Maintain objectivity and professionalism in all suggestions
 5. Ensure feedback addresses observable behaviors and outcomes
 6. Align feedback with our company values, but don't mention the company values in the suggestions:
@@ -182,6 +184,11 @@ When analyzing feedback, consider:
    - Quality and Simplicity in Delivery
    - Team Energy and Collaboration
    - Continuous Improvement Mindset
+
+CRITICAL REQUIREMENTS:
+- The 'Areas for Improvement' section MUST contain different content from the 'Strengths' section
+- If the sections are identical or very similar, this should be treated as a critical issue and result in a 'needs_improvement' rating
+- Duplicate content between sections should be explicitly called out in the suggestions
 
 Return a JSON response with this structure:
 {
@@ -223,11 +230,18 @@ ${feedbackData.areas_for_improvement}`
         temperature: 0.7
       });
 
+      // Step 2: Review content
+      progressToNextStep();
       console.log('OpenAI Response:', completion.choices[0].message);
       
+      // Step 3: Evaluate
+      progressToNextStep();
       let analysis: AiFeedbackResponse;
       try {
         const parsedResponse = JSON.parse(completion.choices[0].message.content || '{}');
+        
+        // Step 4: Generate suggestions
+        progressToNextStep();
         
         // Validate and normalize the response structure
         analysis = {
@@ -253,6 +267,9 @@ ${feedbackData.areas_for_improvement}`
         throw new Error('Failed to parse AI response');
       }
 
+      // Step 5: Finalize
+      progressToNextStep();
+      
       localStorage.setItem('last_feedback_analysis', JSON.stringify(analysis));
       
       try {
@@ -270,64 +287,26 @@ ${feedbackData.areas_for_improvement}`
       }
 
       setAiResponse(analysis);
-      setSteps(prevSteps => prevSteps.map(step => ({
-        ...step,
-        status: 'completed'
-      })));
+      completeAllSteps();
     } catch (error) {
+      console.error('Analysis error:', error);
       setAnalysisError(error instanceof Error ? error.message : 'Failed to analyze feedback');
-      setSteps(prevSteps => prevSteps.map(step => ({
-        ...step,
-        status: step.status === 'completed' ? 'completed' : 'error'
-      })));
+      markStepsAsError();
     }
   };
 
-  if (isLoading || !aiResponse) {
-    const progress = (steps.filter(s => s.status === 'completed').length / steps.length) * 100;
+  const strengthsHighlights = useSuggestionFiltering(
+    aiResponse?.suggestions || [],
+    feedbackData.strengths
+  );
 
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary animate-pulse" />
-            <CardTitle>Analyzing Your Feedback</CardTitle>
-          </div>
-          <CardDescription>
-            {analysisError ? 
-              'There was an issue analyzing your feedback. Proceeding with submission...' :
-              'Our AI is reviewing your feedback to ensure it\'s as helpful as possible...'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Progress value={progress} className="w-full" />
-          
-          <div className="space-y-3">
-            {steps.map((step) => (
-              <div key={step.id} className="flex items-center gap-3">
-                {step.status === 'completed' ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                ) : step.status === 'in_progress' ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                ) : step.status === 'error' ? (
-                  <div className="h-4 w-4 rounded-full bg-red-100" />
-                ) : (
-                  <div className="h-4 w-4 rounded-full bg-gray-100" />
-                )}
-                <span className={`text-sm ${
-                  step.status === 'completed' ? 'text-green-600' :
-                  step.status === 'in_progress' ? 'text-primary' :
-                  step.status === 'error' ? 'text-red-500' :
-                  'text-muted-foreground'
-                }`}>
-                  {step.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const improvementsHighlights = useSuggestionFiltering(
+    aiResponse?.suggestions || [],
+    feedbackData.areas_for_improvement
+  );
+
+  if (isLoading || !aiResponse) {
+    return <AnalysisSteps steps={steps} error={analysisError} />;
   }
 
   return (
@@ -372,7 +351,16 @@ ${feedbackData.areas_for_improvement}`
           <Tabs defaultValue="edit" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="edit" className="text-xs sm:text-sm">Edit & Preview</TabsTrigger>
-              <TabsTrigger value="suggestions" className="text-xs sm:text-sm">AI Suggestions</TabsTrigger>
+              <TabsTrigger value="suggestions" className="text-xs sm:text-sm">
+                AI Suggestions
+                {aiResponse && aiResponse.suggestions.length > 0 && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 text-[11px] h-5 min-w-5 px-1.5 bg-black text-white rounded-full">
+                    {aiResponse.suggestions.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="edit" className="space-y-4 mt-4">
@@ -381,13 +369,8 @@ ${feedbackData.areas_for_improvement}`
                   <h4 className="text-sm sm:text-base font-medium mb-2">Strengths</h4>
                   <RichTextEditor
                     value={feedbackData.strengths}
-                    onChange={(value) => onFeedbackChange?.('strengths', value)}
-                    highlights={aiResponse.suggestions
-                      .filter((s): s is AiFeedbackSuggestion & { context: string } => 
-                        typeof s.context === 'string' && 
-                        fuzzyMatch(feedbackData.strengths.toLowerCase(), s.context.toLowerCase())
-                      )
-                    }
+                    onChange={(value) => handleFeedbackChange('strengths', value)}
+                    highlights={strengthsHighlights}
                   />
                 </div>
 
@@ -395,13 +378,8 @@ ${feedbackData.areas_for_improvement}`
                   <h4 className="text-sm sm:text-base font-medium mb-2">Areas for Improvement</h4>
                   <RichTextEditor
                     value={feedbackData.areas_for_improvement}
-                    onChange={(value) => onFeedbackChange?.('areas_for_improvement', value)}
-                    highlights={aiResponse.suggestions
-                      .filter((s): s is AiFeedbackSuggestion & { context: string } => 
-                        typeof s.context === 'string' && 
-                        fuzzyMatch(feedbackData.areas_for_improvement.toLowerCase(), s.context.toLowerCase())
-                      )
-                    }
+                    onChange={(value) => handleFeedbackChange('areas_for_improvement', value)}
+                    highlights={improvementsHighlights}
                   />
                 </div>
               </div>
@@ -461,17 +439,10 @@ ${feedbackData.areas_for_improvement}`
       <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
         <Button 
           variant="outline" 
-          onClick={onRevise}
-          disabled={isLoading}
-          className="w-full sm:w-auto">
-          Revise
-        </Button>
-        <Button 
-          variant="outline" 
           onClick={() => {
             setAiResponse(null);
             setAnalysisError(null);
-            setSteps(prevSteps => prevSteps.map(step => ({ ...step, status: 'pending' })));
+            resetSteps();
             void analyzeFeedback();
           }}
           disabled={isLoading}
