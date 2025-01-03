@@ -7,6 +7,7 @@ import { validateFeedback } from '@/utils/feedbackValidation';
 import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { useFeedbackSubmission } from '@/hooks/useFeedbackSubmission';
+import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 
 interface FeedbackRequest {
   id: string;
@@ -23,18 +24,6 @@ interface FeedbackRequest {
   };
 }
 
-interface FeedbackFormData {
-  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
-  strengths: string;
-  areas_for_improvement: string;
-}
-
-interface FeedbackFormState {
-  step: 'editing' | 'ai_review' | 'submitting';
-  aiAnalysisAttempted: boolean;
-  draftId?: string;
-}
-
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -46,49 +35,38 @@ export function FeedbackFormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNames, setShowNames] = useState(true);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
-  const [formData, setFormData] = useState<FeedbackFormData>({
-    relationship: 'equal_colleague',
-    strengths: '',
-    areas_for_improvement: ''
-  });
   const [sessionId] = useState(() => generateSessionId());
-  const [formState, setFormState] = useState<FeedbackFormState>({
-    step: 'editing',
-    aiAnalysisAttempted: false
-  });
 
   const { submitFeedback, isSubmitting } = useFeedbackSubmission();
-
-  // Load saved form data from localStorage
-  useEffect(() => {
-    if (uniqueLink) {
-      const savedData = localStorage.getItem(`feedback_draft_${uniqueLink}`);
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          setFormData(parsedData);
-          toast({
-            title: "Draft Restored",
-            description: "Your previous progress has been restored.",
-          });
-        } catch (e) {
-          console.error('Error parsing saved form data:', e);
-        }
-      }
-    }
-  }, [uniqueLink]);
-
-  // Save form data to localStorage whenever it changes
-  useEffect(() => {
-    if (uniqueLink && (formData.strengths || formData.areas_for_improvement)) {
-      localStorage.setItem(`feedback_draft_${uniqueLink}`, JSON.stringify(formData));
-    }
-  }, [formData, uniqueLink]);
+  const {
+    formData,
+    formState,
+    updateFormData,
+    updateFormState,
+    clearSavedData,
+    markAsSubmitted,
+    moveToAiReview,
+    moveToEditing,
+    startSubmission,
+    handleSubmissionFailure,
+    isSubmitted
+  } = useFeedbackFormState({
+    uniqueLink: uniqueLink || '',
+    sessionId
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+
+        // Check if feedback was already submitted
+        if (isSubmitted) {
+          console.log('Feedback already submitted, redirecting to thank you page');
+          navigate('/feedback/thank-you');
+          return;
+        }
+
         await fetchFeedbackRequest();
       } catch (error) {
         console.error('Error fetching feedback request:', error);
@@ -103,7 +81,7 @@ export function FeedbackFormPage() {
     };
 
     fetchData();
-  }, [uniqueLink]);
+  }, [uniqueLink, isSubmitted, navigate, toast]);
 
   async function fetchFeedbackRequest() {
     if (!uniqueLink) {
@@ -123,6 +101,7 @@ export function FeedbackFormPage() {
           id,
           submitted_at,
           is_draft,
+          status,
           session_id,
           strengths,
           areas_for_improvement,
@@ -142,20 +121,33 @@ export function FeedbackFormPage() {
       throw new Error('No feedback request found');
     }
 
-    // Check for existing draft
+    // Check for submitted feedback from this session
     if (requestData.feedback) {
+      const submittedFeedback = requestData.feedback.find(
+        (f: any) => f.status === 'submitted' && f.session_id === sessionId
+      );
+
+      if (submittedFeedback) {
+        console.log('Found submitted feedback for this session');
+        markAsSubmitted();
+        return;
+      }
+
+      // Check for existing draft
       const existingDraft = requestData.feedback.find(
         (f: any) => f.is_draft && f.session_id === sessionId
       );
 
       if (existingDraft) {
         console.log('Found existing draft:', existingDraft);
-        setFormState(prev => ({
-          ...prev,
+        
+        updateFormState({
           draftId: existingDraft.id,
-          aiAnalysisAttempted: true
-        }));
-        setFormData({
+          step: formState.step,
+          aiAnalysisAttempted: formState.aiAnalysisAttempted
+        });
+
+        updateFormData({
           relationship: existingDraft.relationship || 'equal_colleague',
           strengths: existingDraft.strengths || '',
           areas_for_improvement: existingDraft.areas_for_improvement || ''
@@ -208,10 +200,7 @@ export function FeedbackFormPage() {
 
         if (!searchError && existingDrafts && existingDrafts.length > 0) {
           console.log('Found existing draft:', existingDrafts[0]);
-          setFormState(prev => ({
-            ...prev,
-            draftId: existingDrafts[0].id
-          }));
+          updateFormState({ draftId: existingDrafts[0].id });
           return existingDrafts[0].id;
         }
       }
@@ -278,12 +267,11 @@ export function FeedbackFormPage() {
       try {
         const draftId = await saveFeedbackResponse(true);
         if (draftId) {
-          setFormState(prev => ({
-            ...prev,
+          updateFormState({
             step: 'ai_review',
             aiAnalysisAttempted: true,
             draftId
-          }));
+          });
         }
       } catch (error) {
         console.error('Error saving draft:', error);
@@ -297,7 +285,7 @@ export function FeedbackFormPage() {
     }
 
     // If we're in AI review or have already done AI analysis, proceed to submission
-    setFormState(prev => ({ ...prev, step: 'submitting' }));
+    startSubmission();
     
     const success = await submitFeedback(formData, {
       feedbackRequestId: feedbackRequest.id,
@@ -306,13 +294,12 @@ export function FeedbackFormPage() {
       draftId: formState.draftId
     });
 
-    if (!success) {
-      setFormState(prev => ({ ...prev, step: 'ai_review' }));
+    if (success) {
+      clearSavedData();
+      markAsSubmitted();
+    } else {
+      handleSubmissionFailure();
     }
-  }
-
-  function handleRevise() {
-    setFormState(prev => ({ ...prev, step: 'editing' }));
   }
 
   if (isLoading) {
@@ -350,7 +337,7 @@ export function FeedbackFormPage() {
       <div className="relative text-center">
         <button
           onClick={() => setShowNames(!showNames)}
-          className="absolute right-0 top-0 p-2 text-muted-foreground hover:text-foreground"
+          className="absolute right-0 top-0 p-2"
           type="button"
           title={showNames ? "Hide names" : "Show names"}
         >
@@ -390,40 +377,10 @@ export function FeedbackFormPage() {
         <AiFeedbackReview
           feedbackData={formData}
           onSubmit={handleSubmit}
-          onRevise={handleRevise}
+          onRevise={moveToEditing}
           isLoading={isSubmitting}
           onFeedbackChange={async (field, value) => {
-            setFormData(prev => ({
-              ...prev,
-              [field]: value
-            }));
-            
-            if (formState.draftId) {
-              try {
-                const { error: updateError } = await supabase
-                  .from('feedback_responses')
-                  .update({
-                    [field]: value,
-                    submitted_at: new Date().toISOString()
-                  })
-                  .eq('id', formState.draftId)
-                  .eq('session_id', sessionId)
-                  .eq('is_draft', true);
-
-                if (updateError) throw updateError;
-              } catch (error) {
-                console.error('Error saving changes:', error);
-                setFormData(prev => ({
-                  ...prev,
-                  [field]: prev[field]
-                }));
-                toast({
-                  title: "Error",
-                  description: "Failed to save changes. Please try again.",
-                  variant: "destructive",
-                });
-              }
-            }
+            updateFormData({ [field]: value });
           }}
         />
       ) : (
@@ -432,7 +389,7 @@ export function FeedbackFormPage() {
           employeeRole={feedbackRequest.employee.role}
           showNames={showNames}
           formData={formData}
-          onFormDataChange={setFormData}
+          onFormDataChange={updateFormData}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
         />
