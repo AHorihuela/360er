@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS feedback_requests (
     employee_id UUID,
     unique_link TEXT UNIQUE NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    target_responses INTEGER DEFAULT 3,
+    target_responses INTEGER DEFAULT 10,
     manually_completed BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
