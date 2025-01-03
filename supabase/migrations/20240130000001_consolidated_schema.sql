@@ -91,6 +91,30 @@ CREATE TABLE IF NOT EXISTS page_views (
 );
 
 ------------------------------------------
+-- Views
+------------------------------------------
+
+-- Create feedback summary view
+CREATE OR REPLACE VIEW review_cycles_feedback_summary AS
+SELECT 
+    rc.id AS review_cycle_id,
+    rc.user_id,
+    count(fr.id) AS total_requests,
+    count(
+        CASE
+            WHEN (fr.status = 'completed'::text) THEN 1
+            ELSE NULL::integer
+        END
+    ) AS completed_requests
+FROM review_cycles rc
+LEFT JOIN feedback_requests fr ON fr.review_cycle_id = rc.id
+GROUP BY rc.id, rc.user_id;
+
+-- Grant permissions on the view
+GRANT SELECT ON review_cycles_feedback_summary TO authenticated;
+GRANT SELECT ON review_cycles_feedback_summary TO anon;
+
+------------------------------------------
 -- Enable RLS
 ------------------------------------------
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
@@ -149,7 +173,7 @@ CREATE TRIGGER handle_feedback_response
     FOR EACH ROW
     EXECUTE FUNCTION handle_feedback_response();
 
--- Page views updated_at trigger
+-- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -157,6 +181,27 @@ BEGIN
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+-- Create updated_at triggers for all tables
+CREATE TRIGGER update_employees_updated_at
+    BEFORE UPDATE ON employees
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_review_cycles_updated_at
+    BEFORE UPDATE ON review_cycles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_feedback_requests_updated_at
+    BEFORE UPDATE ON feedback_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ai_reports_updated_at
+    BEFORE UPDATE ON ai_reports
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_page_views_updated_at
     BEFORE UPDATE ON page_views
@@ -168,10 +213,28 @@ CREATE TRIGGER update_page_views_updated_at
 ------------------------------------------
 
 -- Employees policies
-CREATE POLICY "Users can view their own employees"
+CREATE POLICY "employees_auth_select"
     ON employees FOR SELECT
     TO authenticated
-    USING (user_id = auth.uid());
+    USING (
+        user_id = auth.uid() OR 
+        id IN (
+            SELECT employee_id FROM feedback_requests fr
+            JOIN review_cycles rc ON rc.id = fr.review_cycle_id
+            WHERE rc.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "employees_anon_select"
+    ON employees FOR SELECT
+    TO public
+    USING (
+        EXISTS (
+            SELECT 1 FROM feedback_requests fr
+            WHERE fr.employee_id = employees.id
+            AND fr.unique_link IS NOT NULL
+        )
+    );
 
 CREATE POLICY "Users can insert their own employees"
     ON employees FOR INSERT
@@ -190,111 +253,155 @@ CREATE POLICY "Users can delete their own employees"
     USING (user_id = auth.uid());
 
 -- Review cycles policies
-CREATE POLICY "Users can view their own review cycles"
+CREATE POLICY "review_cycles_auth_select"
     ON review_cycles FOR SELECT
     TO authenticated
     USING (user_id = auth.uid());
 
-CREATE POLICY "Users can insert their own review cycles"
+CREATE POLICY "review_cycles_anon_select"
+    ON review_cycles FOR SELECT
+    TO public
+    USING (
+        id IN (
+            SELECT DISTINCT review_cycle_id
+            FROM feedback_requests
+            WHERE unique_link IS NOT NULL
+        )
+    );
+
+CREATE POLICY "Users can create their own review cycles"
     ON review_cycles FOR INSERT
     TO authenticated
-    WITH CHECK (user_id = auth.uid());
+    WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update their own review cycles"
     ON review_cycles FOR UPDATE
     TO authenticated
-    USING (user_id = auth.uid())
-    WITH CHECK (user_id = auth.uid());
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own review cycles"
     ON review_cycles FOR DELETE
     TO authenticated
-    USING (user_id = auth.uid());
+    USING (auth.uid() = user_id);
 
 -- Feedback requests policies
-CREATE POLICY "Users can view their own feedback requests"
+CREATE POLICY "feedback_requests_auth_select"
     ON feedback_requests FOR SELECT
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM review_cycles rc
-            WHERE rc.id = review_cycle_id
-            AND rc.user_id = auth.uid()
+            SELECT 1 FROM review_cycles
+            WHERE id = review_cycle_id
+            AND user_id = auth.uid()
         )
     );
 
-CREATE POLICY "Users can insert feedback requests for their cycles"
-    ON feedback_requests FOR INSERT
-    TO authenticated
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM review_cycles rc
-            WHERE rc.id = review_cycle_id
-            AND rc.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can update their own feedback requests"
-    ON feedback_requests FOR UPDATE
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM review_cycles rc
-            WHERE rc.id = review_cycle_id
-            AND rc.user_id = auth.uid()
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM review_cycles rc
-            WHERE rc.id = review_cycle_id
-            AND rc.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can delete their own feedback requests"
-    ON feedback_requests FOR DELETE
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM review_cycles rc
-            WHERE rc.id = review_cycle_id
-            AND rc.user_id = auth.uid()
-        )
-    );
-
--- Anonymous feedback submission policies
-CREATE POLICY "Allow anonymous feedback request viewing"
+CREATE POLICY "feedback_requests_anon_select"
     ON feedback_requests FOR SELECT
     TO public
     USING (unique_link IS NOT NULL);
 
-CREATE POLICY "Allow anonymous feedback submission"
-    ON feedback_responses FOR INSERT
-    TO public
+CREATE POLICY "feedback_requests_auth_update"
+    ON feedback_requests FOR UPDATE
+    TO authenticated
+    USING (
+        review_cycle_id IN (
+            SELECT id FROM review_cycles
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "feedback_requests_auth_delete"
+    ON feedback_requests FOR DELETE
+    TO authenticated
+    USING (
+        review_cycle_id IN (
+            SELECT id FROM review_cycles
+            WHERE user_id = auth.uid()
+        )
+    );
+
+-- Feedback responses policies
+CREATE POLICY "feedback_responses_auth_access"
+    ON feedback_responses FOR ALL
+    TO authenticated
+    USING (
+        feedback_request_id IN (
+            SELECT id FROM feedback_requests
+            WHERE review_cycle_id IN (
+                SELECT id FROM review_cycles
+                WHERE user_id = auth.uid()
+            )
+        )
+    )
     WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM feedback_requests fr
-            WHERE fr.id = feedback_request_id
-            AND fr.unique_link IS NOT NULL
-            AND fr.status != 'closed'
-            AND EXISTS (
-                SELECT 1 FROM review_cycles rc
-                WHERE rc.id = fr.review_cycle_id
-                AND rc.review_by_date >= CURRENT_DATE
+        feedback_request_id IN (
+            SELECT id FROM feedback_requests
+            WHERE review_cycle_id IN (
+                SELECT id FROM review_cycles
+                WHERE user_id = auth.uid()
             )
         )
     );
 
+CREATE POLICY "feedback_responses_anon_submit"
+    ON feedback_responses FOR INSERT
+    TO public
+    WITH CHECK (
+        feedback_request_id IN (
+            SELECT id FROM feedback_requests
+            WHERE unique_link IS NOT NULL
+            AND status <> 'closed'
+            AND review_cycle_id IN (
+                SELECT id FROM review_cycles
+                WHERE review_by_date >= CURRENT_DATE
+            )
+        )
+    );
+
+CREATE POLICY "feedback_responses_anon_access"
+    ON feedback_responses FOR SELECT
+    TO public
+    USING (
+        feedback_request_id IN (
+            SELECT id FROM feedback_requests
+            WHERE unique_link IS NOT NULL
+        )
+    );
+
 -- AI reports policies
-CREATE POLICY "Users can view their own AI reports"
+CREATE POLICY "Anyone can view AI reports through unique link"
+    ON ai_reports FOR SELECT
+    TO public
+    USING (
+        EXISTS (
+            SELECT 1 FROM feedback_requests fr
+            WHERE fr.id = ai_reports.feedback_request_id
+            AND fr.unique_link IS NOT NULL
+        )
+    );
+
+CREATE POLICY "Users can view AI reports for their feedback requests"
     ON ai_reports FOR SELECT
     TO authenticated
     USING (
         EXISTS (
             SELECT 1 FROM feedback_requests fr
-            JOIN review_cycles rc ON rc.id = fr.review_cycle_id
-            WHERE fr.id = feedback_request_id
+            JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+            WHERE fr.id = ai_reports.feedback_request_id
+            AND rc.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can create AI reports for their feedback requests"
+    ON ai_reports FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM feedback_requests fr
+            JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+            WHERE fr.id = ai_reports.feedback_request_id
             AND rc.user_id = auth.uid()
         )
     );
@@ -305,85 +412,87 @@ CREATE POLICY "Users can update their own AI reports"
     USING (
         EXISTS (
             SELECT 1 FROM feedback_requests fr
-            JOIN review_cycles rc ON rc.id = fr.review_cycle_id
-            WHERE fr.id = feedback_request_id
+            JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+            WHERE fr.id = ai_reports.feedback_request_id
             AND rc.user_id = auth.uid()
         )
     )
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM feedback_requests fr
-            JOIN review_cycles rc ON rc.id = fr.review_cycle_id
-            WHERE fr.id = feedback_request_id
+            JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+            WHERE fr.id = ai_reports.feedback_request_id
+            AND rc.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete their own AI reports"
+    ON ai_reports FOR DELETE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM feedback_requests fr
+            JOIN review_cycles rc ON fr.review_cycle_id = rc.id
+            WHERE fr.id = ai_reports.feedback_request_id
             AND rc.user_id = auth.uid()
         )
     );
 
 -- Feedback analyses policies
-CREATE POLICY "Users can view their own feedback analyses"
+CREATE POLICY "feedback_analyses_select_policy"
     ON feedback_analyses FOR SELECT
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM feedback_requests fr
-            JOIN review_cycles rc ON rc.id = fr.review_cycle_id
-            WHERE fr.id = feedback_request_id
-            AND rc.user_id = auth.uid()
-        )
-    );
+    TO public
+    USING (true);
 
-CREATE POLICY "Allow anonymous feedback analyses creation"
+CREATE POLICY "feedback_analyses_insert_policy"
     ON feedback_analyses FOR INSERT
     TO public
+    WITH CHECK (true);
+
+CREATE POLICY "auth_view_feedback_analyses"
+    ON feedback_analyses FOR SELECT
+    TO authenticated
+    USING (true);
+
+CREATE POLICY "anon_insert_feedback_analyses"
+    ON feedback_analyses FOR INSERT
+    TO anon
+    WITH CHECK (true);
+
+-- Page views policies
+CREATE POLICY "page_views_select_policy"
+    ON page_views FOR SELECT
+    TO public
+    USING (true);
+
+CREATE POLICY "page_views_insert_policy"
+    ON page_views FOR INSERT
+    TO public
+    WITH CHECK (true);
+
+CREATE POLICY "Anyone can create page views"
+    ON page_views FOR INSERT
+    TO anon
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM feedback_requests fr
-            WHERE fr.id = feedback_request_id
-            AND fr.unique_link IS NOT NULL
-            AND fr.status != 'closed'
+            WHERE fr.id = page_views.feedback_request_id
         )
     );
 
--- Page views policies
-CREATE POLICY "Users can view their own page views"
-    ON page_views FOR SELECT
-    TO authenticated
-    USING (user_id = auth.uid());
-
-CREATE POLICY "Users can insert their own page views"
-    ON page_views FOR INSERT
-    TO authenticated
-    WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Public can insert page views for feedback requests"
-    ON page_views FOR INSERT
-    TO public
-    WITH CHECK (feedback_request_id IS NOT NULL);
-
 ------------------------------------------
--- Indexes
+-- Grants
 ------------------------------------------
 
--- Page views indexes
-CREATE INDEX IF NOT EXISTS idx_page_views_user_id ON page_views(user_id);
-CREATE INDEX IF NOT EXISTS idx_page_views_feedback_request_id ON page_views(feedback_request_id);
-CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
-
-------------------------------------------
--- Permissions
-------------------------------------------
-
--- Schema usage
-GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT USAGE ON SCHEMA public TO anon;
-
--- Table permissions for authenticated users
+-- Grant necessary permissions to authenticated users
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
 
--- Table permissions for anonymous users
+-- Grant limited permissions to anonymous users
+GRANT SELECT, INSERT ON feedback_responses TO anon;
+GRANT SELECT ON employees TO anon;
+GRANT SELECT ON review_cycles TO anon;
 GRANT SELECT ON feedback_requests TO anon;
-GRANT INSERT ON feedback_responses TO anon;
-GRANT INSERT ON feedback_analyses TO anon;
-
--- Additional permissions for page views
-GRANT INSERT ON page_views TO anon; 
+GRANT SELECT, INSERT ON feedback_analyses TO anon;
+GRANT SELECT, INSERT ON page_views TO anon; 

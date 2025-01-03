@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Sparkles, RefreshCw, FileDown, ChevronDown } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { generateAIReport } from '@/lib/openai';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { FeedbackResponse } from '@/types/feedback';

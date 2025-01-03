@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Loader2, Trash2, Copy } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -20,8 +20,34 @@ import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytic
 import { AIReport } from '@/components/employee-review/AIReport';
 
 // Types for report generation steps and progress
-type GenerationStep = 0 | 1 | 2 | 3;
-type GenerationSteps = readonly [string, string, string, string];
+export type GenerationStep = 0 | 1 | 2 | 3;
+export type GenerationSteps = readonly [string, string, string, string];
+
+// Generation steps for the UI progress display
+export const GENERATION_STEPS = [
+  "Analyzing feedback responses...",
+  "Identifying key themes and patterns...",
+  "Generating comprehensive insights...",
+  "Preparing final report..."
+] as const;
+
+// Utility functions for report generation
+export function getElapsedTime(startTime: number | null): string {
+  if (!startTime) return '0s';
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  return `${elapsed}s`;
+}
+
+export function formatLastAnalyzed(timestamp: string): string {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+}
 
 // Interface for AI Report
 interface AIReportType {
@@ -36,8 +62,6 @@ export function EmployeeReviewDetailsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Error state for async operations and data fetching
   const [error, setError] = useState<string | null>(null);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
@@ -49,14 +73,6 @@ export function EmployeeReviewDetailsPage() {
   const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  // Generation steps for the UI progress display
-  const generationSteps: GenerationSteps = [
-    "Analyzing feedback responses...",
-    "Identifying key themes and patterns...",
-    "Generating comprehensive insights...",
-    "Preparing final report..."
-  ] as const;
-
   // Utility functions for report generation
   const getNextStep = (current: GenerationStep): GenerationStep => {
     switch (current) {
@@ -67,25 +83,6 @@ export function EmployeeReviewDetailsPage() {
       default: return current;
     }
   };
-
-  /** @preserve Used in UI for elapsed time display */
-  const getElapsedTime = useCallback((startTime: number | null): string => {
-    if (!startTime) return '0s';
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    return `${elapsed}s`;
-  }, []);
-
-  /** @preserve Used in UI for timestamp formatting */
-  const formatLastAnalyzed = useCallback((timestamp: string): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    });
-  }, []);
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -552,6 +549,21 @@ export function EmployeeReviewDetailsPage() {
     } finally {
       document.body.removeChild(tempDiv);
     }
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="flex items-center gap-2 text-destructive mb-4">
+          <AlertCircle className="h-5 w-5" />
+          <p className="text-lg font-medium">{error}</p>
+        </div>
+        <Button variant="outline" onClick={() => navigate(`/reviews/${cycleId}`)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Review Cycle
+        </Button>
+      </div>
+    );
   }
 
   if (isLoading) {
