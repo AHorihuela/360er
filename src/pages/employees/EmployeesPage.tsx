@@ -15,12 +15,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface FeedbackRequest {
+  id: string;
+  review_cycle_id: string;
+  created_at: string;
+}
+
 interface Employee {
   id: string;
   name: string;
   role: string;
   created_at: string;
   user_id: string;
+  feedback_requests?: FeedbackRequest[];
   latest_feedback_request: {
     id: string;
     review_cycle_id: string;
@@ -139,16 +146,27 @@ export function EmployeesPage() {
 
       const { data, error } = await supabase
         .from('employees')
-        .select('*')
+        .select(`
+          *,
+          feedback_requests (
+            id,
+            review_cycle_id,
+            created_at
+          )
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Set employees without feedback data for now
+      // Process the data to get the latest feedback request for each employee
       const processedData = data.map(employee => ({
         ...employee,
-        latest_feedback_request: null
+        latest_feedback_request: employee.feedback_requests
+          ? employee.feedback_requests.sort((a: FeedbackRequest, b: FeedbackRequest) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0] || null
+          : null
       }));
       
       setEmployees(processedData);
@@ -233,8 +251,6 @@ export function EmployeesPage() {
 
   async function handleDelete(id: string): Promise<void> {
     try {
-      if (!confirm('Are you sure you want to delete this employee? This will permanently delete the employee and all associated feedback requests.')) return;
-
       setIsDeleteLoading(true);
       setError(null);
       const { data: { user } } = await supabase.auth.getUser();

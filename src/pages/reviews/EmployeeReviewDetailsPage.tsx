@@ -10,6 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FeedbackRequest } from '@/types/feedback';
@@ -180,8 +191,6 @@ export function EmployeeReviewDetailsPage() {
   }
 
   async function handleDeleteFeedback(feedbackId: string) {
-    if (!confirm('Are you sure you want to delete this feedback?')) return;
-
     setDeletingFeedbackId(feedbackId);
     try {
       const { error } = await supabase
@@ -721,19 +730,36 @@ export function EmployeeReviewDetailsPage() {
                               {new Date(feedback.submitted_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteFeedback(feedback.id)}
-                            disabled={deletingFeedbackId === feedback.id}
-                            className="h-7 px-2 text-destructive hover:text-destructive-foreground"
-                          >
-                            {deletingFeedbackId === feedback.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={deletingFeedbackId === feedback.id}
+                                className="h-7 px-2 text-destructive hover:text-destructive-foreground"
+                              >
+                                {deletingFeedbackId === feedback.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete this feedback response.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteFeedback(feedback.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div>
