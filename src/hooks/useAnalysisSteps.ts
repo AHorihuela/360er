@@ -1,76 +1,71 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
-interface AnalysisStep {
+export interface AnalysisStep {
   id: string;
   label: string;
   status: 'pending' | 'in_progress' | 'completed' | 'error';
 }
 
-const INITIAL_STEPS: AnalysisStep[] = [
-  { id: 'init', label: 'Initializing analysis...', status: 'pending' },
-  { id: 'review', label: 'Reviewing feedback content...', status: 'pending' },
-  { id: 'evaluate', label: 'Evaluating quality and actionability...', status: 'pending' },
-  { id: 'suggest', label: 'Generating improvement suggestions...', status: 'pending' },
+const defaultSteps: AnalysisStep[] = [
+  { id: 'initialize', label: 'Initializing analysis...', status: 'pending' },
+  { id: 'review', label: 'Reviewing content...', status: 'pending' },
+  { id: 'evaluate', label: 'Evaluating feedback...', status: 'pending' },
+  { id: 'generate', label: 'Generating suggestions...', status: 'pending' },
   { id: 'finalize', label: 'Finalizing analysis...', status: 'pending' }
 ];
 
-export function useAnalysisSteps(isAnalyzing: boolean) {
-  const [steps, setSteps] = useState<AnalysisStep[]>(INITIAL_STEPS);
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+export function useAnalysisSteps() {
+  const [steps, setSteps] = useState<AnalysisStep[]>(defaultSteps);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Reset steps when analysis starts
-  useEffect(() => {
-    if (isAnalyzing) {
-      console.log('Analysis started - resetting steps');
-      setSteps(INITIAL_STEPS);
-      setCurrentStepIndex(0);
-      
-      // Set first step to in progress
-      setSteps(prevSteps => prevSteps.map((step, index) => ({
-        ...step,
-        status: index === 0 ? 'in_progress' as const : 'pending' as const
-      })));
-    }
-  }, [isAnalyzing]);
+  const resetSteps = useCallback(() => {
+    setSteps(defaultSteps);
+  }, []);
 
   const progressToNextStep = useCallback(() => {
-    setCurrentStepIndex(prev => {
-      const nextIndex = prev + 1;
-      if (nextIndex >= INITIAL_STEPS.length) return prev;
-      
-      console.log(`Progressing to step ${nextIndex}: ${INITIAL_STEPS[nextIndex].label}`);
-      
-      setSteps(prevSteps => prevSteps.map((step, index) => ({
-        ...step,
-        status: index === nextIndex ? 'in_progress' as const
-               : index < nextIndex ? 'completed' as const
-               : 'pending' as const
-      })));
-      
-      return nextIndex;
+    setSteps(currentSteps => {
+      const inProgressIndex = currentSteps.findIndex(step => step.status === 'in_progress');
+      if (inProgressIndex >= 0) {
+        // Complete the current step and start the next one
+        return currentSteps.map((step, index) => {
+          if (index === inProgressIndex) {
+            return { ...step, status: 'completed' };
+          }
+          if (index === inProgressIndex + 1) {
+            return { ...step, status: 'in_progress' };
+          }
+          return step;
+        });
+      } else {
+        // Start the first pending step
+        const firstPendingIndex = currentSteps.findIndex(step => step.status === 'pending');
+        if (firstPendingIndex >= 0) {
+          return currentSteps.map((step, index) => 
+            index === firstPendingIndex ? { ...step, status: 'in_progress' } : step
+          );
+        }
+      }
+      return currentSteps;
     });
   }, []);
 
   const completeAllSteps = useCallback(() => {
-    console.log('Completing all steps');
-    setSteps(prevSteps => prevSteps.map(step => ({
-      ...step,
-      status: 'completed' as const
-    })));
+    setSteps(currentSteps => 
+      currentSteps.map(step => ({ ...step, status: 'completed' }))
+    );
   }, []);
 
   const markStepsAsError = useCallback(() => {
-    console.log('Marking steps as error');
-    setSteps(prevSteps => prevSteps.map(step => ({
-      ...step,
-      status: step.status === 'completed' ? 'completed' as const : 'error' as const
-    })));
-  }, []);
-
-  const resetSteps = useCallback(() => {
-    console.log('Resetting steps');
-    setCurrentStepIndex(-1);
-    setSteps(INITIAL_STEPS);
+    setSteps(currentSteps => {
+      const inProgressIndex = currentSteps.findIndex(step => step.status === 'in_progress');
+      if (inProgressIndex >= 0) {
+        return currentSteps.map((step, index) => ({
+          ...step,
+          status: index === inProgressIndex ? 'error' : step.status
+        }));
+      }
+      return currentSteps;
+    });
   }, []);
 
   return {
@@ -78,6 +73,8 @@ export function useAnalysisSteps(isAnalyzing: boolean) {
     progressToNextStep,
     completeAllSteps,
     markStepsAsError,
-    resetSteps
+    resetSteps,
+    isAnalyzing,
+    setIsAnalyzing
   };
 } 

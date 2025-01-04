@@ -1,18 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-
-interface FeedbackFormData {
-  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
-  strengths: string;
-  areas_for_improvement: string;
-}
-
-interface FeedbackFormState {
-  step: 'editing' | 'ai_review' | 'submitting';
-  aiAnalysisAttempted: boolean;
-  draftId?: string;
-}
+import { FeedbackFormData, FeedbackFormState } from '@/types/feedback/form';
 
 interface UseFeedbackFormStateProps {
   uniqueLink: string;
@@ -113,36 +102,49 @@ export function useFeedbackFormState({ uniqueLink, sessionId }: UseFeedbackFormS
 
   // Update form data
   const updateFormData = useCallback((newData: Partial<FeedbackFormData>) => {
-    setFormData(prev => ({ ...prev, ...newData }));
+    setFormData((prev: FeedbackFormData) => ({ ...prev, ...newData }));
   }, []);
 
   // Update form state
   const updateFormState = useCallback((newState: Partial<FeedbackFormState>) => {
-    setFormState(prev => ({ ...prev, ...newState }));
+    setFormState((prev: FeedbackFormState) => ({ ...prev, ...newState }));
   }, []);
 
   // Move to AI review step
   const moveToAiReview = useCallback(() => {
-    setFormState(prev => ({
-      ...prev,
-      step: 'ai_review',
-      aiAnalysisAttempted: true
-    }));
+    console.log('Moving to AI review step');
+    setFormState(prev => {
+      const newState: FeedbackFormState = {
+        ...prev,
+        step: 'ai_review' as const,
+        aiAnalysisAttempted: true
+      };
+      console.log('New form state:', newState);
+      return newState;
+    });
   }, []);
 
   // Move back to editing step
   const moveToEditing = useCallback(() => {
-    setFormState(prev => ({ ...prev, step: 'editing' }));
+    console.log('Moving back to editing step');
+    setFormState(prev => {
+      const newState: FeedbackFormState = {
+        ...prev,
+        step: 'editing' as const
+      };
+      console.log('New form state:', newState);
+      return newState;
+    });
   }, []);
 
   // Start submission process
   const startSubmission = useCallback(() => {
-    setFormState(prev => ({ ...prev, step: 'submitting' }));
+    setFormState((prev: FeedbackFormState) => ({ ...prev, step: 'submitting' }));
   }, []);
 
   // Handle submission failure
   const handleSubmissionFailure = useCallback(() => {
-    setFormState(prev => ({ ...prev, step: 'ai_review' }));
+    setFormState((prev: FeedbackFormState) => ({ ...prev, step: 'ai_review' }));
     toast({
       title: "Error",
       description: "Failed to submit feedback. Please try again.",

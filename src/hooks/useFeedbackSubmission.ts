@@ -2,27 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
-
-interface FeedbackData {
-  strengths: string;
-  areas_for_improvement: string;
-  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
-}
-
-interface SubmissionOptions {
-  feedbackRequestId: string;
-  uniqueLink: string;
-  sessionId: string;
-  draftId?: string;
-}
+import { FeedbackFormData } from '@/types/feedback/form';
+import { SubmissionOptions, FeedbackResponse } from '@/types/feedback/submission';
 
 export function useFeedbackSubmission() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitFeedback = async (
-    formData: FeedbackData,
+    formData: FeedbackFormData,
     options: SubmissionOptions
   ) => {
     const { feedbackRequestId, uniqueLink, sessionId, draftId } = options;
@@ -44,184 +33,112 @@ export function useFeedbackSubmission() {
     
     try {
       const currentTime = new Date().toISOString();
-      
-      if (draftId) {
-        console.log('=== Starting Feedback Submission Process ===');
-        console.log('Draft ID:', draftId);
-        console.log('Session ID:', sessionId);
-        console.log('Form Data:', formData);
 
-        // First verify the draft exists and is still a draft
-        const { data: currentDraft, error: fetchError } = await supabase
+      // First, check for existing draft
+      const { data: existingDraft, error: fetchError } = await supabase
+        .from('feedback_responses')
+        .select()
+        .eq('id', draftId)
+        .eq('status', 'in_progress')
+        .maybeSingle();
+
+      console.log('Existing draft check:', { existingDraft, fetchError });
+
+      if (fetchError) {
+        console.error('Error checking existing draft:', fetchError);
+        throw new Error('Could not verify existing draft. Please try again.');
+      }
+
+      if (!existingDraft && draftId) {
+        console.error('Draft not found:', draftId);
+        throw new Error('Could not find the draft to update. Please try again.');
+      }
+
+      let result: FeedbackResponse;
+
+      if (existingDraft) {
+        // Update existing feedback to submitted in two steps
+        console.log('Converting in-progress feedback to submission:', existingDraft.id);
+        
+        // Step 1: Update the content while keeping status as in_progress
+        const { error: contentUpdateError } = await supabase
           .from('feedback_responses')
-          .select('*')
-          .eq('id', draftId)
-          .eq('session_id', sessionId)
-          .eq('is_draft', true)
-          .maybeSingle();
-
-        console.log('Current draft fetch result:', { currentDraft, fetchError });
-
-        if (fetchError) {
-          console.error('Error fetching draft:', fetchError);
-          throw new Error('Could not access draft. Please try again.');
-        }
-
-        if (!currentDraft) {
-          console.log('No draft found, proceeding with direct submission');
-          // Handle as a new submission
-          const submissionData = {
-            feedback_request_id: feedbackRequestId,
-            session_id: sessionId,
-            relationship: formData.relationship,
+          .update({
             strengths: formData.strengths.trim(),
             areas_for_improvement: formData.areas_for_improvement.trim(),
-            is_draft: false,
+            relationship: formData.relationship
+          })
+          .eq('id', existingDraft.id)
+          .eq('status', 'in_progress');
+
+        if (contentUpdateError) {
+          console.error('Error updating feedback content:', contentUpdateError);
+          throw new Error('Failed to update feedback content');
+        }
+
+        // Step 2: Update the status to submitted
+        const { data: updated, error: statusUpdateError } = await supabase
+          .from('feedback_responses')
+          .update({
             status: 'submitted',
             submitted_at: currentTime
-          };
-
-          const { data: newSubmission, error: insertError } = await supabase
-            .from('feedback_responses')
-            .insert([submissionData])
-            .select()
-            .single();
-
-          if (insertError || !newSubmission) {
-            console.error('Error inserting feedback:', insertError);
-            throw new Error('Failed to submit feedback');
-          }
-
-          // Store submission in localStorage
-          const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-          submittedFeedbacks[uniqueLink] = true;
-          localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
-          
-          // Clear any draft and analysis cache
-          localStorage.removeItem(`feedback_draft_${uniqueLink}`);
-          localStorage.removeItem('last_feedback_analysis');
-
-          toast({
-            title: "Success",
-            description: "Thank you for your feedback!",
-          });
-
-          navigate('/feedback/thank-you');
-          return true;
-        }
-
-        if (currentDraft.status === 'submitted') {
-          console.error('Draft is already submitted');
-          throw new Error('This feedback has already been submitted.');
-        }
-
-        // Log the current state of the draft
-        console.log('Current draft state:', {
-          id: currentDraft.id,
-          is_draft: currentDraft.is_draft,
-          status: currentDraft.status,
-          session_id: currentDraft.session_id
-        });
-
-        // Prepare update data
-        const updateData = {
-          strengths: formData.strengths.trim(),
-          areas_for_improvement: formData.areas_for_improvement.trim(),
-          relationship: formData.relationship,
-          is_draft: false,
-          status: 'submitted',
-          submitted_at: currentTime
-        };
-
-        console.log('Attempting to update draft with data:', updateData);
-
-        // Update the draft - only use id for the condition
-        const { data: updated, error: updateError } = await supabase
-          .from('feedback_responses')
-          .update(updateData)
-          .eq('id', draftId)
-          .eq('session_id', sessionId)
-          .eq('is_draft', true)
+          })
+          .eq('id', existingDraft.id)
           .select()
           .single();
 
-        console.log('Update result:', { updated, updateError });
-
-        if (updateError) {
-          console.error('Error updating feedback:', updateError);
-          throw new Error(`Failed to update feedback: ${updateError.message}`);
-        }
-
-        if (!updated) {
-          console.error('No draft was updated');
-          throw new Error('Failed to verify feedback update - no rows were modified');
-        }
-
-        console.log('=== Submission Complete ===');
-        console.log('Final state:', updated);
-
-        // Store submission in localStorage
-        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-        submittedFeedbacks[uniqueLink] = true;
-        localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
-        
-        // Clear draft and analysis cache
-        localStorage.removeItem(`feedback_draft_${uniqueLink}`);
-        localStorage.removeItem('last_feedback_analysis');
-
-        toast({
-          title: "Success",
-          description: "Thank you for your feedback!",
-        });
-
-        navigate('/feedback/thank-you');
-        return true;
-      } else {
-        // Handle direct submission without draft
-        console.log('=== Attempting direct submission ===');
-        const submissionData = {
-          feedback_request_id: feedbackRequestId,
-          session_id: sessionId,
-          relationship: formData.relationship,
-          strengths: formData.strengths.trim(),
-          areas_for_improvement: formData.areas_for_improvement.trim(),
-          is_draft: false,
-          status: 'submitted',
-          submitted_at: currentTime
-        };
-
-        console.log('Submitting data:', submissionData);
-
-        const { data: newSubmission, error: insertError } = await supabase
-          .from('feedback_responses')
-          .insert([submissionData])
-          .select()
-          .single();
-
-        console.log('Insert result:', { newSubmission, insertError });
-
-        if (insertError || !newSubmission) {
-          console.error('Error inserting feedback:', insertError);
+        if (statusUpdateError) {
+          console.error('Error updating feedback status:', statusUpdateError);
           throw new Error('Failed to submit feedback');
         }
 
-        // Store submission in localStorage
-        const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-        submittedFeedbacks[uniqueLink] = true;
-        localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
-        
-        // Clear any draft and analysis cache
-        localStorage.removeItem(`feedback_draft_${uniqueLink}`);
-        localStorage.removeItem('last_feedback_analysis');
+        result = updated;
+        console.log('=== Feedback Submitted ===');
+      } else {
+        // Create new feedback
+        console.log('Creating new feedback');
+        const { data: newSubmission, error: insertError } = await supabase
+          .from('feedback_responses')
+          .insert([{
+            feedback_request_id: feedbackRequestId,
+            session_id: sessionId,
+            strengths: formData.strengths.trim(),
+            areas_for_improvement: formData.areas_for_improvement.trim(),
+            relationship: formData.relationship,
+            status: 'submitted',
+            submitted_at: currentTime
+          }])
+          .select()
+          .single();
 
-        toast({
-          title: "Success",
-          description: "Thank you for your feedback!",
-        });
+        if (insertError) {
+          console.error('Error creating feedback:', insertError);
+          throw new Error('Failed to submit feedback');
+        }
 
-        navigate('/feedback/thank-you');
-        return true;
+        result = newSubmission;
+        console.log('=== New Feedback Created ===');
       }
+
+      console.log('Final result:', result);
+
+      // Store submission in localStorage and clean up
+      const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+      submittedFeedbacks[uniqueLink] = true;
+      localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+      
+      // Clear any draft and analysis cache
+      localStorage.removeItem(`feedback_draft_${uniqueLink}`);
+      localStorage.removeItem('last_feedback_analysis');
+
+      toast({
+        title: "Success",
+        description: "Thank you for your feedback!",
+      });
+
+      navigate('/feedback/thank-you');
+      return true;
+
     } catch (error) {
       console.error('Error submitting feedback:', error);
       toast({

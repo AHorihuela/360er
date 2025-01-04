@@ -9,50 +9,13 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { FeedbackResponse } from '@/types/feedback';
-
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  user_id: string;
-  completed_reviews: number;
-  total_reviews: number;
-}
-
-interface DbFeedbackResponse {
-  id: string;
-  status: string;
-  submitted_at: string;
-  relationship: string;
-  strengths: string | null;
-  areas_for_improvement: string | null;
-}
-
-interface DbFeedbackRequest {
-  id: string;
-  employee_id: string;
-  status: string;
-  target_responses: number;
-  unique_link: string;
-  feedback_responses?: DbFeedbackResponse[];
-}
-
-interface DbReviewCycle {
-  id: string;
-  title: string;
-  review_by_date: string;
-  feedback_requests: DbFeedbackRequest[];
-}
-
-interface ReviewCycleWithFeedback {
-  id: string;
-  title: string;
-  review_by_date: string;
-  total_requests: number;
-  completed_requests: number;
-  feedback_requests: DbFeedbackRequest[];
-}
+import { 
+  DashboardEmployee, 
+  DashboardFeedbackResponse, 
+  DashboardFeedbackRequest, 
+  DashboardReviewCycle,
+  ReviewCycleWithFeedback 
+} from '@/types/feedback/dashboard';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -61,7 +24,7 @@ export function DashboardPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [hasEmployees, setHasEmployees] = useState(false);
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycleWithFeedback | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<DashboardEmployee[]>([]);
 
   const startRealtimeSubscription = (userId: string) => {
     const feedbackChannel = supabase
@@ -142,7 +105,7 @@ export function DashboardPage(): JSX.Element {
       }
 
       if (reviewCycles && reviewCycles.length > 0) {
-        const currentCycle = reviewCycles[0] as unknown as DbReviewCycle;
+        const currentCycle = reviewCycles[0] as unknown as DashboardReviewCycle;
         
         // Calculate total completed requests across all employees
         const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
@@ -400,7 +363,7 @@ export function DashboardPage(): JSX.Element {
           <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             {(activeReviewCycle as ReviewCycleWithFeedback).feedback_requests?.flatMap(request => 
               request.feedback_responses?.map(response => {
-                const feedbackResponse: FeedbackResponse = {
+                const feedbackResponse: DashboardFeedbackResponse = {
                   id: response.id,
                   feedback_request_id: request.id,
                   relationship: response.relationship,
@@ -408,12 +371,16 @@ export function DashboardPage(): JSX.Element {
                   areas_for_improvement: response.areas_for_improvement,
                   submitted_at: response.submitted_at,
                   status: response.status,
-                  employee: employees.find(e => e.id === request.employee_id)
+                  employee: employees.find(e => e.id === request.employee_id) ? {
+                    id: request.employee_id,
+                    name: employees.find(e => e.id === request.employee_id)!.name,
+                    role: employees.find(e => e.id === request.employee_id)!.role
+                  } : undefined
                 };
                 return feedbackResponse;
               })
             )
-            .filter((response): response is FeedbackResponse => 
+            .filter((response): response is DashboardFeedbackResponse => 
               response !== undefined && 
               Boolean(response.strengths?.trim() || response.areas_for_improvement?.trim())
             )
