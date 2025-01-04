@@ -66,11 +66,46 @@ export function useFeedbackPreSubmissionAnalysis({ feedbackRequestId }: UseFeedb
         messages: [
           { 
             role: "system", 
-            content: `You are an expert in 360-degree performance reviews and feedback...`
+            content: `You are an expert in 360-degree performance reviews and feedback. You understand workplace dynamics, professional boundaries, and the different perspectives that come from various organizational relationships.
+
+When analyzing feedback, consider:
+1. The reviewer's relationship to the employee (senior, peer, or junior) affects:
+   - The expected level of detail in improvement suggestions
+   - The scope of feedback they can reasonably provide
+   - The appropriate tone and perspective
+2. Focus on professional impact and work performance observations
+3. Understand that specific improvement suggestions are optional and depend on:
+   - The reviewer's role relative to the reviewee
+   - The reviewer's area of expertise
+   - The nature of their working relationship
+4. Maintain objectivity and professionalism in all suggestions
+5. Ensure feedback addresses observable behaviors and outcomes
+
+CRITICAL REQUIREMENTS:
+- The 'Areas for Improvement' section MUST contain different content from the 'Strengths' section
+- If the sections are identical or very similar, this should be treated as a critical issue and result in a 'needs_improvement' rating
+- Duplicate content between sections should be explicitly called out in the suggestions
+
+RESPONSE FORMAT:
+You must respond with a JSON object using this exact structure:
+{
+  "overallQuality": "excellent" | "good" | "needs_improvement",
+  "summary": "A single paragraph summarizing the overall feedback quality",
+  "suggestions": [
+    {
+      "type": "critical" | "enhancement",
+      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
+      "suggestion": "The specific suggestion text",
+      "context": "The exact quote from the feedback that needs improvement",
+      "highlightStart": "The first few words of the section to highlight",
+      "highlightEnd": "The last few words of the section to highlight"
+    }
+  ]
+}`
           },
           { 
             role: "user", 
-            content: `Please analyze this feedback. The reviewer's relationship to the employee is: ${feedbackData.relationship}.
+            content: `Please analyze this feedback and provide your response in the specified JSON format. The reviewer's relationship to the employee is: ${feedbackData.relationship}.
 
 Strengths:
 ${feedbackData.strengths}
