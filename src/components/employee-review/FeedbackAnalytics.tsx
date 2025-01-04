@@ -57,8 +57,18 @@ export function FeedbackAnalytics({
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
   const [existingAnalysis, setExistingAnalysis] = useState<AnalyticsMetadata | null>(null);
 
+  // Memoized values
   const MINIMUM_REVIEWS_REQUIRED = 5;
-  const hasMinimumReviews = feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED;
+  const hasMinimumReviews = useMemo(() => 
+    feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED,
+    [feedbackResponses.length]
+  );
+
+  // Memoized grouped feedback
+  const groupedFeedback = useMemo(() => 
+    groupFeedbackByRelationship(feedbackResponses),
+    [feedbackResponses]
+  );
 
   // If there aren't enough reviews, show a message instead of the analysis
   if (!hasMinimumReviews) {
@@ -114,12 +124,6 @@ export function FeedbackAnalytics({
       </Card>
     );
   }
-
-  // Memoized values
-  const groupedFeedback = useMemo(() => 
-    groupFeedbackByRelationship(feedbackResponses),
-    [feedbackResponses]
-  );
 
   const currentFeedbackHash = useMemo(() => 
     createFeedbackHash(feedbackResponses),
