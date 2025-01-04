@@ -755,7 +755,9 @@ export function EmployeeReviewDetailsPage() {
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {feedbackRequest?.feedback?.map((feedback) => (
+                    {feedbackRequest?.feedback
+                      ?.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+                      ?.map((feedback) => (
                       <div key={feedback.id} className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
