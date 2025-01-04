@@ -2,37 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validateFeedback } from '@/utils/feedbackValidation';
-
-interface FeedbackFormData {
-  relationship: 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
-  strengths: string;
-  areas_for_improvement: string;
-}
-
-interface FeedbackFormProps {
-  employeeName: string;
-  employeeRole: string;
-  showNames: boolean;
-  formData: FeedbackFormData;
-  onFormDataChange: (data: FeedbackFormData) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isSubmitting: boolean;
-}
-
-interface ValidationState {
-  strengths: {
-    isValid: boolean;
-    message: string;
-    warnings?: string[];
-    showLengthWarning: boolean;
-  };
-  areas_for_improvement: {
-    isValid: boolean;
-    message: string;
-    warnings?: string[];
-    showLengthWarning: boolean;
-  };
-}
+import { FeedbackFormData, FeedbackFormProps, ValidationState, ValidationFieldState } from '@/types/feedback/form';
+import { RelationshipType } from '@/types/feedback/base';
 
 export function FeedbackForm({
   employeeName,
@@ -59,8 +30,41 @@ export function FeedbackForm({
 
   const displayName = showNames ? employeeName : 'Employee';
 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form submit triggered');
+    
+    // Check if validation passes before submitting
+    const isValid = validation.strengths.isValid && validation.areas_for_improvement.isValid;
+    if (!isValid) {
+      console.log('Validation failed:', validation);
+      setShowLengthRequirements(true);
+      return;
+    }
+
+    if (isSubmitting) {
+      console.log('Already submitting, preventing duplicate submission');
+      return;
+    }
+
+    // Disable the form temporarily to prevent double submission
+    const submitButton = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    try {
+      await onSubmit(e);
+    } finally {
+      // Re-enable the button after submission attempt
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       <div className="space-y-3">
         <label className="text-base sm:text-lg font-medium">
           Your relationship to {showNames ? employeeName : 'the reviewee'}
@@ -72,7 +76,7 @@ export function FeedbackForm({
             if (value) {
               onFormDataChange({
                 ...formData,
-                relationship: value as typeof formData.relationship
+                relationship: value as RelationshipType
               });
             }
           }}
