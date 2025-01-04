@@ -29,6 +29,8 @@ export interface CoreFeedbackResponse extends BaseFeedbackContent, BaseEntity {
   submitted_at: string | null;
   previous_version_id?: string | null;
   status: FeedbackStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Type aliases for different contexts

@@ -68,6 +68,22 @@ export function useFeedbackPreSubmissionAnalysis({ feedbackRequestId }: UseFeedb
             role: "system", 
             content: `You are an expert in 360-degree performance reviews and feedback. You understand workplace dynamics, professional boundaries, and the different perspectives that come from various organizational relationships.
 
+Analyze the feedback and return a JSON object with the following structure:
+{
+  "overallQuality": "excellent" | "good" | "needs_improvement",
+  "summary": "A single paragraph summarizing the overall feedback quality",
+  "suggestions": [
+    {
+      "type": "critical" | "enhancement",
+      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
+      "suggestion": "The specific suggestion text",
+      "context": "The exact quote from the feedback that needs improvement",
+      "highlightStart": "The first few words of the section to highlight",
+      "highlightEnd": "The last few words of the section to highlight"
+    }
+  ]
+}
+
 When analyzing feedback, consider:
 1. The reviewer's relationship to the employee (senior, peer, or junior) affects:
    - The expected level of detail in improvement suggestions
@@ -97,64 +113,8 @@ Areas for Improvement:
 ${feedbackData.areas_for_improvement}`
           }
         ],
-        functions: [
-          {
-            name: "analyzeFeedback",
-            description: "Analyze the feedback and provide structured assessment",
-            parameters: {
-              type: "object",
-              properties: {
-                overallQuality: {
-                  type: "string",
-                  enum: ["excellent", "good", "needs_improvement"],
-                  description: "Overall quality rating of the feedback"
-                },
-                summary: {
-                  type: "string",
-                  description: "A single paragraph summarizing the overall feedback quality"
-                },
-                suggestions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      type: {
-                        type: "string",
-                        enum: ["critical", "enhancement"],
-                        description: "Whether this is a critical issue or an enhancement suggestion"
-                      },
-                      category: {
-                        type: "string",
-                        enum: ["clarity", "specificity", "actionability", "tone", "completeness"],
-                        description: "The category of the suggestion"
-                      },
-                      suggestion: {
-                        type: "string",
-                        description: "The specific suggestion text"
-                      },
-                      context: {
-                        type: "string",
-                        description: "The exact quote from the feedback that needs improvement"
-                      },
-                      highlightStart: {
-                        type: "string",
-                        description: "The first few words of the section to highlight"
-                      },
-                      highlightEnd: {
-                        type: "string",
-                        description: "The last few words of the section to highlight"
-                      }
-                    },
-                    required: ["type", "category", "suggestion", "context", "highlightStart", "highlightEnd"]
-                  }
-                }
-              },
-              required: ["overallQuality", "summary", "suggestions"]
-            }
-          }
-        ],
-        function_call: { name: "analyzeFeedback" },
-        temperature: 0.7
+        temperature: 0.7,
+        response_format: { type: "json_object" }
       });
 
       // Step 2: Review content
@@ -165,11 +125,11 @@ ${feedbackData.areas_for_improvement}`
       callbacks.onStepComplete();
       let analysis: AiFeedbackResponse;
       try {
-        const functionCall = completion.choices[0].message.function_call;
-        if (!functionCall || functionCall.name !== 'analyzeFeedback') {
+        const content = completion.choices[0].message.content;
+        if (!content) {
           throw new Error('Invalid response format from OpenAI');
         }
-        analysis = JSON.parse(functionCall.arguments) as AiFeedbackResponse;
+        analysis = JSON.parse(content) as AiFeedbackResponse;
       } catch (parseError) {
         throw new Error('Failed to parse AI response');
       }

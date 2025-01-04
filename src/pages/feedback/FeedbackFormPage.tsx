@@ -90,7 +90,8 @@ export function FeedbackFormPage() {
             session_id,
             strengths,
             areas_for_improvement,
-            relationship
+            relationship,
+            created_at
           )
         `)
         .eq('unique_link', uniqueLink)
@@ -199,15 +200,24 @@ export function FeedbackFormPage() {
         strengths: formData.strengths.trim(),
         areas_for_improvement: formData.areas_for_improvement.trim(),
         status: isSubmitting ? 'submitted' : 'in_progress',
-        submitted_at: isSubmitting ? currentTime : null
+        submitted_at: isSubmitting ? currentTime : null,
+        created_at: formState.draftId ? undefined : currentTime
       };
 
-      console.log('Prepared feedback data:', feedbackData);
+      console.log('Prepared feedback data:', JSON.stringify(feedbackData, null, 2));
+      console.log('Validation check:', {
+        hasFeedbackRequest: !!feedbackRequest,
+        hasUniqueLink: !!uniqueLink,
+        hasSessionId: !!sessionId,
+        relationshipType: formData.relationship,
+        strengthsLength: formData.strengths.length,
+        improvementsLength: formData.areas_for_improvement.length
+      });
 
-      // First try to find any existing draft, regardless of formState.draftId
+      // First try to find any existing draft
       const { data: existingResponses, error: searchError } = await supabase
         .from('feedback_responses')
-        .select('id, status')
+        .select('id, status, created_at')
         .eq('feedback_request_id', feedbackRequest.id)
         .eq('session_id', sessionId)
         .eq('status', 'in_progress');
@@ -249,7 +259,12 @@ export function FeedbackFormPage() {
         .single();
 
       if (insertError) {
-        console.error('Error creating new response:', insertError);
+        console.error('Error creating new response:', insertError.message);
+        console.error('Error details:', {
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint
+        });
         throw insertError;
       }
 
@@ -263,7 +278,7 @@ export function FeedbackFormPage() {
 
     } catch (error) {
       console.error('Error in saveFeedbackResponse:', error);
-      throw error; // Let the caller handle the error
+      throw error;
     }
   }
 
@@ -286,28 +301,23 @@ export function FeedbackFormPage() {
     console.log('Current step:', formState.step);
     console.log('AI analysis attempted:', formState.aiAnalysisAttempted);
 
-    // If we're in the editing state and haven't done AI analysis yet
-    if (formState.step === 'form' && !formState.aiAnalysisAttempted) {
-      try {
-        console.log('Attempting to save draft and move to AI review');
-        
-        // Try to save the feedback response
-        const draftId = await saveFeedbackResponse(false).catch(error => {
-          console.error('Error saving feedback response:', error);
-          toast({
-            title: "Error",
-            description: "Failed to save feedback. Please try again.",
-            variant: "destructive",
-          });
-          return null;
+    try {
+      // Always save the latest changes first
+      const draftId = await saveFeedbackResponse(false);
+      
+      if (!draftId) {
+        console.error('Failed to save latest changes');
+        toast({
+          title: "Error",
+          description: "Failed to save feedback. Please try again.",
+          variant: "destructive",
         });
+        return;
+      }
 
-        if (!draftId) {
-          console.error('Failed to get draft ID');
-          return;
-        }
-
-        console.log('Draft saved successfully with ID:', draftId);
+      // If we're in the editing state and haven't done AI analysis yet
+      if (formState.step === 'form' && !formState.aiAnalysisAttempted) {
+        console.log('Moving to AI review with draft:', draftId);
         
         // Update form state with new draft ID and move to AI review
         updateFormState({
@@ -315,36 +325,34 @@ export function FeedbackFormPage() {
           aiAnalysisAttempted: true,
           draftId
         });
-
-        console.log('Form state updated, moving to AI review');
         
-      } catch (error) {
-        console.error('Error in handleSubmit:', error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
+        return;
       }
-      return;
-    }
 
-    // If we're in AI review or have already done AI analysis, proceed to submission
-    console.log('Moving to submission phase');
-    startSubmission();
-    
-    const success = await submitFeedback(formData, {
-      feedbackRequestId: feedbackRequest.id,
-      uniqueLink,
-      sessionId,
-      draftId: formState.draftId
-    });
+      // If we're in AI review or have already done AI analysis, proceed to submission
+      console.log('Moving to submission phase with latest draft:', draftId);
+      startSubmission();
+      
+      const success = await submitFeedback(formData, {
+        feedbackRequestId: feedbackRequest.id,
+        uniqueLink,
+        sessionId,
+        draftId
+      });
 
-    if (!success) {
-      console.log('Submission failed, handling failure');
-      handleSubmissionFailure();
-    } else {
-      console.log('Submission completed successfully');
+      if (!success) {
+        console.log('Submission failed, handling failure');
+        handleSubmissionFailure();
+      } else {
+        console.log('Submission completed successfully');
+      }
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
   }
 

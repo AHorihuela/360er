@@ -67,7 +67,8 @@ export function useFeedbackSubmission() {
           .update({
             strengths: formData.strengths.trim(),
             areas_for_improvement: formData.areas_for_improvement.trim(),
-            relationship: formData.relationship
+            relationship: formData.relationship,
+            created_at: currentTime
           })
           .eq('id', existingDraft.id)
           .eq('status', 'in_progress');
@@ -82,7 +83,8 @@ export function useFeedbackSubmission() {
           .from('feedback_responses')
           .update({
             status: 'submitted',
-            submitted_at: currentTime
+            submitted_at: currentTime,
+            created_at: currentTime
           })
           .eq('id', existingDraft.id)
           .select()
@@ -107,7 +109,8 @@ export function useFeedbackSubmission() {
             areas_for_improvement: formData.areas_for_improvement.trim(),
             relationship: formData.relationship,
             status: 'submitted',
-            submitted_at: currentTime
+            submitted_at: currentTime,
+            created_at: currentTime
           }])
           .select()
           .single();

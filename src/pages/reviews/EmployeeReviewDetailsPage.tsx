@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
 
 interface ReviewCycle {
   id: string;
@@ -34,14 +35,7 @@ interface ReviewCycle {
   status: string;
 }
 
-interface FeedbackResponse {
-  id: string;
-  submitted_at: string;
-  relationship: string;
-  strengths: string;
-  areas_for_improvement: string;
-  status: string;
-}
+type FeedbackResponse = CoreFeedbackResponse;
 
 interface FeedbackRequest {
   id: string;
@@ -100,6 +94,10 @@ interface AIReportType {
   created_at: string;
 }
 
+function getFeedbackDate(feedback: CoreFeedbackResponse): number {
+  return new Date(feedback.submitted_at ?? feedback.created_at ?? 0).getTime();
+}
+
 export function EmployeeReviewDetailsPage() {
   const params = useParams<{ cycleId: string; employeeId: string }>();
   const cycleId = params.cycleId;
@@ -120,6 +118,11 @@ export function EmployeeReviewDetailsPage() {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [feedbackToDelete, setFeedbackToDelete] = useState<string | null>(null);
+
+  const sortedFeedback = useMemo(() => 
+    feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
+    [feedbackRequest?.feedback]
+  );
 
   // Utility functions for report generation
   const getNextStep = (current: GenerationStep): GenerationStep => {
@@ -184,7 +187,8 @@ export function EmployeeReviewDetailsPage() {
               submitted_at,
               relationship,
               strengths,
-              areas_for_improvement
+              areas_for_improvement,
+              created_at
             ),
             ai_reports (
               content,
@@ -782,15 +786,13 @@ export function EmployeeReviewDetailsPage() {
                 <CardTitle className="text-base">Feedback Responses</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {feedbackRequest?.feedback?.length === 0 ? (
+                {!sortedFeedback.length ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No feedback responses yet.
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {feedbackRequest?.feedback
-                      ?.sort((a, b) => new Date(b.submitted_at || '').getTime() - new Date(a.submitted_at || '').getTime())
-                      ?.map((feedback) => (
+                    {sortedFeedback.map((feedback) => (
                       <div key={feedback.id} className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -798,7 +800,7 @@ export function EmployeeReviewDetailsPage() {
                               {feedback.relationship.replace('_', ' ')}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(feedback.submitted_at).toLocaleDateString()}
+                              {new Date(feedback.submitted_at ?? feedback.created_at ?? 0).toLocaleDateString()}
                             </span>
                           </div>
                           <Button
