@@ -182,8 +182,12 @@ export function FeedbackFormPage() {
   }
 
   async function saveFeedbackResponse(isSubmitting: boolean = false): Promise<string | null> {
-    if (!feedbackRequest || !uniqueLink) {
-      console.error('Missing feedbackRequest or uniqueLink');
+    if (!feedbackRequest || !uniqueLink || !feedbackRequest.id) {
+      console.error('Missing required data:', { 
+        hasFeedbackRequest: !!feedbackRequest,
+        hasUniqueLink: !!uniqueLink,
+        hasFeedbackRequestId: !!feedbackRequest?.id
+      });
       return null;
     }
 
@@ -191,7 +195,21 @@ export function FeedbackFormPage() {
       console.log('=== Starting saveFeedbackResponse ===');
       console.log('Session ID:', sessionId);
       console.log('Feedback Request ID:', feedbackRequest.id);
+      console.log('Unique Link:', uniqueLink);
       console.log('Current form state:', formState);
+
+      // Verify the feedback request exists and has a unique link
+      const { data: verifiedRequest, error: verifyError } = await supabase
+        .from('feedback_requests')
+        .select('id, unique_link')
+        .eq('id', feedbackRequest.id)
+        .eq('unique_link', uniqueLink)
+        .single();
+
+      if (verifyError || !verifiedRequest) {
+        console.error('Error verifying feedback request:', verifyError);
+        throw new Error('Invalid feedback request or unique link');
+      }
 
       const currentTime = new Date().toISOString();
       const feedbackData = {
