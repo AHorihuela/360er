@@ -35,8 +35,6 @@ interface ReviewCycle {
   status: string;
 }
 
-type FeedbackResponse = CoreFeedbackResponse;
-
 interface FeedbackRequest {
   id: string;
   unique_link: string;
@@ -46,7 +44,7 @@ interface FeedbackRequest {
     name: string;
     role: string;
   };
-  feedback?: FeedbackResponse[];
+  feedback?: CoreFeedbackResponse[];
   ai_reports?: Array<{
     content: string;
     updated_at: string;
@@ -56,6 +54,12 @@ interface FeedbackRequest {
     page_views: number;
     unique_viewers: number;
   };
+}
+
+interface AIReportResponse {
+  content: string;
+  updated_at: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
 }
 
 // Types for report generation steps and progress
@@ -123,17 +127,6 @@ export function EmployeeReviewDetailsPage() {
     feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
     [feedbackRequest?.feedback]
   );
-
-  // Utility functions for report generation
-  const getNextStep = (current: GenerationStep): GenerationStep => {
-    switch (current) {
-      case 0: return 1;
-      case 1: return 2;
-      case 2: return 3;
-      case 3: return 3;
-      default: return current;
-    }
-  };
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -286,116 +279,92 @@ export function EmployeeReviewDetailsPage() {
   }
 
   async function handleGenerateReport() {
-    if (!feedbackRequest || !feedbackRequest.feedback?.length) return;
-    
-    setIsGeneratingReport(true);
-    setGenerationStep(0);
-    setStartTime(Date.now());
-    let reportId: string | null = null;
-    
-    // Start step progression with type-safe step updates
-    const stepInterval = setInterval(() => {
-      setGenerationStep(currentStep => getNextStep(currentStep));
-    }, 8000);
-    
+    if (!feedbackRequest?.id || !feedbackRequest.feedback?.length) return;
+
     try {
-      console.log('Checking for existing report...');
+      setIsGeneratingReport(true);
+      setGenerationStep(0);
+      setStartTime(Date.now());
+
+      // First check if we have a recent analysis
       const { data: existingReport } = await supabase
         .from('ai_reports')
-        .select('*')
+        .select('content, updated_at, status')
         .eq('feedback_request_id', feedbackRequest.id)
+        .eq('is_final', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .single();
 
-      if (existingReport) {
-        console.log('Updating existing report...');
-        reportId = existingReport.id;
-        const { error: updateError } = await supabase
-          .from('ai_reports')
-          .update({
-            status: 'processing',
-            is_final: false,
-            error: null,
-            content: null, // Clear content while processing
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingReport.id);
+      const typedReport = existingReport as AIReportResponse | null;
 
-        if (updateError) throw updateError;
-      } else {
-        console.log('Creating new report...');
-        const { data: newReport, error: insertError } = await supabase
-          .from('ai_reports')
-          .insert({
-            feedback_request_id: feedbackRequest.id,
-            status: 'processing',
-            is_final: false,
-            content: null // Explicitly set content as null while processing
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        if (newReport) reportId = newReport.id;
+      // If we have a recent report (less than 1 hour old) and it's completed, use it
+      if (typedReport?.status === 'completed' && 
+          typedReport?.content &&
+          new Date(typedReport.updated_at).getTime() > Date.now() - 3600000) {
+        console.log('Using existing recent report');
+        setAiReport({
+          content: typedReport.content,
+          created_at: typedReport.updated_at
+        });
+        setIsGeneratingReport(false);
+        setStartTime(null);
+        return;
       }
 
+      // Create or update the report entry
+      const { error: initError } = await supabase
+        .from('ai_reports')
+        .upsert({
+          feedback_request_id: feedbackRequest.id,
+          status: 'processing',
+          is_final: false,
+          updated_at: new Date().toISOString()
+        });
+
+      if (initError) throw initError;
+
+      // Generate new report
       console.log('Calling OpenAI to generate report...');
       const reportContent = await generateAIReport(
         feedbackRequest.employee?.name || 'Unknown Employee',
         feedbackRequest.employee?.role || 'Unknown Role',
-        feedbackRequest.feedback || []
+        feedbackRequest.feedback
       );
 
       if (!reportContent) {
         throw new Error('Failed to generate report content');
       }
 
-      console.log('Report generated:', reportContent.substring(0, 100) + '...');
-      clearInterval(stepInterval);
-      
-      // Force a re-render by creating a new string
+      const currentTime = new Date().toISOString();
       const formattedReport = reportContent.trim();
+
+      // Update state
       setAiReport({
         content: formattedReport,
-        created_at: new Date().toISOString()
+        created_at: currentTime
       });
-      console.log('Set AI report in state');
 
-      console.log('Updating report in Supabase...');
+      // Update database
       const { error: finalizeError } = await supabase
         .from('ai_reports')
         .update({
           content: formattedReport,
           status: 'completed',
           is_final: true,
-          updated_at: new Date().toISOString()
+          updated_at: currentTime
         })
         .eq('feedback_request_id', feedbackRequest.id);
 
       if (finalizeError) throw finalizeError;
 
-      console.log('Report generation completed successfully');
       toast({
         title: "Success",
         description: "AI report generated successfully",
       });
-    } catch (err) {
-      clearInterval(stepInterval);
-      setError('Failed to generate AI report');
-      console.error('Error generating report:', err);
-      
-      // Update report with error if we have a report ID
-      if (reportId) {
-        await supabase
-          .from('ai_reports')
-          .update({
-            status: 'error',
-            error: err instanceof Error ? err.message : 'Unknown error occurred',
-            is_final: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', reportId);
-      }
 
+    } catch (error) {
+      console.error('Error generating report:', error);
       toast({
         title: "Error",
         description: "Failed to generate AI report",
@@ -403,7 +372,6 @@ export function EmployeeReviewDetailsPage() {
       });
     } finally {
       setIsGeneratingReport(false);
-      setGenerationStep(0);
       setStartTime(null);
     }
   }
@@ -720,7 +688,15 @@ export function EmployeeReviewDetailsPage() {
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
         <AIReport 
-          feedbackRequest={feedbackRequest}
+          feedbackRequest={{
+            id: feedbackRequest?.id || '',
+            employee: feedbackRequest?.employee,
+            feedback: feedbackRequest?.feedback?.map(f => ({
+              ...f,
+              submitted_at: f.submitted_at || f.created_at // Ensure submitted_at is never null
+            })),
+            ai_reports: feedbackRequest?.ai_reports
+          }}
           onExportPDF={handleExportPDF}
           onReportChange={handleReportChange}
           onGenerateReport={handleGenerateReport}

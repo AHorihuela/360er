@@ -9,6 +9,7 @@ import { useFeedbackSubmission } from '@/hooks/useFeedbackSubmission';
 import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 import { FeedbackRequest } from '@/types/feedback/submission';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
+import { type RelationshipType } from '@/types/feedback/base';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -130,7 +131,7 @@ export function FeedbackFormPage() {
             });
 
             updateFormData({
-              relationship: existingFeedback.relationship || 'equal_colleague',
+              relationship: (existingFeedback.relationship || 'equal_colleague') as RelationshipType,
               strengths: existingFeedback.strengths || '',
               areas_for_improvement: existingFeedback.areas_for_improvement || ''
             });

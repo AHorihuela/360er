@@ -1,5 +1,5 @@
 import { RELATIONSHIP_TYPES } from "@/constants/feedback";
-import type { FeedbackResponse } from "@/types/feedback";
+import { CoreFeedbackResponse } from "@/types/feedback/base";
 
 export function normalizeRelationship(relationship: string): string {
   const normalized = relationship.toLowerCase().replace(/[_\s]+/g, '');
@@ -9,7 +9,7 @@ export function normalizeRelationship(relationship: string): string {
   return RELATIONSHIP_TYPES.PEER;
 }
 
-export function createFeedbackHash(responses: FeedbackResponse[]): string {
+export function createFeedbackHash(responses: CoreFeedbackResponse[]): string {
   return responses
     .map(r => `${r.id}-${r.submitted_at}`)
     .sort()

@@ -7,33 +7,35 @@ export type FeedbackStatus = 'in_progress' | 'submitted';
 export type FeedbackStep = 'form' | 'ai_review' | 'submitting';
 
 export interface BaseFeedbackContent {
-  relationship: RelationshipType;
-  strengths: string | null;
-  areas_for_improvement: string | null;
+  strengths: string;
+  areas_for_improvement: string;
+  relationship: string;
 }
 
 export interface TimestampedEntity {
-  created_at?: string;
+  created_at: string;
   updated_at?: string;
 }
 
 export interface BaseEntity {
   id: string;
   status: string;
-}
-
-// Core feedback response that all other feedback responses extend
-export interface CoreFeedbackResponse extends BaseFeedbackContent, BaseEntity {
-  feedback_request_id: string;
-  session_id?: string | null;
-  submitted_at: string | null;
-  previous_version_id?: string | null;
-  status: FeedbackStatus;
-  created_at?: string;
+  created_at: string;
   updated_at?: string;
 }
 
+// Core feedback response that all other feedback responses extend
+export interface CoreFeedbackResponse extends BaseFeedbackContent {
+  id: string;
+  feedback_request_id: string;
+  submitted_at: string | null;
+  status: string;
+  session_id: string;
+  created_at: string;
+}
+
 // Type aliases for different contexts
+export type FeedbackResponse = CoreFeedbackResponse;
 export type SubmissionFeedbackResponse = CoreFeedbackResponse;
 export type DashboardFeedbackResponse = CoreFeedbackResponse & {
   employee?: {

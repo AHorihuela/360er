@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { FeedbackResponse } from '@/types/feedback';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
 
 export const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -9,7 +9,7 @@ export const openai = new OpenAI({
 function formatFeedbackForPrompt(
   employeeName: string,
   employeeRole: string,
-  feedback: FeedbackResponse[]
+  feedback: CoreFeedbackResponse[]
 ): string {
   const formattedFeedback = feedback.map(f => `
 Relationship: ${f.relationship.replace('_', ' ')}
@@ -60,7 +60,7 @@ Generate a report that:
 export async function generateAIReport(
   employeeName: string,
   employeeRole: string,
-  feedback: FeedbackResponse[]
+  feedback: CoreFeedbackResponse[]
 ): Promise<string> {
   try {
     console.log('Formatting feedback for prompt...');

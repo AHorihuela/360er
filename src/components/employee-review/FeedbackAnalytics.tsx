@@ -7,17 +7,35 @@ import { Loader2, ChevronDown, RefreshCw, Info } from 'lucide-react';
 import { openai } from '@/lib/openai';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { type FeedbackResponse, type RelationshipInsight, type Competency, type AnalyticsMetadata } from "@/types/feedback";
+import { type RelationshipInsight, type Competency, type AnalyticsMetadata } from "@/types/feedback/analysis";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CORE_COMPETENCIES, ANALYSIS_STAGES, RELATIONSHIP_TYPES, RELATIONSHIP_ORDER } from "@/constants/feedback";
 import { normalizeRelationship, createFeedbackHash, validateConfidenceLevel, formatLastAnalyzed } from "@/utils/feedback";
+import { type CoreFeedbackResponse } from '@/types/feedback/base';
 
 interface Props {
-  feedbackResponses: FeedbackResponse[];
+  feedbackResponses: CoreFeedbackResponse[];
   employeeName: string;
   employeeRole: string;
   feedbackRequestId: string;
 }
+
+// Memoized helper functions
+const groupFeedbackByRelationship = (feedbackResponses: CoreFeedbackResponse[]) => {
+  const grouped = feedbackResponses.reduce((acc, response) => {
+    const relationship = normalizeRelationship(response.relationship);
+    if (!acc[relationship]) acc[relationship] = [];
+    acc[relationship].push(response);
+    return acc;
+  }, {} as Record<string, CoreFeedbackResponse[]>);
+
+  // Ensure all relationship types exist
+  RELATIONSHIP_ORDER.forEach(type => {
+    if (!grouped[type]) grouped[type] = [];
+  });
+
+  return grouped;
+};
 
 export function FeedbackAnalytics({ 
   feedbackResponses, 
@@ -97,29 +115,12 @@ export function FeedbackAnalytics({
     );
   }
 
-  // Group feedback by normalized relationship type
-  const groupedFeedback = useMemo(() => {
-    const grouped = feedbackResponses.reduce((acc, response) => {
-      const relationship = normalizeRelationship(response.relationship);
-      
-      if (!acc[relationship]) {
-        acc[relationship] = [];
-      }
-      acc[relationship].push(response);
-      return acc;
-    }, {} as Record<string, FeedbackResponse[]>);
+  // Memoized values
+  const groupedFeedback = useMemo(() => 
+    groupFeedbackByRelationship(feedbackResponses),
+    [feedbackResponses]
+  );
 
-    // Ensure all relationship types exist in the grouped feedback
-    RELATIONSHIP_ORDER.forEach(type => {
-      if (!grouped[type]) {
-        grouped[type] = [];
-      }
-    });
-
-    return grouped;
-  }, [feedbackResponses]);
-
-  // Memoize the feedback hash to prevent unnecessary recalculations
   const currentFeedbackHash = useMemo(() => 
     createFeedbackHash(feedbackResponses),
     [feedbackResponses]
@@ -677,10 +678,11 @@ Important:
                         <Badge 
                           variant={competency.confidence === 'low' ? 'destructive' : 
                                  competency.confidence === 'medium' ? 'outline' : 
-                                 'default'}
+                                 'secondary'}
                           className={cn(
                             "text-xs capitalize cursor-help",
-                            competency.confidence === 'medium' && "bg-yellow-50 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-700"
+                            competency.confidence === 'medium' && "bg-yellow-50 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-700",
+                            competency.confidence === 'high' && "bg-green-50 text-green-700 hover:bg-green-50 hover:text-green-700"
                           )}
                         >
                           {competency.confidence}
