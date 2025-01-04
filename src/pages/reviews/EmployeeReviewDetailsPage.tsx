@@ -678,8 +678,6 @@ export function EmployeeReviewDetailsPage() {
         <section className="space-y-4 pb-6">
           <FeedbackAnalytics
             feedbackResponses={feedbackRequest.feedback}
-            employeeName={feedbackRequest.employee?.name || ''}
-            employeeRole={feedbackRequest.employee?.role || ''}
             feedbackRequestId={feedbackRequest.id}
           />
         </section>

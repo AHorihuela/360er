@@ -4,19 +4,16 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronDown, RefreshCw, Info } from 'lucide-react';
-import { openai } from '@/lib/openai';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { type RelationshipInsight, type Competency, type AnalyticsMetadata } from "@/types/feedback/analysis";
+import { type RelationshipInsight, type AnalyticsMetadata } from "@/types/feedback/analysis";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CORE_COMPETENCIES, ANALYSIS_STAGES, RELATIONSHIP_TYPES, RELATIONSHIP_ORDER } from "@/constants/feedback";
-import { normalizeRelationship, createFeedbackHash, validateConfidenceLevel, formatLastAnalyzed } from "@/utils/feedback";
+import { normalizeRelationship, createFeedbackHash, formatLastAnalyzed } from "@/utils/feedback";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 
 interface Props {
   feedbackResponses: CoreFeedbackResponse[];
-  employeeName: string;
-  employeeRole: string;
   feedbackRequestId: string;
 }
 
@@ -37,11 +34,9 @@ const groupFeedbackByRelationship = (feedbackResponses: CoreFeedbackResponse[]) 
   return grouped;
 };
 
-export function FeedbackAnalytics({ 
-  feedbackResponses, 
-  employeeName, 
-  employeeRole,
-  feedbackRequestId 
+export function FeedbackAnalytics({
+  feedbackResponses,
+  feedbackRequestId,
 }: Props) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [insights, setInsights] = useState<RelationshipInsight[]>([]);
