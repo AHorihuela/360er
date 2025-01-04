@@ -7,15 +7,13 @@ export type CustomText = {
     type: 'critical' | 'enhancement';
     category: 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness';
     suggestion: string;
+    key: string;
   };
-  bold?: boolean;
-  italic?: boolean;
 };
 
 export type CustomElement = {
-  type: 'paragraph' | 'heading-one' | 'heading-two' | 'heading-three' | 'numbered-list' | 'bulleted-list' | 'list-item';
-  children: Array<CustomElement | CustomText>;
-  level?: number;
+  type: 'paragraph' | 'bulleted-list' | 'numbered-list' | 'list-item';
+  children: CustomText[];
 };
 
 export type CustomEditor = BaseEditor & ReactEditor;

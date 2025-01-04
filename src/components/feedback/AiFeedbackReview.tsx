@@ -17,12 +17,11 @@ import { useAnalysisSteps } from '@/hooks/useAnalysisSteps';
 import { useSuggestionFiltering } from '@/hooks/useSuggestionFiltering';
 import { useFeedbackPreSubmissionAnalysis } from '@/hooks/useFeedbackPreSubmissionAnalysis';
 import { FeedbackFormData } from '@/types/feedback/form';
-import { AnalysisStep, SuggestionCategory } from '@/types/feedback/analysis';
+import { SuggestionCategory } from '@/types/feedback/analysis';
 
 interface Props {
   feedbackData: FeedbackFormData;
   onSubmit: (e?: React.FormEvent) => void | Promise<void>;
-  onRevise: () => void;
   isLoading: boolean;
   onFeedbackChange?: (field: keyof Pick<FeedbackFormData, 'strengths' | 'areas_for_improvement'>, value: string) => void;
 }
@@ -44,7 +43,6 @@ const qualityColors = {
 export function AiFeedbackReview({ 
   feedbackData, 
   onSubmit, 
-  onRevise, 
   isLoading,
   onFeedbackChange 
 }: Props) {

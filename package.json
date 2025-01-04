@@ -79,6 +79,7 @@
     "@shadcn/ui": "^0.0.4",
     "@tailwindcss/typography": "^0.5.15",
     "@testing-library/react": "^16.1.0",
+    "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.13",
     "@types/node": "^20.11.16",
     "@types/react": "^18.2.43",

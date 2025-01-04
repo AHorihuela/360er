@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
-import { createEditor, Descendant, Node, Range, Text, NodeEntry, BaseRange, Element } from 'slate';
+import { createEditor, Descendant, Node, Range, Text, NodeEntry, BaseRange } from 'slate';
 import { Slate, Editable, withReact, RenderLeafProps } from 'slate-react';
 import { withHistory } from 'slate-history';
+import { CustomText } from './types';
 
 interface RichTextEditorProps {
   value: string;
@@ -21,29 +22,6 @@ interface CustomRange extends BaseRange {
     suggestion: string;
     key: string;
   };
-}
-
-interface CustomText {
-  text: string;
-  highlight?: {
-    type: 'critical' | 'enhancement';
-    category: 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness';
-    suggestion: string;
-    key: string;
-  };
-}
-
-interface CustomElement {
-  type: 'paragraph';
-  children: CustomText[];
-}
-
-declare module 'slate' {
-  interface CustomTypes {
-    Element: CustomElement;
-    Range: CustomRange;
-    Text: CustomText;
-  }
 }
 
 // Convert plain text to Slate nodes

@@ -9,12 +9,11 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { 
-  DashboardEmployee, 
-  DashboardFeedbackResponse, 
-  DashboardFeedbackRequest, 
+import {
   DashboardReviewCycle,
-  ReviewCycleWithFeedback 
+  ReviewCycleWithFeedback,
+  DashboardEmployee,
+  DashboardFeedbackResponse
 } from '@/types/feedback/dashboard';
 
 export function DashboardPage(): JSX.Element {
@@ -325,7 +324,7 @@ export function DashboardPage(): JSX.Element {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                           <AvatarFallback>
-                            {employee.name.split(' ').map(n => n[0]).join('')}
+                            {employee.name.split(' ').map((n: string) => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -363,7 +362,7 @@ export function DashboardPage(): JSX.Element {
           <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             {(activeReviewCycle as ReviewCycleWithFeedback).feedback_requests?.flatMap(request => 
               request.feedback_responses?.map(response => {
-                const feedbackResponse: DashboardFeedbackResponse = {
+                const feedbackResponse = {
                   id: response.id,
                   feedback_request_id: request.id,
                   relationship: response.relationship,
@@ -376,13 +375,12 @@ export function DashboardPage(): JSX.Element {
                     name: employees.find(e => e.id === request.employee_id)!.name,
                     role: employees.find(e => e.id === request.employee_id)!.role
                   } : undefined
-                };
+                } as DashboardFeedbackResponse;
                 return feedbackResponse;
               })
             )
             .filter((response): response is DashboardFeedbackResponse => 
-              response !== undefined && 
-              Boolean(response.strengths?.trim() || response.areas_for_improvement?.trim())
+              response !== null && typeof response === 'object' && 'id' in response
             )
             .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
             .slice(0, 4)
@@ -467,7 +465,7 @@ export function DashboardPage(): JSX.Element {
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarFallback>
-                          {employee.name.split(' ').map(n => n[0]).join('')}
+                          {employee.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>

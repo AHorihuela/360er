@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { validateFeedback } from '@/utils/feedbackValidation';
-import { FeedbackFormData, FeedbackFormProps, ValidationState, ValidationFieldState } from '@/types/feedback/form';
+import { FeedbackFormProps, ValidationState } from '@/types/feedback/form';
 import { RelationshipType } from '@/types/feedback/base';
+import { validateFeedback } from '@/utils/feedbackValidation';
 
 export function FeedbackForm({
   employeeName,
-  employeeRole,
   showNames,
   formData,
   onFormDataChange,

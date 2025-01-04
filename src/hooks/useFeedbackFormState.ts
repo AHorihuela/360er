@@ -5,10 +5,9 @@ import { FeedbackFormData, FeedbackFormState } from '@/types/feedback/form';
 
 interface UseFeedbackFormStateProps {
   uniqueLink: string;
-  sessionId: string;
 }
 
-export function useFeedbackFormState({ uniqueLink, sessionId }: UseFeedbackFormStateProps) {
+export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 

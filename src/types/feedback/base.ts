@@ -22,4 +22,27 @@ export interface TimestampedEntity {
 export interface BaseEntity {
   id: string;
   status: string;
+}
+
+export interface FeedbackResponse extends BaseFeedbackContent, TimestampedEntity {
+  id: string;
+}
+
+export interface FeedbackRequest extends TimestampedEntity {
+  id: string;
+  unique_link: string;
+  status: string;
+  employee?: {
+    name: string;
+    role: string;
+  };
+  feedback?: FeedbackResponse[];
+  ai_reports?: Array<{
+    content: string;
+    updated_at: string;
+  }>;
+  _count?: {
+    target_responses: number;
+    responses?: number;
+  };
 } 

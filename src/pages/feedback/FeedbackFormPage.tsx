@@ -3,9 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, setSessionId } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
-import { validateFeedback } from '@/utils/feedbackValidation';
-import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
+import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
 import { useFeedbackSubmission } from '@/hooks/useFeedbackSubmission';
 import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 import { FeedbackRequest, FeedbackResponse } from '@/types/feedback/submission';
@@ -16,7 +15,7 @@ function generateSessionId() {
 
 export function FeedbackFormPage() {
   const { toast } = useToast();
-  const { uniqueLink } = useParams();
+  const { uniqueLink } = useParams<{ uniqueLink: string }>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [showNames, setShowNames] = useState(true);
@@ -33,17 +32,11 @@ export function FeedbackFormPage() {
     formState,
     updateFormData,
     updateFormState,
-    clearSavedData,
     markAsSubmitted,
-    moveToAiReview,
-    moveToEditing,
     startSubmission,
     handleSubmissionFailure,
     isSubmitted
-  } = useFeedbackFormState({
-    uniqueLink: uniqueLink || '',
-    sessionId
-  });
+  } = useFeedbackFormState({ uniqueLink: uniqueLink || '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -429,7 +422,6 @@ export function FeedbackFormPage() {
         <AiFeedbackReview
           feedbackData={formData}
           onSubmit={handleSubmit}
-          onRevise={moveToEditing}
           isLoading={isSubmitting}
           onFeedbackChange={async (field, value) => {
             updateFormData({ [field]: value });

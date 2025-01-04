@@ -1,15 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,17 +9,60 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-  AlertDialogPortal,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { FeedbackRequest } from '@/types/feedback';
-import { ReviewCycle } from '@/types/review';
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/components/ui/use-toast';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
+
+interface ReviewCycle {
+  id: string;
+  title: string;
+  review_by_date: string;
+  status: string;
+}
+
+interface FeedbackResponse {
+  id: string;
+  submitted_at: string;
+  relationship: string;
+  strengths: string;
+  areas_for_improvement: string;
+  status: string;
+}
+
+interface FeedbackRequest {
+  id: string;
+  unique_link: string;
+  status: string;
+  target_responses: number;
+  employee?: {
+    name: string;
+    role: string;
+  };
+  feedback?: FeedbackResponse[];
+  ai_reports?: Array<{
+    content: string;
+    updated_at: string;
+  }>;
+  _count?: {
+    responses: number;
+    page_views: number;
+    unique_viewers: number;
+  };
+}
 
 // Types for report generation steps and progress
 export type GenerationStep = 0 | 1 | 2 | 3;
@@ -220,7 +253,7 @@ export function EmployeeReviewDetailsPage() {
 
       // Update local state
       if (feedbackRequest) {
-        const updatedFeedback = feedbackRequest.feedback?.filter(f => f.id !== feedbackId) || [];
+        const updatedFeedback = feedbackRequest.feedback?.filter((f: { id: string }) => f.id !== feedbackId) || [];
         setFeedbackRequest({
           ...feedbackRequest,
           feedback: updatedFeedback,
@@ -756,7 +789,7 @@ export function EmployeeReviewDetailsPage() {
                 ) : (
                   <div className="divide-y">
                     {feedbackRequest?.feedback
-                      ?.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+                      ?.sort((a, b) => new Date(b.submitted_at || '').getTime() - new Date(a.submitted_at || '').getTime())
                       ?.map((feedback) => (
                       <div key={feedback.id} className="p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -806,30 +839,28 @@ export function EmployeeReviewDetailsPage() {
         open={isDeleteDialogOpen} 
         onOpenChange={setIsDeleteDialogOpen}
       >
-        <AlertDialogPortal>
-          <AlertDialogContent className="focus-visible:outline-none">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this feedback response.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel 
-                onClick={handleDeleteCancel}
-                className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteConfirm}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogPortal>
+        <AlertDialogContent className="focus-visible:outline-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this feedback response.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={handleDeleteCancel}
+              className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
     </div>
   );
