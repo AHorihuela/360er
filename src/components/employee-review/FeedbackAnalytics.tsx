@@ -157,9 +157,17 @@ export function FeedbackAnalytics({
           return;
         }
 
-        // Only run new analysis if explicitly requested
-        if (isForceRerun) {
-          console.log('Running new analysis - Force rerun requested');
+        // Run new analysis if:
+        // 1. Force rerun is requested, or
+        // 2. No existing analysis and we have enough reviews, or
+        // 3. Existing analysis hash doesn't match current feedback hash
+        if (isForceRerun || 
+            (!existing && feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED) ||
+            (existing && existing.feedback_hash !== currentFeedbackHash)) {
+          console.log('Running new analysis - ' + 
+            (isForceRerun ? 'Force rerun requested' : 
+             !existing ? 'No existing analysis' : 
+             'Update available'));
           await analyzeFeedback(currentFeedbackHash);
         }
       } catch (error) {
@@ -180,7 +188,7 @@ export function FeedbackAnalytics({
     return () => {
       isMounted = false;
     };
-  }, [currentFeedbackHash, feedbackRequestId, isForceRerun]);
+  }, [currentFeedbackHash, feedbackRequestId, isForceRerun, feedbackResponses.length]);
 
   const analyzeFeedback = async (currentHash: string) => {
     setIsAnalyzing(true);
