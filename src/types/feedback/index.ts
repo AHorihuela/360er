@@ -1,11 +1,27 @@
-export * from './base';
-export * from './form';
-export * from './analysis';
-export * from './dashboard';
+// Export base types
+export type {
+  RelationshipType,
+  FeedbackStatus,
+  FeedbackStep,
+  BaseFeedbackContent,
+  TimestampedEntity,
+  BaseEntity,
+  CoreFeedbackResponse,
+  SubmissionFeedbackResponse
+} from './base';
 
-// Re-export specific types from submission to avoid conflicts
-export type { 
-  FeedbackRequest as SubmissionFeedbackRequest,
-  FeedbackResponse as SubmissionFeedbackResponse,
-  SubmissionOptions
-} from './submission'; 
+// Export form types
+export type * from './form';
+
+// Export analysis types
+export type * from './analysis';
+
+// Export dashboard types with alias to avoid conflict
+export type { DashboardFeedbackResponse as DashboardResponse } from './base';
+export type * from './dashboard';
+
+// Export submission types
+export type * from './submission';
+
+// Re-export the main FeedbackResponse type
+export type { CoreFeedbackResponse as FeedbackResponse } from './base'; 

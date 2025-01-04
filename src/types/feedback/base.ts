@@ -2,21 +2,19 @@
 
 export type RelationshipType = 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
 
-export type FeedbackStatus = 'in_progress' | 'submitted' | 'superseded';
+export type FeedbackStatus = 'in_progress' | 'submitted';
 
-export type FeedbackStep = 'editing' | 'ai_review' | 'submitting';
+export type FeedbackStep = 'form' | 'ai_review' | 'submitting';
 
 export interface BaseFeedbackContent {
   relationship: RelationshipType;
-  strengths: string;
-  areas_for_improvement: string;
-  status: FeedbackStatus;
+  strengths: string | null;
+  areas_for_improvement: string | null;
 }
 
 export interface TimestampedEntity {
   created_at?: string;
   updated_at?: string;
-  submitted_at?: string;
 }
 
 export interface BaseEntity {
@@ -24,25 +22,22 @@ export interface BaseEntity {
   status: string;
 }
 
-export interface FeedbackResponse extends BaseFeedbackContent, TimestampedEntity {
-  id: string;
+// Core feedback response that all other feedback responses extend
+export interface CoreFeedbackResponse extends BaseFeedbackContent, BaseEntity {
+  feedback_request_id: string;
+  session_id?: string | null;
+  submitted_at: string | null;
+  previous_version_id?: string | null;
+  status: FeedbackStatus;
 }
 
-export interface FeedbackRequest extends TimestampedEntity {
-  id: string;
-  unique_link: string;
-  status: string;
+// Type aliases for different contexts
+export type SubmissionFeedbackResponse = CoreFeedbackResponse;
+export type DashboardFeedbackResponse = CoreFeedbackResponse & {
   employee?: {
+    id: string;
     name: string;
     role: string;
   };
-  feedback?: FeedbackResponse[];
-  ai_reports?: Array<{
-    content: string;
-    updated_at: string;
-  }>;
-  _count?: {
-    target_responses: number;
-    responses?: number;
-  };
-} 
+};
+export type AnalyticsFeedbackResponse = CoreFeedbackResponse; 

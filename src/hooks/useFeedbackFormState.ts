@@ -39,21 +39,24 @@ export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) 
   // Form state management
   const [formState, setFormState] = useState<FeedbackFormState>(() => {
     if (!uniqueLink) return {
-      step: 'editing',
-      aiAnalysisAttempted: false
+      step: 'form',
+      aiAnalysisAttempted: false,
+      draftId: undefined
     };
 
     try {
       const savedState = localStorage.getItem(`feedback_state_${uniqueLink}`);
       return savedState ? JSON.parse(savedState) : {
-        step: 'editing',
-        aiAnalysisAttempted: false
+        step: 'form',
+        aiAnalysisAttempted: false,
+        draftId: undefined
       };
     } catch (e) {
       console.error('Error parsing saved form state:', e);
       return {
-        step: 'editing',
-        aiAnalysisAttempted: false
+        step: 'form',
+        aiAnalysisAttempted: false,
+        draftId: undefined
       };
     }
   });
@@ -129,7 +132,7 @@ export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) 
     setFormState(prev => {
       const newState: FeedbackFormState = {
         ...prev,
-        step: 'editing' as const
+        step: 'form' as const
       };
       console.log('New form state:', newState);
       return newState;

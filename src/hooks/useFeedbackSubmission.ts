@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { FeedbackFormData } from '@/types/feedback/form';
-import { SubmissionOptions, FeedbackResponse } from '@/types/feedback/submission';
+import { SubmissionOptions } from '@/types/feedback/submission';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
 
 export function useFeedbackSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +55,7 @@ export function useFeedbackSubmission() {
         throw new Error('Could not find the draft to update. Please try again.');
       }
 
-      let result: FeedbackResponse;
+      let result: CoreFeedbackResponse;
 
       if (existingDraft) {
         // Update existing feedback to submitted in two steps

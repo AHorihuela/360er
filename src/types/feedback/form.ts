@@ -1,6 +1,11 @@
-import { BaseFeedbackContent, FeedbackStep } from './base';
+import { RelationshipType, FeedbackStep } from './base';
 
-export interface FeedbackFormData extends BaseFeedbackContent {}
+// Form data should always have non-null strings
+export interface FeedbackFormData {
+  relationship: RelationshipType;
+  strengths: string;
+  areas_for_improvement: string;
+}
 
 export interface FeedbackFormState {
   step: FeedbackStep;

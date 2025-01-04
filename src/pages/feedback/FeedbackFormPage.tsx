@@ -7,7 +7,8 @@ import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { AiFeedbackReview } from '@/components/feedback/AiFeedbackReview';
 import { useFeedbackSubmission } from '@/hooks/useFeedbackSubmission';
 import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
-import { FeedbackRequest, FeedbackResponse } from '@/types/feedback/submission';
+import { FeedbackRequest } from '@/types/feedback/submission';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -106,7 +107,7 @@ export function FeedbackFormPage() {
 
       // Check for any existing feedback from this session (both submitted and in-progress)
       if (data.feedback) {
-        const existingFeedback = (data.feedback as FeedbackResponse[]).find(
+        const existingFeedback = (data.feedback as CoreFeedbackResponse[]).find(
           f => f.session_id === sessionId
         );
 
@@ -161,7 +162,7 @@ export function FeedbackFormPage() {
         ...data,
         employee: employeeData,
         review_cycle: cycleData,
-        feedback: data.feedback as FeedbackResponse[]
+        feedback: data.feedback as CoreFeedbackResponse[]
       };
 
       setFeedbackRequest(combinedData);
@@ -286,7 +287,7 @@ export function FeedbackFormPage() {
     console.log('AI analysis attempted:', formState.aiAnalysisAttempted);
 
     // If we're in the editing state and haven't done AI analysis yet
-    if (formState.step === 'editing' && !formState.aiAnalysisAttempted) {
+    if (formState.step === 'form' && !formState.aiAnalysisAttempted) {
       try {
         console.log('Attempting to save draft and move to AI review');
         

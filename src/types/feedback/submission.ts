@@ -1,4 +1,4 @@
-import { BaseFeedbackContent } from './base';
+import { CoreFeedbackResponse } from './base';
 
 interface Employee {
   id: string;
@@ -11,14 +11,6 @@ interface ReviewCycle {
   title: string;
   review_by_date: string;
   status: string;
-}
-
-export interface FeedbackResponse extends BaseFeedbackContent {
-  id: string;
-  feedback_request_id: string;
-  session_id: string | null;
-  submitted_at: string | null;
-  previous_version_id?: string;
 }
 
 export interface SubmissionOptions {
@@ -35,7 +27,7 @@ export interface FeedbackRequest {
   status: string;
   unique_link: string;
   target_responses: number;
-  feedback?: FeedbackResponse[];
+  feedback?: CoreFeedbackResponse[];
   employee: Employee;
   review_cycle: ReviewCycle;
 } 
