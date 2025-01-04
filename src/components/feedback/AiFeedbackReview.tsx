@@ -23,6 +23,7 @@ interface Props {
   feedbackData: FeedbackFormData;
   onSubmit: (e?: React.FormEvent) => void | Promise<void>;
   isLoading: boolean;
+  feedbackRequestId: string;
   onFeedbackChange?: (field: keyof Pick<FeedbackFormData, 'strengths' | 'areas_for_improvement'>, value: string) => void;
 }
 
@@ -44,6 +45,7 @@ export function AiFeedbackReview({
   feedbackData, 
   onSubmit, 
   isLoading,
+  feedbackRequestId,
   onFeedbackChange 
 }: Props) {
   const { 
@@ -51,7 +53,7 @@ export function AiFeedbackReview({
     error: analysisError, 
     analyzeFeedback,
     resetAnalysis
-  } = useFeedbackPreSubmissionAnalysis();
+  } = useFeedbackPreSubmissionAnalysis({ feedbackRequestId });
 
   const { 
     steps, 
@@ -66,14 +68,14 @@ export function AiFeedbackReview({
   // Only start analysis if we don't have a saved response
   useEffect(() => {
     const shouldStartAnalysis = !aiResponse && 
-                              !localStorage.getItem('last_feedback_analysis') && 
+                              !localStorage.getItem(`feedback_analysis_${feedbackRequestId}`) && 
                               !isAnalyzing;
     
     if (shouldStartAnalysis) {
       console.log('Starting initial analysis');
       setIsAnalyzing(true);
     }
-  }, []); // Only run on mount
+  }, [feedbackRequestId]); // Add feedbackRequestId to dependencies
 
   // Start analysis when isAnalyzing is set to true
   useEffect(() => {

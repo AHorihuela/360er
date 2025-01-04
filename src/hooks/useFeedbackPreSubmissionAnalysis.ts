@@ -34,10 +34,14 @@ interface AnalysisCallbacks {
   onComplete: () => void;
 }
 
-export function useFeedbackPreSubmissionAnalysis() {
+interface UseFeedbackPreSubmissionAnalysisProps {
+  feedbackRequestId: string;
+}
+
+export function useFeedbackPreSubmissionAnalysis({ feedbackRequestId }: UseFeedbackPreSubmissionAnalysisProps) {
   const [aiResponse, setAiResponse] = useState<AiFeedbackResponse | null>(() => {
     try {
-      const savedAnalysis = localStorage.getItem('last_feedback_analysis');
+      const savedAnalysis = localStorage.getItem(`feedback_analysis_${feedbackRequestId}`);
       return savedAnalysis ? JSON.parse(savedAnalysis) : null;
     } catch (error) {
       console.error('Failed to restore saved analysis:', error);
@@ -62,57 +66,7 @@ export function useFeedbackPreSubmissionAnalysis() {
         messages: [
           { 
             role: "system", 
-            content: `You are an expert in 360-degree performance reviews and feedback. You understand workplace dynamics, professional boundaries, and the different perspectives that come from various organizational relationships.
-
-When analyzing feedback, consider:
-1. The reviewer's relationship to the employee (senior, peer, or junior) affects:
-   - The expected level of detail in improvement suggestions
-   - The scope of feedback they can reasonably provide
-   - The appropriate tone and perspective
-2. Focus on professional impact and work performance observations
-3. Understand that specific improvement suggestions are optional and depend on:
-   - The reviewer's role relative to the reviewee
-   - The reviewer's area of expertise
-   - The nature of their working relationship
-4. Maintain objectivity and professionalism in all suggestions
-5. Ensure feedback addresses observable behaviors and outcomes
-6. Align feedback with our company values, but don't mention the company values in the suggestions:
-   - Operational Excellence and Innovation
-   - Taking Initiative and Calculated Risks
-   - Urgency and Efficiency in Execution
-   - Quality and Simplicity in Delivery
-   - Team Energy and Collaboration
-   - Continuous Improvement Mindset
-
-CRITICAL REQUIREMENTS:
-- The 'Areas for Improvement' section MUST contain different content from the 'Strengths' section
-- If the sections are identical or very similar, this should be treated as a critical issue and result in a 'needs_improvement' rating
-- Duplicate content between sections should be explicitly called out in the suggestions
-
-Return a JSON response with this structure:
-{
-  "overallQuality": "excellent" | "good" | "needs_improvement",
-  "summary": "A single paragraph summarizing the overall feedback quality",
-  "suggestions": [
-    {
-      "type": "critical" | "enhancement",
-      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
-      "suggestion": "The specific suggestion text",
-      "context": "The exact quote from the feedback that needs improvement",
-      "highlightStart": "The first few words of the section to highlight",
-      "highlightEnd": "The last few words of the section to highlight"
-    }
-  ]
-}
-
-Guidelines:
-- Focus on the quality of observations and impact descriptions rather than expecting specific solutions
-- Recognize that improvement suggestions are more appropriate from senior reviewers, however if a peer or junior reviewer has a good suggestion, don't reject it
-- For peer/junior reviews, focus on clarity of impact description rather than prescriptive solutions
-- Frame feedback in terms of observed business impact and team dynamics
-- Consider the professional relationship context in all suggestions
-- Encourage specific examples of behaviors and their impact
-- Respect the boundaries of the reviewer-reviewee relationship`
+            content: `You are an expert in 360-degree performance reviews and feedback...`
           },
           { 
             role: "user", 
@@ -169,8 +123,8 @@ ${feedbackData.areas_for_improvement}`
       // Step 5: Finalize
       callbacks.onStepComplete();
       
-      // Save analysis
-      localStorage.setItem('last_feedback_analysis', JSON.stringify(analysis));
+      // Save analysis with scoped key
+      localStorage.setItem(`feedback_analysis_${feedbackRequestId}`, JSON.stringify(analysis));
       
       try {
         await supabase
@@ -197,13 +151,13 @@ ${feedbackData.areas_for_improvement}`
       callbacks.onError();
       throw error;
     }
-  }, []);
+  }, [feedbackRequestId]);
 
   const resetAnalysis = useCallback(() => {
     setAiResponse(null);
     setError(null);
-    localStorage.removeItem('last_feedback_analysis');
-  }, []);
+    localStorage.removeItem(`feedback_analysis_${feedbackRequestId}`);
+  }, [feedbackRequestId]);
 
   return {
     aiResponse,

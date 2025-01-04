@@ -424,6 +424,7 @@ export function FeedbackFormPage() {
           feedbackData={formData}
           onSubmit={handleSubmit}
           isLoading={isSubmitting}
+          feedbackRequestId={feedbackRequest.id}
           onFeedbackChange={async (field, value) => {
             updateFormData({ [field]: value });
           }}
