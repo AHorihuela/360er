@@ -84,28 +84,11 @@ When analyzing feedback, consider:
 CRITICAL REQUIREMENTS:
 - The 'Areas for Improvement' section MUST contain different content from the 'Strengths' section
 - If the sections are identical or very similar, this should be treated as a critical issue and result in a 'needs_improvement' rating
-- Duplicate content between sections should be explicitly called out in the suggestions
-
-RESPONSE FORMAT:
-You must respond with a JSON object using this exact structure:
-{
-  "overallQuality": "excellent" | "good" | "needs_improvement",
-  "summary": "A single paragraph summarizing the overall feedback quality",
-  "suggestions": [
-    {
-      "type": "critical" | "enhancement",
-      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
-      "suggestion": "The specific suggestion text",
-      "context": "The exact quote from the feedback that needs improvement",
-      "highlightStart": "The first few words of the section to highlight",
-      "highlightEnd": "The last few words of the section to highlight"
-    }
-  ]
-}`
+- Duplicate content between sections should be explicitly called out in the suggestions`
           },
           { 
             role: "user", 
-            content: `Please analyze this feedback and provide your response in the specified JSON format. The reviewer's relationship to the employee is: ${feedbackData.relationship}.
+            content: `Please analyze this feedback. The reviewer's relationship to the employee is: ${feedbackData.relationship}.
 
 Strengths:
 ${feedbackData.strengths}
@@ -114,7 +97,63 @@ Areas for Improvement:
 ${feedbackData.areas_for_improvement}`
           }
         ],
-        response_format: { type: "json_object" },
+        functions: [
+          {
+            name: "analyzeFeedback",
+            description: "Analyze the feedback and provide structured assessment",
+            parameters: {
+              type: "object",
+              properties: {
+                overallQuality: {
+                  type: "string",
+                  enum: ["excellent", "good", "needs_improvement"],
+                  description: "Overall quality rating of the feedback"
+                },
+                summary: {
+                  type: "string",
+                  description: "A single paragraph summarizing the overall feedback quality"
+                },
+                suggestions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: {
+                        type: "string",
+                        enum: ["critical", "enhancement"],
+                        description: "Whether this is a critical issue or an enhancement suggestion"
+                      },
+                      category: {
+                        type: "string",
+                        enum: ["clarity", "specificity", "actionability", "tone", "completeness"],
+                        description: "The category of the suggestion"
+                      },
+                      suggestion: {
+                        type: "string",
+                        description: "The specific suggestion text"
+                      },
+                      context: {
+                        type: "string",
+                        description: "The exact quote from the feedback that needs improvement"
+                      },
+                      highlightStart: {
+                        type: "string",
+                        description: "The first few words of the section to highlight"
+                      },
+                      highlightEnd: {
+                        type: "string",
+                        description: "The last few words of the section to highlight"
+                      }
+                    },
+                    required: ["type", "category", "suggestion", "context", "highlightStart", "highlightEnd"]
+                  }
+                }
+              },
+              required: ["overallQuality", "summary", "suggestions"]
+            }
+          }
+        ],
+        function_call: { name: "analyzeFeedback" },
         temperature: 0.7
       });
 
@@ -126,31 +165,11 @@ ${feedbackData.areas_for_improvement}`
       callbacks.onStepComplete();
       let analysis: AiFeedbackResponse;
       try {
-        const parsedResponse = JSON.parse(completion.choices[0].message.content || '{}');
-        
-        // Step 4: Generate suggestions
-        callbacks.onStepComplete();
-        
-        // Validate and normalize the response structure
-        analysis = {
-          overallQuality: parsedResponse.overallQuality === 'Moderate' ? 'good' : 
-                         parsedResponse.overallQuality === 'Satisfactory' ? 'good' :
-                         parsedResponse.overallQuality.toLowerCase() as 'excellent' | 'good' | 'needs_improvement',
-          summary: typeof parsedResponse.summary === 'string' ? 
-                  parsedResponse.summary : 
-                  typeof parsedResponse.summary === 'object' ? 
-                    Object.values(parsedResponse.summary).join(' ') : 
-                    'Failed to parse summary',
-          suggestions: Array.isArray(parsedResponse.suggestions) ? 
-            parsedResponse.suggestions.map((s: any) => ({
-              type: (s.type || 'enhancement').toLowerCase() as 'critical' | 'enhancement',
-              category: (s.category || 'actionability').toLowerCase() as 'clarity' | 'specificity' | 'actionability' | 'tone' | 'completeness',
-              suggestion: s.suggestion || s.content || '',
-              context: s.context || '',
-              highlightStart: s.context || s.highlightStart || '',
-              highlightEnd: s.context || s.highlightEnd || ''
-            })) : []
-        };
+        const functionCall = completion.choices[0].message.function_call;
+        if (!functionCall || functionCall.name !== 'analyzeFeedback') {
+          throw new Error('Invalid response format from OpenAI');
+        }
+        analysis = JSON.parse(functionCall.arguments) as AiFeedbackResponse;
       } catch (parseError) {
         throw new Error('Failed to parse AI response');
       }
