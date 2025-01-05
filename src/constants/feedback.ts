@@ -100,4 +100,6 @@ export const ANALYSIS_STAGES = [
   "Analyzing peer feedback",
   "Analyzing junior feedback",
   "Generating final insights"
-] as const; 
+] as const;
+
+export const MINIMUM_REVIEWS_REQUIRED = 5; 
