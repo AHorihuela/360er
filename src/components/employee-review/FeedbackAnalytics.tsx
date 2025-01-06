@@ -1,11 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ChevronDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { type RelationshipInsight, type AnalyticsMetadata } from "@/types/feedback/analysis";
+import { type RelationshipInsight, type AnalyticsMetadata, type OpenAIAnalysisResponse, type OpenAICompetencyScore } from "@/types/feedback/analysis";
 import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED } from "@/constants/feedback";
 import { normalizeRelationship, createFeedbackHash, formatLastAnalyzed } from "@/utils/feedback";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
@@ -13,6 +13,7 @@ import { MinimumReviewsMessage } from './MinimumReviewsMessage';
 import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { InsightContent } from './InsightContent';
+import { OpenAI } from 'openai';
 
 // Types
 interface Props {
@@ -30,28 +31,74 @@ interface ExpandedSections {
   junior: boolean;
 }
 
-// Memoized helper functions
-const groupFeedbackByRelationship = (feedbackResponses: CoreFeedbackResponse[]) => {
-  const grouped = feedbackResponses.reduce((acc, response) => {
-    const relationship = normalizeRelationship(response.relationship);
-    if (!acc[relationship]) acc[relationship] = [];
-    acc[relationship].push(response);
-    return acc;
-  }, {} as Record<string, CoreFeedbackResponse[]>);
+interface AnalysisResult {
+  insights: RelationshipInsight[];
+  error?: string;
+}
 
-  // Ensure all relationship types exist
-  RELATIONSHIP_ORDER.forEach(type => {
-    if (!grouped[type]) grouped[type] = [];
-  });
+interface RelationshipSectionProps {
+  relationshipType: string;
+  insight: RelationshipInsight | undefined;
+  responseCount: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+}
 
-  return grouped;
-};
+interface AnalysisSectionProps extends RelationshipSectionProps {
+  variant: 'aggregate' | 'perspective';
+}
+
+// Memoized Components
+const AnalysisSection = memo(function AnalysisSection({
+  relationshipType,
+  insight,
+  responseCount,
+  isExpanded,
+  onToggle,
+  variant
+}: AnalysisSectionProps) {
+  const isAggregate = variant === 'aggregate';
+  
+  return (
+    <Card className={isAggregate ? "border-2" : "border border-muted"}>
+      <CardHeader 
+        className={cn(
+          "cursor-pointer hover:bg-muted/50 transition-colors",
+          isAggregate ? "bg-muted/30" : "py-3"
+        )}
+        onClick={onToggle}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CardTitle className={isAggregate ? "text-xl" : "text-base"}>
+              {isAggregate ? "Overall Analysis" : `${relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Perspective`}
+            </CardTitle>
+            <Badge variant="outline" className="capitalize">
+              {responseCount} {responseCount === 1 ? 'response' : 'responses'}
+            </Badge>
+          </div>
+          <ChevronDown className={cn(
+            "transition-transform",
+            isAggregate ? "h-5 w-5" : "h-4 w-4",
+            isExpanded && "rotate-180"
+          )} />
+        </div>
+      </CardHeader>
+      {isExpanded && (
+        <CardContent className="space-y-6">
+          <InsightContent insight={insight} />
+        </CardContent>
+      )}
+    </Card>
+  );
+});
 
 // Main Component
 export function FeedbackAnalytics({
   feedbackResponses,
   feedbackRequestId,
 }: Props) {
+  // State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [insights, setInsights] = useState<RelationshipInsight[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +109,10 @@ export function FeedbackAnalytics({
     peer: false,
     junior: false
   }));
-  const [isForceRerun, setIsForceRerun] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
   const [existingAnalysis, setExistingAnalysis] = useState<AnalyticsMetadata | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const cleanupRef = useRef<(() => void) | undefined>();
 
   // Memoized values
   const hasMinimumReviews = useMemo(() => 
@@ -72,26 +120,55 @@ export function FeedbackAnalytics({
     [feedbackResponses.length]
   );
 
-  const groupedFeedback = useMemo(() => 
-    groupFeedbackByRelationship(feedbackResponses),
-    [feedbackResponses]
-  );
+  const groupedFeedback = useMemo(() => {
+    const grouped = feedbackResponses.reduce((acc, response) => {
+      const relationship = normalizeRelationship(response.relationship);
+      if (!acc[relationship]) acc[relationship] = [];
+      acc[relationship].push(response);
+      return acc;
+    }, {} as Record<string, CoreFeedbackResponse[]>);
+
+    return Object.fromEntries(
+      RELATIONSHIP_ORDER.map(type => [type, grouped[type] || []])
+    );
+  }, [feedbackResponses]);
 
   const currentFeedbackHash = useMemo(() => 
     createFeedbackHash(feedbackResponses),
     [feedbackResponses]
   );
 
-  const hasChangedSinceLastAnalysis = useMemo(() => {
-    if (!existingAnalysis?.feedback_hash || !currentFeedbackHash) return false;
-    return existingAnalysis.feedback_hash !== currentFeedbackHash;
-  }, [existingAnalysis?.feedback_hash, currentFeedbackHash]);
+  const insightMap = useMemo(() => 
+    new Map(insights.map(insight => [
+      insight.relationship === 'aggregate' 
+        ? 'aggregate' 
+        : normalizeRelationship(insight.relationship),
+      insight
+    ])),
+    [insights]
+  );
+
+  const hasChangedSinceLastAnalysis = useMemo(() => 
+    existingAnalysis?.feedback_hash !== currentFeedbackHash,
+    [existingAnalysis?.feedback_hash, currentFeedbackHash]
+  );
+
+  const shouldShowAnalysis = useMemo(() => {
+    if (!existingAnalysis?.insights) return false;
+    return Array.isArray(existingAnalysis.insights) && existingAnalysis.insights.length > 0;
+  }, [existingAnalysis?.insights]);
+
+  const needsInitialAnalysis = useMemo(() => 
+    hasMinimumReviews && !isAnalyzing && !error && !isLoading && !shouldShowAnalysis,
+    [hasMinimumReviews, isAnalyzing, error, isLoading, shouldShowAnalysis]
+  );
+
+  const shouldShowUpdateButton = useMemo(() => 
+    shouldShowAnalysis && hasChangedSinceLastAnalysis && !isLoading,
+    [shouldShowAnalysis, hasChangedSinceLastAnalysis, isLoading]
+  );
 
   // Callbacks
-  const handleRerunAnalysis = useCallback(() => {
-    setIsForceRerun(true);
-  }, []);
-
   const toggleSection = useCallback((relationship: RelationshipType) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -100,76 +177,233 @@ export function FeedbackAnalytics({
   }, []);
 
   const runAnalysis = useCallback(async () => {
+    let isSubscribed = true;
     setIsAnalyzing(true);
     setError(null);
     setAnalysisStage(0);
 
-    try {
-      // Step 1: Prepare data
-      setAnalysisStage(0);
-      const feedbackData = {
-        responses: feedbackResponses,
-        requestId: feedbackRequestId
-      };
+    const cleanup = () => {
+      isSubscribed = false;
+    };
 
-      // Step 2: Call analysis endpoint
+    try {
+      // Stage 1: Generate insights
+      if (!isSubscribed) return cleanup;
       setAnalysisStage(1);
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-feedback', {
-        body: JSON.stringify(feedbackData)
+      
+      const openai = new OpenAI({
+        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+        dangerouslyAllowBrowser: true
       });
 
-      if (analysisError) throw analysisError;
+      const formattedFeedback = feedbackResponses.map(f => `
+Relationship: ${f.relationship.replace('_', ' ')}
+Strengths: "${f.strengths}"
+Areas for Improvement: "${f.areas_for_improvement}"
+`).join('\n');
 
-      // Step 3: Process results
-      setAnalysisStage(2);
-      if (!analysisResult?.insights) {
-        throw new Error('No insights returned from analysis');
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-1106-preview",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert in 360-degree performance reviews and feedback analysis. Your task is to analyze feedback responses and generate a structured analysis following a specific JSON schema.
+
+Response Requirements:
+1. Return ONLY a valid JSON object
+2. Follow the exact schema structure provided
+3. Include all 7 competencies for each perspective
+4. Use "low" confidence when evidence is limited
+
+Required Competencies:
+1. Leadership & Influence
+2. Execution & Accountability
+3. Collaboration & Communication
+4. Innovation & Problem-Solving
+5. Growth & Development
+6. Technical/Functional Expertise
+7. Emotional Intelligence & Culture Fit
+
+Confidence Level Rules:
+- "low": 0-1 reviewers OR limited/no specific evidence
+- "medium": 2-3 reviewers WITH specific evidence
+- "high": 4+ reviewers WITH specific evidence
+- IMPORTANT: A perspective with only 1 response MUST use "low" confidence for all competencies
+
+Schema Description:
+- aggregate: Overall analysis combining all perspectives
+  - themes: Array of key themes identified
+  - competency_scores: Array of competency evaluations
+- senior/peer/junior: Perspective-specific analysis
+  - key_insights: Array of unique insights
+  - competency_scores: Array of competency evaluations
+- Each competency_scores array must include all 7 competencies
+- Each competency evaluation must include:
+  - name: Competency name (from list above)
+  - score: Number 1-5
+  - confidence: "low" | "medium" | "high"
+  - description: String explaining the score
+  - evidenceCount: Number of evidence pieces
+  - evidenceQuotes: Array of supporting quotes`
+          },
+          {
+            role: "user",
+            content: `Analyze these feedback responses and return a JSON object matching the required schema:
+
+${formattedFeedback}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 4000,
+        response_format: { type: "json_object" }
+      });
+
+      let cleanedContent = completion.choices[0].message.content!;
+      
+      let analysisResult: OpenAIAnalysisResponse;
+      try {
+        analysisResult = JSON.parse(cleanedContent);
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Malformed JSON:', cleanedContent);
+        throw new Error('Failed to parse analysis results. Please try again.');
       }
 
-      // Step 4: Save analysis
-      setAnalysisStage(3);
+      if (!isSubscribed) return cleanup;
+      
+      if (!analysisResult || !analysisResult.aggregate) {
+        throw new Error('Invalid analysis format. Please try again.');
+      }
+
+      // Transform the OpenAI response into our expected format
+      const transformedInsights: RelationshipInsight[] = [
+        {
+          relationship: 'aggregate',
+          themes: analysisResult.aggregate.themes || [],
+          competencies: analysisResult.aggregate.competency_scores?.map((score: OpenAICompetencyScore) => ({
+            name: score.name,
+            score: score.score,
+            confidence: feedbackResponses.length <= 1 ? "low" : 
+                       feedbackResponses.length <= 3 ? "medium" : "high",
+            description: score.description,
+            evidenceCount: score.evidenceCount,
+            roleSpecificNotes: ""
+          })) || [],
+          responseCount: feedbackResponses.length,
+          uniquePerspectives: []
+        },
+        {
+          relationship: 'senior',
+          themes: analysisResult.senior.key_insights || [],
+          competencies: analysisResult.senior.competency_scores?.map((score: OpenAICompetencyScore) => ({
+            name: score.name,
+            score: score.score,
+            confidence: (groupedFeedback.senior?.length || 0) <= 1 ? "low" :
+                       (groupedFeedback.senior?.length || 0) <= 3 ? "medium" : "high",
+            description: score.description,
+            evidenceCount: score.evidenceCount,
+            roleSpecificNotes: ""
+          })) || [],
+          responseCount: groupedFeedback.senior?.length || 0,
+          uniquePerspectives: []
+        },
+        {
+          relationship: 'peer',
+          themes: analysisResult.peer.key_insights || [],
+          competencies: analysisResult.peer.competency_scores?.map((score: OpenAICompetencyScore) => ({
+            name: score.name,
+            score: score.score,
+            confidence: (groupedFeedback.peer?.length || 0) <= 1 ? "low" :
+                       (groupedFeedback.peer?.length || 0) <= 3 ? "medium" : "high",
+            description: score.description,
+            evidenceCount: score.evidenceCount,
+            roleSpecificNotes: ""
+          })) || [],
+          responseCount: groupedFeedback.peer?.length || 0,
+          uniquePerspectives: []
+        },
+        {
+          relationship: 'junior',
+          themes: analysisResult.junior.key_insights || [],
+          competencies: analysisResult.junior.competency_scores?.map((score: OpenAICompetencyScore) => ({
+            name: score.name,
+            score: score.score,
+            confidence: (groupedFeedback.junior?.length || 0) <= 1 ? "low" :
+                       (groupedFeedback.junior?.length || 0) <= 3 ? "medium" : "high",
+            description: score.description,
+            evidenceCount: score.evidenceCount,
+            roleSpecificNotes: ""
+          })) || [],
+          responseCount: groupedFeedback.junior?.length || 0,
+          uniquePerspectives: []
+        }
+      ];
+
+      // Stage 2: Save to database
+      if (!isSubscribed) return cleanup;
+      setAnalysisStage(2);
       const timestamp = new Date().toISOString();
-      const analysisMetadata: AnalyticsMetadata = {
-        insights: analysisResult.insights,
+      
+      const { error: upsertError } = await supabase
+        .from('feedback_analytics')
+        .upsert(
+          {
+            feedback_request_id: feedbackRequestId,
+            insights: transformedInsights,
+            feedback_hash: currentFeedbackHash,
+            last_analyzed_at: timestamp
+          },
+          {
+            onConflict: 'feedback_request_id',
+            ignoreDuplicates: false
+          }
+        );
+
+      if (upsertError) {
+        console.error('Save error:', upsertError);
+        throw new Error(upsertError.message);
+      }
+
+      // Stage 3: Update UI
+      if (!isSubscribed) return cleanup;
+      setAnalysisStage(3);
+      setInsights(transformedInsights);
+      setLastAnalyzedAt(timestamp);
+      setExistingAnalysis({
+        insights: transformedInsights,
         feedback_hash: currentFeedbackHash,
         last_analyzed_at: timestamp
-      };
-
-      const { error: saveError } = await supabase
-        .from('feedback_analytics')
-        .upsert({
-          feedback_request_id: feedbackRequestId,
-          insights: analysisResult.insights,
-          feedback_hash: currentFeedbackHash,
-          last_analyzed_at: timestamp
-        });
-
-      if (saveError) throw saveError;
-
-      // Step 5: Update state
-      setAnalysisStage(4);
-      setInsights(analysisResult.insights);
-      setLastAnalyzedAt(timestamp);
-      setExistingAnalysis(analysisMetadata);
+      });
 
     } catch (error) {
-      console.error('Error in runAnalysis:', error);
-      setError('Failed to analyze feedback');
+      if (!isSubscribed) return cleanup;
+      console.error('Analysis error:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to analyze feedback. Please try again later.';
+      setError(errorMessage);
     } finally {
-      setIsAnalyzing(false);
-      setAnalysisStage(0);
-      setIsForceRerun(false);
+      if (isSubscribed) {
+        setIsAnalyzing(false);
+        setAnalysisStage(0);
+      }
     }
+
+    return cleanup;
   }, [feedbackResponses, feedbackRequestId, currentFeedbackHash]);
 
   // Effects
   useEffect(() => {
+    if (!hasMinimumReviews || feedbackResponses.length === 0) {
+      setIsLoading(false);
+      return;
+    }
+
     let isMounted = true;
     
-    const checkAndAnalyze = async () => {
-      if (!hasMinimumReviews || feedbackResponses.length === 0) return;
-      
+    const fetchExistingAnalysis = async () => {
       try {
+        setIsLoading(true);
         const { data: existing, error: fetchError } = await supabase
           .from('feedback_analytics')
           .select('insights, feedback_hash, last_analyzed_at')
@@ -179,37 +413,55 @@ export function FeedbackAnalytics({
         if (!isMounted) return;
 
         if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error fetching existing analysis:', fetchError);
+          console.error('Fetch error:', fetchError);
           return;
         }
 
-        setExistingAnalysis(existing);
+        if (!existing) {
+          setIsLoading(false);
+          return;
+        }
 
-        if (existing && existing.feedback_hash === currentFeedbackHash && !isForceRerun) {
-          console.log('Using cached analysis from:', existing.last_analyzed_at);
-          setInsights(existing.insights);
+        // Ensure insights is an array and has content
+        const validInsights = Array.isArray(existing.insights) && existing.insights.length > 0
+          ? existing.insights 
+          : [];
+
+        if (validInsights.length > 0) {
+          setExistingAnalysis({
+            ...existing,
+            insights: validInsights
+          });
+          
+          setInsights(validInsights);
           setLastAnalyzedAt(existing.last_analyzed_at);
-          return;
         }
 
-        if (hasMinimumReviews && (
-            isForceRerun || 
-            !existing || 
-            existing.feedback_hash !== currentFeedbackHash
-          )) {
-          await runAnalysis();
-        }
       } catch (error) {
-        console.error('Error in checkAndAnalyze:', error);
+        console.error('Fetch analysis error:', error);
         if (isMounted) {
-          setError('Failed to analyze feedback');
+          setError('Failed to fetch existing analysis');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
     };
 
-    checkAndAnalyze();
-    return () => { isMounted = false; };
-  }, [feedbackResponses, currentFeedbackHash, isForceRerun, hasMinimumReviews, feedbackRequestId, runAnalysis]);
+    fetchExistingAnalysis();
+    
+    return () => { 
+      isMounted = false;
+      if (cleanupRef.current) cleanupRef.current();
+    };
+  }, [feedbackResponses, currentFeedbackHash, hasMinimumReviews, feedbackRequestId]);
+
+  // Handle analysis
+  const handleAnalysis = useCallback(async () => {
+    const cleanupFn = await runAnalysis();
+    if (cleanupFn) cleanupRef.current = cleanupFn;
+  }, [runAnalysis]);
 
   // Render conditions
   if (!hasMinimumReviews) {
@@ -224,7 +476,10 @@ export function FeedbackAnalytics({
     return <ErrorState error={error} />;
   }
 
-  // Rest of the component for when we have enough reviews
+  if (isLoading) {
+    return <LoadingState stage={0} />;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -235,17 +490,17 @@ export function FeedbackAnalytics({
               Beta
             </Badge>
           </div>
-          {lastAnalyzedAt && (
+          {lastAnalyzedAt && shouldShowAnalysis && (
             <p className="text-sm text-muted-foreground">
               Last analyzed {formatLastAnalyzed(lastAnalyzedAt)}
             </p>
           )}
         </div>
-        {hasChangedSinceLastAnalysis && (
+        {needsInitialAnalysis ? (
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
-            onClick={handleRerunAnalysis}
+            onClick={handleAnalysis}
             disabled={isAnalyzing}
             className="h-8 text-xs"
           >
@@ -257,74 +512,96 @@ export function FeedbackAnalytics({
             ) : (
               <>
                 <RefreshCw className="h-3.5 w-3.5" />
-                <span className="ml-1.5">Update Available</span>
+                <span className="ml-1.5">Generate Analysis</span>
+              </>
+            )}
+          </Button>
+        ) : shouldShowUpdateButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAnalysis}
+            disabled={isAnalyzing}
+            className="h-8 text-xs"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span className="ml-1.5">Analyzing...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="ml-1.5">Update Analysis</span>
               </>
             )}
           </Button>
         )}
       </div>
 
-      {/* Aggregate Analysis Section */}
-      {insights.find(i => i.relationship === 'aggregate') && (
-        <Card className="border-2">
-          <CardHeader 
-            className="cursor-pointer hover:bg-muted/50 transition-colors bg-muted/30"
-            onClick={() => toggleSection('aggregate')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-xl">
-                  Overall Analysis
-                </CardTitle>
-                <Badge variant="outline" className="capitalize">
-                  {feedbackResponses.length} {feedbackResponses.length === 1 ? 'response' : 'responses'}
-                </Badge>
+      {needsInitialAnalysis ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="rounded-full bg-primary/10 p-3">
+                <RefreshCw className="h-6 w-6 text-primary" />
               </div>
-              <ChevronDown className={cn("h-5 w-5 transition-transform", expandedSections['aggregate'] && "rotate-180")} />
+              <div className="space-y-1">
+                <h3 className="font-medium">Ready to Analyze</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click the Generate Analysis button above to analyze {feedbackResponses.length} feedback responses
+                </p>
+              </div>
             </div>
-          </CardHeader>
-          {expandedSections['aggregate'] && (
-            <CardContent className="space-y-6">
-              <InsightContent insight={insights.find(i => i.relationship === 'aggregate')} />
-            </CardContent>
+          </CardContent>
+        </Card>
+      ) : shouldShowAnalysis ? (
+        <>
+          {insightMap.has('aggregate') && (
+            <AnalysisSection
+              variant="aggregate"
+              relationshipType="aggregate"
+              insight={insightMap.get('aggregate')}
+              responseCount={feedbackResponses.length}
+              isExpanded={expandedSections['aggregate']}
+              onToggle={() => toggleSection('aggregate')}
+            />
           )}
+
+          <div className="grid grid-cols-1 gap-4 mt-6">
+            {RELATIONSHIP_ORDER.map((relationshipType) => {
+              const responseCount = groupedFeedback[relationshipType]?.length || 0;
+              return (
+                <AnalysisSection
+                  key={relationshipType}
+                  variant="perspective"
+                  relationshipType={relationshipType}
+                  insight={insightMap.get(relationshipType)}
+                  responseCount={responseCount}
+                  isExpanded={expandedSections[relationshipType]}
+                  onToggle={() => toggleSection(relationshipType)}
+                />
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="rounded-full bg-primary/10 p-3">
+                <RefreshCw className="h-6 w-6 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-medium">Generate Analysis</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click the Generate Analysis button above to analyze your feedback responses
+                </p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       )}
-
-      {/* Perspective Sections */}
-      <div className="grid grid-cols-1 gap-4 mt-6">
-        {RELATIONSHIP_ORDER.map((relationshipType) => {
-          const insight = insights.find(i => normalizeRelationship(i.relationship) === relationshipType);
-          const responseCount = groupedFeedback[relationshipType]?.length || 0;
-          const isExpanded = expandedSections[relationshipType] || false;
-
-          return (
-            <Card key={relationshipType} className="border border-muted">
-              <CardHeader 
-                className="cursor-pointer hover:bg-muted/50 transition-colors py-3"
-                onClick={() => toggleSection(relationshipType)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base">
-                      {relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Perspective
-                    </CardTitle>
-                    <Badge variant="outline" className="capitalize">
-                      {responseCount} {responseCount === 1 ? 'response' : 'responses'}
-                    </Badge>
-                  </div>
-                  <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
-                </div>
-              </CardHeader>
-              {isExpanded && (
-                <CardContent className="space-y-6 pt-0">
-                  <InsightContent insight={insight} />
-                </CardContent>
-              )}
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
-} 
+}
