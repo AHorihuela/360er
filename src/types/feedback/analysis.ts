@@ -21,25 +21,41 @@ export interface AiFeedbackResponse {
   summary: string;
 }
 
-export interface Competency {
+export interface CompetencyScore {
   name: string;
   score: number;
-  confidence: ConfidenceLevel;
+  confidence: 'low' | 'medium' | 'high';
   description: string;
-  roleSpecificNotes?: string;
-  evidenceCount?: number;
-  evidenceQuotes?: string[];
-  scoreJustification?: string;
-  isInsufficientData?: boolean;
+  evidenceCount: number;
+  roleSpecificNotes: string;
 }
 
-export interface RelationshipInsight {
-  relationship: string;
-  themes: string[];
-  uniquePerspectives: string[];
-  competencies: Competency[];
-  responseCount?: number;
+export interface Competency extends Omit<CompetencyScore, 'name' | 'description'> {
+  dimension: string;
+  evidence: string;
 }
+
+interface BaseInsight {
+  relationship: string;
+}
+
+export interface AggregateInsight extends BaseInsight {
+  relationship: 'aggregate';
+  themes: string[];
+  competencies: CompetencyScore[];
+  responseCount: number;
+  uniquePerspectives: string[];
+}
+
+export interface PerspectiveInsight extends BaseInsight {
+  relationship: 'senior' | 'peer' | 'junior';
+  themes: string[];
+  competencies: CompetencyScore[];
+  responseCount: number;
+  uniquePerspectives: string[];
+}
+
+export type RelationshipInsight = AggregateInsight | PerspectiveInsight;
 
 export interface AnalyticsMetadata {
   insights: RelationshipInsight[];
@@ -60,4 +76,31 @@ export interface AnalysisStep {
   title: string;
   description: string;
   status: 'pending' | 'in_progress' | 'completed' | 'error';
+}
+
+// OpenAI API Response Types
+export interface OpenAICompetencyScore {
+  name: string;
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
+  description: string;
+  evidenceCount: number;
+  evidenceQuotes?: string[];
+}
+
+export interface OpenAIAggregateSection {
+  themes: string[];
+  competency_scores?: OpenAICompetencyScore[];
+}
+
+export interface OpenAIPerspectiveSection {
+  key_insights: string[];
+  competency_scores?: OpenAICompetencyScore[];
+}
+
+export interface OpenAIAnalysisResponse {
+  aggregate: OpenAIAggregateSection;
+  senior: OpenAIPerspectiveSection;
+  peer: OpenAIPerspectiveSection;
+  junior: OpenAIPerspectiveSection;
 } 

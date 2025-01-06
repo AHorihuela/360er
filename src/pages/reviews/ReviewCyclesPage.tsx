@@ -53,6 +53,53 @@ async function updateRequestStatus(
   }
 }
 
+// Add helper function for timestamp validation
+function isValidTimestamp(timestamp: string): boolean {
+  const date = new Date(timestamp);
+  return date instanceof Date && !isNaN(date.getTime());
+}
+
+function validateResponseTimestamps(
+  response: { created_at: string; submitted_at: string; id: string },
+  requestCreatedAt: string
+): { isValid: boolean; error?: string } {
+  // Validate timestamp formats
+  if (!isValidTimestamp(response.created_at)) {
+    return { isValid: false, error: `Invalid created_at format for response ${response.id}` };
+  }
+  if (!isValidTimestamp(response.submitted_at)) {
+    return { isValid: false, error: `Invalid submitted_at format for response ${response.id}` };
+  }
+  if (!isValidTimestamp(requestCreatedAt)) {
+    return { isValid: false, error: `Invalid request created_at format for response ${response.id}` };
+  }
+
+  const responseCreatedAt = new Date(response.created_at);
+  const responseSubmittedAt = new Date(response.submitted_at);
+  const requestCreatedAtDate = new Date(requestCreatedAt);
+
+  // Add 1-second tolerance for timestamp comparisons
+  const TIMESTAMP_TOLERANCE = 1000; // 1 second in milliseconds
+
+  // Check if response was created after request
+  if (responseCreatedAt.getTime() + TIMESTAMP_TOLERANCE < requestCreatedAtDate.getTime()) {
+    return { 
+      isValid: false, 
+      error: `Response ${response.id} created before request (diff: ${Math.floor((requestCreatedAtDate.getTime() - responseCreatedAt.getTime()) / 1000)}s)`
+    };
+  }
+
+  // Check if response was submitted after creation
+  if (responseSubmittedAt.getTime() + TIMESTAMP_TOLERANCE < responseCreatedAt.getTime()) {
+    return { 
+      isValid: false, 
+      error: `Response ${response.id} submitted before creation (diff: ${Math.floor((responseCreatedAt.getTime() - responseSubmittedAt.getTime()) / 1000)}s)`
+    };
+  }
+
+  return { isValid: true };
+}
+
 export function ReviewCyclesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -129,22 +176,24 @@ export function ReviewCyclesPage() {
         .map(cycle => {
           const validFeedbackRequests = (cycle.feedback_requests || [])
             .filter(request => {
+              if (!isValidTimestamp(request.created_at)) {
+                console.error(`Invalid request created_at timestamp for request ${request.id}`);
+                return false;
+              }
+
               if (new Date(request.created_at) < new Date(cycle.created_at)) {
-                console.error(`Invalid timestamp for request ${request.id}: created before cycle`);
+                console.error(`Request ${request.id} created before cycle (diff: ${Math.floor((new Date(cycle.created_at).getTime() - new Date(request.created_at).getTime()) / 1000)}s)`);
                 return false;
               }
 
               // Process responses and validate status
               const validResponses = (request.feedback_responses || [])
                 .filter(response => {
-                  const isValid = 
-                    new Date(response.created_at) >= new Date(request.created_at) &&
-                    new Date(response.submitted_at) >= new Date(response.created_at);
-                  
-                  if (!isValid) {
-                    console.error(`Invalid timestamp for response ${response.id}: timestamp mismatch`);
+                  const validation = validateResponseTimestamps(response, request.created_at);
+                  if (!validation.isValid && validation.error) {
+                    console.error(validation.error);
                   }
-                  return isValid;
+                  return validation.isValid;
                 });
 
               // Calculate response counts and determine status

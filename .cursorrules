@@ -2,8 +2,16 @@
 A web-based 360-degree feedback platform that allows managers to register, set up review cycles for their direct reports, and distribute a unique anonymous feedback link to multiple reviewers (peers, direct reports, and senior coleagues). Reviewers submit their feedback anonymously through a centralized form, and the system aggregates all responses into a consolidated report for the manager to review.
 - The manager can create an account and maintain a list of employees to be reviewed.
 - For each review cycle, a unique, shareable link is generated, which the manager can send to all intended reviewers.
-- The reviewers’ submissions, including their relationship to the reviewee, are stored securely and anonymously in a centralized database.
+- The reviewers' submissions, including their relationship to the reviewee, are stored securely and anonymously in a centralized database.
 - Upon completion of the feedback collection process, the system synthesizes the input into a unified 360-degree review report, providing the manager with a comprehensive summary of performance insights.
+
+## Database Documentation
+The complete database structure, relationships, and policies are documented in `database.md`. This document serves as the single source of truth for our database architecture and should be:
+- Updated whenever new database information is discovered
+- Referenced before making database changes
+- Used to verify policy and security requirements
+- Kept in sync with actual database state
+- Updated when new tables, functions, or policies are added
 
 ## Code Style 
 - Write concise, technical TypeScript code with accurate examples

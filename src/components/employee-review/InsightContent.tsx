@@ -3,12 +3,26 @@ import { Info } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CORE_COMPETENCIES } from "@/constants/feedback";
+import { CORE_COMPETENCIES } from "@/lib/competencies";
 import { cn } from '@/lib/utils';
 import { type RelationshipInsight } from "@/types/feedback/analysis";
 
 interface Props {
   insight: RelationshipInsight | undefined;
+}
+
+interface CompetencyDetail {
+  name: string;
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
+  description: string;
+  evidenceCount: number;
+  roleSpecificNotes: string;
+  details?: {
+    name: string;
+    aspects: readonly string[];
+    rubric: Readonly<Record<number, string>>;
+  };
 }
 
 export function InsightContent({ insight }: Props) {
@@ -19,21 +33,22 @@ export function InsightContent({ insight }: Props) {
       </div>
     );
   }
-
+  
   // Add default values and null checks
+  const isAggregate = insight?.relationship === 'aggregate';
+  
+  // For aggregate view
   const themes = insight?.themes || [];
-  const uniquePerspectives = insight?.uniquePerspectives || [];
-  const competencies = insight?.competencies || [];
-
+  
   // Memoize competency lookups
   const competencyDetails = useMemo(() => 
-    competencies.map(competency => ({
-      ...competency,
+    insight.competencies?.map((score) => ({
+      ...score,
       details: Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
-        comp.name === competency.name
+        comp.name === score.name
       )?.[1],
-    })),
-    [competencies]
+    })) || [],
+    [insight.competencies]
   );
 
   return (
@@ -44,7 +59,7 @@ export function InsightContent({ insight }: Props) {
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Key Themes</h4>
           <div className="grid gap-2">
-            {themes.map((theme, i) => (
+            {themes.map((theme: string, i: number) => (
               <div key={i} className="text-sm text-muted-foreground">
                 • {theme}
               </div>
@@ -57,18 +72,18 @@ export function InsightContent({ insight }: Props) {
           </div>
         </div>
 
-        {/* Unique Insights Column */}
+        {/* Areas for Improvement Column */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Unique Insights</h4>
+          <h4 className="text-sm font-medium">Unique Perspectives</h4>
           <div className="grid gap-2">
-            {uniquePerspectives.map((perspective, i) => (
+            {(insight.uniquePerspectives || []).map((perspective: string, i: number) => (
               <div key={i} className="text-sm text-muted-foreground">
                 • {perspective}
               </div>
             ))}
-            {uniquePerspectives.length === 0 && (
+            {(!insight.uniquePerspectives || insight.uniquePerspectives.length === 0) && (
               <div className="text-sm text-muted-foreground italic">
-                No unique insights identified yet
+                No unique perspectives identified yet
               </div>
             )}
           </div>
@@ -79,7 +94,7 @@ export function InsightContent({ insight }: Props) {
       <div className="space-y-4 mt-8">
         <h4 className="text-sm font-medium">Competency Assessment</h4>
         {competencyDetails.length > 0 ? (
-          competencyDetails.map(({ details, ...competency }, i) => (
+          competencyDetails.map(({ details, ...competency }: CompetencyDetail, i: number) => (
             <div key={i} className="space-y-2">
               <div className="flex justify-between text-sm">
                 <div className="flex items-center gap-2">
@@ -108,7 +123,7 @@ export function InsightContent({ insight }: Props) {
                               <div>
                                 <p className="font-medium mb-1">Key Aspects:</p>
                                 <div className="grid gap-1">
-                                  {details.aspects.map((aspect, i) => (
+                                  {details.aspects.map((aspect: string, i: number) => (
                                     <div key={i} className="flex items-baseline gap-2 text-sm">
                                       <div className="w-1 h-1 rounded-full bg-primary/50 mt-1.5" />
                                       <span>{aspect}</span>
@@ -179,9 +194,7 @@ export function InsightContent({ insight }: Props) {
               </div>
               <p className="text-sm text-muted-foreground">{competency.description}</p>
               {competency.roleSpecificNotes && (
-                <p className="text-sm text-muted-foreground italic mt-1">
-                  Note: {competency.roleSpecificNotes}
-                </p>
+                <p className="text-sm text-muted-foreground italic mt-1">{competency.roleSpecificNotes}</p>
               )}
             </div>
           ))
