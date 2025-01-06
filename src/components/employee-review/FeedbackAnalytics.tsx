@@ -14,6 +14,7 @@ import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { InsightContent } from './InsightContent';
 import { OpenAI } from 'openai';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Optimized types
 type RelationshipType = 'aggregate' | 'senior' | 'peer' | 'junior';
@@ -508,9 +509,28 @@ ${formattedFeedback}`
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">Feedback Analytics</h2>
-            <Badge variant="outline" className="text-xs font-normal bg-black text-white hover:bg-black/90 cursor-help transition-colors border-black">
-              Beta
-            </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="text-xs font-normal bg-black text-white hover:bg-black/90 cursor-help transition-colors border-black">
+                    Beta
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="start" className="max-w-[300px] p-4">
+                  <div className="space-y-2">
+                    <p className="font-medium">AI-Powered Analysis</p>
+                    <p className="text-sm text-muted-foreground">
+                      This feature uses AI to analyze feedback responses and identify patterns. Results may vary based on:
+                    </p>
+                    <ul className="text-sm text-muted-foreground list-disc pl-4 space-y-1">
+                      <li>Number of responses</li>
+                      <li>Detail level in feedback</li>
+                      <li>Consistency across reviewers</li>
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {state.lastAnalyzedAt && shouldShowAnalysis && (
             <p className="text-sm text-muted-foreground">

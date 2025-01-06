@@ -50,40 +50,20 @@ export function InsightContent({ insight }: Props) {
 
   return (
     <>
-      {/* Key Themes and Unique Insights in a grid */}
-      <div className="grid grid-cols-2 gap-8">
-        {/* Key Themes Column */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Key Themes</h4>
-          <div className="grid gap-2">
-            {themes.map((theme: string, i: number) => (
-              <div key={i} className="text-sm text-muted-foreground">
-                • {theme}
-              </div>
-            ))}
-            {themes.length === 0 && (
-              <div className="text-sm text-muted-foreground italic">
-                No themes identified yet
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Areas for Improvement Column */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Unique Perspectives</h4>
-          <div className="grid gap-2">
-            {(insight.uniquePerspectives || []).map((perspective: string, i: number) => (
-              <div key={i} className="text-sm text-muted-foreground">
-                • {perspective}
-              </div>
-            ))}
-            {(!insight.uniquePerspectives || insight.uniquePerspectives.length === 0) && (
-              <div className="text-sm text-muted-foreground italic">
-                No unique perspectives identified yet
-              </div>
-            )}
-          </div>
+      {/* Key Themes */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium">Key Themes</h4>
+        <div className="grid gap-2">
+          {themes.map((theme: string, i: number) => (
+            <div key={i} className="text-sm text-muted-foreground">
+              • {theme}
+            </div>
+          ))}
+          {themes.length === 0 && (
+            <div className="text-sm text-muted-foreground italic">
+              No themes identified yet
+            </div>
+          )}
         </div>
       </div>
 
