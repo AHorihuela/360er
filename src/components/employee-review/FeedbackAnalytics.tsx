@@ -15,37 +15,13 @@ import { ErrorState } from './ErrorState';
 import { InsightContent } from './InsightContent';
 import { OpenAI } from 'openai';
 
-// Types
+// Optimized types
+type RelationshipType = 'aggregate' | 'senior' | 'peer' | 'junior';
+type ExpandedSections = Record<RelationshipType, boolean>;
+
 interface Props {
   feedbackResponses: CoreFeedbackResponse[];
   feedbackRequestId: string;
-}
-
-type RelationshipType = 'aggregate' | 'senior' | 'peer' | 'junior';
-
-interface ExpandedSections {
-  [key: string]: boolean;
-  aggregate: boolean;
-  senior: boolean;
-  peer: boolean;
-  junior: boolean;
-}
-
-interface AnalysisResult {
-  insights: RelationshipInsight[];
-  error?: string;
-}
-
-interface RelationshipSectionProps {
-  relationshipType: string;
-  insight: RelationshipInsight | undefined;
-  responseCount: number;
-  isExpanded: boolean;
-  onToggle: () => void;
-}
-
-interface AnalysisSectionProps extends RelationshipSectionProps {
-  variant: 'aggregate' | 'perspective';
 }
 
 // Memoized Components
@@ -56,7 +32,14 @@ const AnalysisSection = memo(function AnalysisSection({
   isExpanded,
   onToggle,
   variant
-}: AnalysisSectionProps) {
+}: {
+  relationshipType: string;
+  insight: RelationshipInsight | undefined;
+  responseCount: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  variant: 'aggregate' | 'perspective';
+}) {
   const isAggregate = variant === 'aggregate';
   
   return (
@@ -98,77 +81,73 @@ export function FeedbackAnalytics({
   feedbackResponses,
   feedbackRequestId,
 }: Props) {
-  // State
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [insights, setInsights] = useState<RelationshipInsight[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [analysisStage, setAnalysisStage] = useState(0);
+  // State with optimized initial values
+  const [state, setState] = useState({
+    isAnalyzing: false,
+    insights: [] as RelationshipInsight[],
+    error: null as string | null,
+    analysisStage: 0,
+    lastAnalyzedAt: null as string | null,
+    existingAnalysis: null as AnalyticsMetadata | null,
+    isLoading: true
+  });
+
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>(() => ({
     aggregate: true,
     senior: false,
     peer: false,
     junior: false
   }));
-  const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
-  const [existingAnalysis, setExistingAnalysis] = useState<AnalyticsMetadata | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
   const cleanupRef = useRef<(() => void) | undefined>();
 
   // Memoized values
-  const hasMinimumReviews = useMemo(() => 
-    feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED,
-    [feedbackResponses.length]
-  );
+  const {
+    hasMinimumReviews,
+    groupedFeedback,
+    currentFeedbackHash,
+    insightMap,
+    shouldShowAnalysis,
+    needsInitialAnalysis,
+    shouldShowUpdateButton
+  } = useMemo((): {
+    hasMinimumReviews: boolean;
+    groupedFeedback: Record<string, CoreFeedbackResponse[]>;
+    currentFeedbackHash: string;
+    insightMap: Map<string, RelationshipInsight>;
+    shouldShowAnalysis: boolean;
+    needsInitialAnalysis: boolean;
+    shouldShowUpdateButton: boolean;
+  } => {
+    const feedbackHash = createFeedbackHash(feedbackResponses);
+    
+    return {
+      hasMinimumReviews: feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED,
+      groupedFeedback: RELATIONSHIP_ORDER.reduce((acc, type) => {
+        acc[type] = feedbackResponses
+          .filter(response => normalizeRelationship(response.relationship) === type);
+        return acc;
+      }, {} as Record<string, CoreFeedbackResponse[]>),
+      currentFeedbackHash: feedbackHash,
+      insightMap: new Map(state.insights.map(insight => [
+        insight.relationship === 'aggregate' 
+          ? 'aggregate' 
+          : normalizeRelationship(insight.relationship),
+        insight
+      ])),
+      shouldShowAnalysis: Boolean(state.existingAnalysis?.insights?.length),
+      needsInitialAnalysis: feedbackResponses.length >= MINIMUM_REVIEWS_REQUIRED && 
+                          !state.isAnalyzing && 
+                          !state.error && 
+                          !state.isLoading && 
+                          !Boolean(state.existingAnalysis?.insights?.length),
+      shouldShowUpdateButton: Boolean(state.existingAnalysis?.insights?.length) && 
+                            state.existingAnalysis?.feedback_hash !== feedbackHash && 
+                            !state.isLoading
+    };
+  }, [feedbackResponses, state]);
 
-  const groupedFeedback = useMemo(() => {
-    const grouped = feedbackResponses.reduce((acc, response) => {
-      const relationship = normalizeRelationship(response.relationship);
-      if (!acc[relationship]) acc[relationship] = [];
-      acc[relationship].push(response);
-      return acc;
-    }, {} as Record<string, CoreFeedbackResponse[]>);
-
-    return Object.fromEntries(
-      RELATIONSHIP_ORDER.map(type => [type, grouped[type] || []])
-    );
-  }, [feedbackResponses]);
-
-  const currentFeedbackHash = useMemo(() => 
-    createFeedbackHash(feedbackResponses),
-    [feedbackResponses]
-  );
-
-  const insightMap = useMemo(() => 
-    new Map(insights.map(insight => [
-      insight.relationship === 'aggregate' 
-        ? 'aggregate' 
-        : normalizeRelationship(insight.relationship),
-      insight
-    ])),
-    [insights]
-  );
-
-  const hasChangedSinceLastAnalysis = useMemo(() => 
-    existingAnalysis?.feedback_hash !== currentFeedbackHash,
-    [existingAnalysis?.feedback_hash, currentFeedbackHash]
-  );
-
-  const shouldShowAnalysis = useMemo(() => {
-    if (!existingAnalysis?.insights) return false;
-    return Array.isArray(existingAnalysis.insights) && existingAnalysis.insights.length > 0;
-  }, [existingAnalysis?.insights]);
-
-  const needsInitialAnalysis = useMemo(() => 
-    hasMinimumReviews && !isAnalyzing && !error && !isLoading && !shouldShowAnalysis,
-    [hasMinimumReviews, isAnalyzing, error, isLoading, shouldShowAnalysis]
-  );
-
-  const shouldShowUpdateButton = useMemo(() => 
-    shouldShowAnalysis && hasChangedSinceLastAnalysis && !isLoading,
-    [shouldShowAnalysis, hasChangedSinceLastAnalysis, isLoading]
-  );
-
-  // Callbacks
+  // Optimized callbacks
   const toggleSection = useCallback((relationship: RelationshipType) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -178,9 +157,12 @@ export function FeedbackAnalytics({
 
   const runAnalysis = useCallback(async () => {
     let isSubscribed = true;
-    setIsAnalyzing(true);
-    setError(null);
-    setAnalysisStage(0);
+    setState(prev => ({
+      ...prev,
+      isAnalyzing: true,
+      error: null,
+      analysisStage: 0
+    }));
 
     const cleanup = () => {
       isSubscribed = false;
@@ -189,7 +171,10 @@ export function FeedbackAnalytics({
     try {
       // Stage 1: Generate insights
       if (!isSubscribed) return cleanup;
-      setAnalysisStage(1);
+      setState(prev => ({
+        ...prev,
+        analysisStage: 1
+      }));
       
       const openai = new OpenAI({
         apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -225,10 +210,14 @@ Required Competencies:
 7. Emotional Intelligence & Culture Fit
 
 Confidence Level Rules:
-- "low": 0-1 reviewers OR limited/no specific evidence
-- "medium": 2-3 reviewers WITH specific evidence
-- "high": 4+ reviewers WITH specific evidence
-- IMPORTANT: A perspective with only 1 response MUST use "low" confidence for all competencies
+- Confidence levels are determined PER COMPETENCY based on specific evidence:
+  - "low": 0-1 pieces of specific evidence for this competency
+  - "medium": 2-3 pieces of specific evidence for this competency
+  - "high": 4+ pieces of specific evidence for this competency
+- Evidence must be directly related to the competency being evaluated
+- General feedback that doesn't specifically address a competency should not count as evidence
+- Even if there are many reviewers, if few mention a specific competency, confidence should be low
+- Example: If 10 people review but only 1 mentions emotional intelligence, confidence for that competency should be "low"
 
 Schema Description:
 - aggregate: Overall analysis combining all perspectives
@@ -241,10 +230,18 @@ Schema Description:
 - Each competency evaluation must include:
   - name: Competency name (from list above)
   - score: Number 1-5
-  - confidence: "low" | "medium" | "high"
-  - description: String explaining the score
-  - evidenceCount: Number of evidence pieces
-  - evidenceQuotes: Array of supporting quotes`
+  - confidence: "low" | "medium" | "high" (based on evidence for THIS specific competency)
+  - description: String explaining the score and evidence
+  - evidenceCount: Number of specific evidence pieces for this competency
+  - evidenceQuotes: Array of supporting quotes specific to this competency
+
+IMPORTANT: 
+- Evaluate each competency independently based on available evidence
+- Do not inflate confidence levels just because there are many reviewers overall
+- Only count evidence that specifically relates to the competency being evaluated
+- If a competency lacks specific evidence, mark it as "low" confidence regardless of total review count
+
+${formattedFeedback}`
           },
           {
             role: "user",
@@ -283,8 +280,7 @@ ${formattedFeedback}`
           competencies: analysisResult.aggregate.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
-            confidence: feedbackResponses.length <= 1 ? "low" : 
-                       feedbackResponses.length <= 3 ? "medium" : "high",
+            confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
@@ -298,8 +294,7 @@ ${formattedFeedback}`
           competencies: analysisResult.senior.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
-            confidence: (groupedFeedback.senior?.length || 0) <= 1 ? "low" :
-                       (groupedFeedback.senior?.length || 0) <= 3 ? "medium" : "high",
+            confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
@@ -313,8 +308,7 @@ ${formattedFeedback}`
           competencies: analysisResult.peer.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
-            confidence: (groupedFeedback.peer?.length || 0) <= 1 ? "low" :
-                       (groupedFeedback.peer?.length || 0) <= 3 ? "medium" : "high",
+            confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
@@ -328,8 +322,7 @@ ${formattedFeedback}`
           competencies: analysisResult.junior.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
-            confidence: (groupedFeedback.junior?.length || 0) <= 1 ? "low" :
-                       (groupedFeedback.junior?.length || 0) <= 3 ? "medium" : "high",
+            confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
@@ -341,7 +334,10 @@ ${formattedFeedback}`
 
       // Stage 2: Save to database
       if (!isSubscribed) return cleanup;
-      setAnalysisStage(2);
+      setState(prev => ({
+        ...prev,
+        analysisStage: 2
+      }));
       const timestamp = new Date().toISOString();
       
       const { error: upsertError } = await supabase
@@ -366,14 +362,17 @@ ${formattedFeedback}`
 
       // Stage 3: Update UI
       if (!isSubscribed) return cleanup;
-      setAnalysisStage(3);
-      setInsights(transformedInsights);
-      setLastAnalyzedAt(timestamp);
-      setExistingAnalysis({
+      setState(prev => ({
+        ...prev,
+        analysisStage: 3,
         insights: transformedInsights,
-        feedback_hash: currentFeedbackHash,
-        last_analyzed_at: timestamp
-      });
+        lastAnalyzedAt: timestamp,
+        existingAnalysis: {
+          insights: transformedInsights,
+          feedback_hash: currentFeedbackHash,
+          last_analyzed_at: timestamp
+        }
+      }));
 
     } catch (error) {
       if (!isSubscribed) return cleanup;
@@ -381,11 +380,17 @@ ${formattedFeedback}`
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'Failed to analyze feedback. Please try again later.';
-      setError(errorMessage);
+      setState(prev => ({
+        ...prev,
+        error: errorMessage
+      }));
     } finally {
       if (isSubscribed) {
-        setIsAnalyzing(false);
-        setAnalysisStage(0);
+        setState(prev => ({
+          ...prev,
+          isAnalyzing: false,
+          analysisStage: 0
+        }));
       }
     }
 
@@ -395,7 +400,10 @@ ${formattedFeedback}`
   // Effects
   useEffect(() => {
     if (!hasMinimumReviews || feedbackResponses.length === 0) {
-      setIsLoading(false);
+      setState(prev => ({
+        ...prev,
+        isLoading: false
+      }));
       return;
     }
 
@@ -403,7 +411,10 @@ ${formattedFeedback}`
     
     const fetchExistingAnalysis = async () => {
       try {
-        setIsLoading(true);
+        setState(prev => ({
+          ...prev,
+          isLoading: true
+        }));
         const { data: existing, error: fetchError } = await supabase
           .from('feedback_analytics')
           .select('insights, feedback_hash, last_analyzed_at')
@@ -418,7 +429,10 @@ ${formattedFeedback}`
         }
 
         if (!existing) {
-          setIsLoading(false);
+          setState(prev => ({
+            ...prev,
+            isLoading: false
+          }));
           return;
         }
 
@@ -428,23 +442,31 @@ ${formattedFeedback}`
           : [];
 
         if (validInsights.length > 0) {
-          setExistingAnalysis({
-            ...existing,
-            insights: validInsights
-          });
-          
-          setInsights(validInsights);
-          setLastAnalyzedAt(existing.last_analyzed_at);
+          setState(prev => ({
+            ...prev,
+            existingAnalysis: {
+              ...existing,
+              insights: validInsights
+            },
+            insights: validInsights,
+            lastAnalyzedAt: existing.last_analyzed_at
+          }));
         }
 
       } catch (error) {
         console.error('Fetch analysis error:', error);
         if (isMounted) {
-          setError('Failed to fetch existing analysis');
+          setState(prev => ({
+            ...prev,
+            error: 'Failed to fetch existing analysis'
+          }));
         }
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setState(prev => ({
+            ...prev,
+            isLoading: false
+          }));
         }
       }
     };
@@ -468,15 +490,15 @@ ${formattedFeedback}`
     return <MinimumReviewsMessage feedbackResponses={feedbackResponses} />;
   }
 
-  if (isAnalyzing) {
-    return <LoadingState stage={analysisStage} />;
+  if (state.isAnalyzing) {
+    return <LoadingState stage={state.analysisStage} />;
   }
 
-  if (error) {
-    return <ErrorState error={error} />;
+  if (state.error) {
+    return <ErrorState error={state.error} />;
   }
 
-  if (isLoading) {
+  if (state.isLoading) {
     return <LoadingState stage={0} />;
   }
 
@@ -490,9 +512,9 @@ ${formattedFeedback}`
               Beta
             </Badge>
           </div>
-          {lastAnalyzedAt && shouldShowAnalysis && (
+          {state.lastAnalyzedAt && shouldShowAnalysis && (
             <p className="text-sm text-muted-foreground">
-              Last analyzed {formatLastAnalyzed(lastAnalyzedAt)}
+              Last analyzed {formatLastAnalyzed(state.lastAnalyzedAt)}
             </p>
           )}
         </div>
@@ -501,10 +523,10 @@ ${formattedFeedback}`
             variant="default"
             size="sm"
             onClick={handleAnalysis}
-            disabled={isAnalyzing}
+            disabled={state.isAnalyzing}
             className="h-8 text-xs"
           >
-            {isAnalyzing ? (
+            {state.isAnalyzing ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span className="ml-1.5">Analyzing...</span>
@@ -521,10 +543,10 @@ ${formattedFeedback}`
             variant="outline"
             size="sm"
             onClick={handleAnalysis}
-            disabled={isAnalyzing}
+            disabled={state.isAnalyzing}
             className="h-8 text-xs"
           >
-            {isAnalyzing ? (
+            {state.isAnalyzing ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span className="ml-1.5">Analyzing...</span>

@@ -67,45 +67,56 @@ export function CycleAnalytics({ reviewCycle }: Props) {
     if (!aggregateInsight?.competencies) return;
 
     totalEmployeesWithAnalytics++;
+    
+    // Create a map of competency names to their normalized scores for this employee
+    const employeeCompetencies = new Map();
     aggregateInsight.competencies.forEach(comp => {
       const isInsufficientData = comp.score === 0 || comp.evidenceCount === 0;
-
-      if (!aggregateAnalytics[comp.name]) {
-        aggregateAnalytics[comp.name] = {
-          score: isInsufficientData ? null : comp.score,
+      if (!isInsufficientData) {
+        employeeCompetencies.set(comp.name, {
+          score: comp.score,
           confidence: comp.confidence,
-          sampleSize: 0,
-          evidenceCount: 0,
-          isInsufficientData
+          evidenceCount: comp.evidenceCount
+        });
+      }
+    });
+
+    // Now aggregate the normalized scores into the overall analytics
+    employeeCompetencies.forEach((comp, name) => {
+      if (!aggregateAnalytics[name]) {
+        aggregateAnalytics[name] = {
+          score: comp.score,
+          confidence: comp.confidence,
+          sampleSize: 1,
+          evidenceCount: comp.evidenceCount,
+          isInsufficientData: false
         };
       } else {
-        if (!isInsufficientData) {
-          if (aggregateAnalytics[comp.name].score === null) {
-            aggregateAnalytics[comp.name].score = comp.score;
-          } else {
-            aggregateAnalytics[comp.name].score! += comp.score;
-          }
+        if (aggregateAnalytics[name].score === null) {
+          aggregateAnalytics[name].score = comp.score;
+        } else {
+          aggregateAnalytics[name].score! += comp.score;
         }
-      }
-      
-      aggregateAnalytics[comp.name].sampleSize++;
-      
-      // Update confidence level (take the most conservative)
-      if (comp.confidence === 'low' || 
-         (comp.confidence === 'medium' && aggregateAnalytics[comp.name].confidence === 'high')) {
-        aggregateAnalytics[comp.name].confidence = comp.confidence;
-      }
-
-      // Mark as insufficient if majority of samples are insufficient
-      if (aggregateAnalytics[comp.name].isInsufficientData) {
-        const insufficientCount = aggregateAnalytics[comp.name].sampleSize;
-        if (insufficientCount > totalEmployeesWithAnalytics / 2) {
-          aggregateAnalytics[comp.name].score = null;
-          aggregateAnalytics[comp.name].confidence = 'low';
-          aggregateAnalytics[comp.name].isInsufficientData = true;
+        aggregateAnalytics[name].sampleSize++;
+        aggregateAnalytics[name].evidenceCount += comp.evidenceCount;
+        
+        // Update confidence level (take the most conservative)
+        if (comp.confidence === 'low' || 
+           (comp.confidence === 'medium' && aggregateAnalytics[name].confidence === 'high')) {
+          aggregateAnalytics[name].confidence = comp.confidence;
         }
       }
     });
+
+    // Mark as insufficient if majority of samples are insufficient
+    if (aggregateAnalytics[aggregateInsight.competencies[0].name].isInsufficientData) {
+      const insufficientCount = aggregateAnalytics[aggregateInsight.competencies[0].name].sampleSize;
+      if (insufficientCount > totalEmployeesWithAnalytics / 2) {
+        aggregateAnalytics[aggregateInsight.competencies[0].name].score = null;
+        aggregateAnalytics[aggregateInsight.competencies[0].name].confidence = 'low';
+        aggregateAnalytics[aggregateInsight.competencies[0].name].isInsufficientData = true;
+      }
+    }
   });
 
   // Calculate averages for non-insufficient data
@@ -116,16 +127,30 @@ export function CycleAnalytics({ reviewCycle }: Props) {
     }
   });
 
-  // Sort competencies by score (null scores at the end)
-  const sortedCompetencies = Object.entries(aggregateAnalytics)
-    .sort(([, a], [, b]) => {
-      if (a.score === null && b.score === null) return 0;
-      if (a.score === null) return 1;
-      if (b.score === null) return -1;
-      return b.score - a.score;
-    });
+  // Get the 7 core competencies in the correct order
+  const CORE_COMPETENCY_ORDER = [
+    'Leadership & Influence',
+    'Execution & Accountability',
+    'Collaboration & Communication',
+    'Innovation & Problem-Solving',
+    'Growth & Development',
+    'Technical/Functional Expertise',
+    'Emotional Intelligence & Culture Fit'
+  ];
 
-  if (sortedCompetencies.length === 0) return null;
+  // Filter and sort competencies to only include core competencies in the specified order
+  const sortedCompetencies = CORE_COMPETENCY_ORDER.map(name => {
+    const data = aggregateAnalytics[name] || {
+      score: null,
+      confidence: 'low',
+      sampleSize: 0,
+      evidenceCount: 0,
+      isInsufficientData: true
+    };
+    return [name, data] as [string, CompetencyScore];
+  });
+
+  if (sortedCompetencies.every(([_, data]) => data.isInsufficientData)) return null;
 
   // If no employees have sufficient reviews, show a message
   if (totalEmployeesWithSufficientReviews === 0) {

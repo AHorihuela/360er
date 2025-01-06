@@ -34,9 +34,6 @@ export function InsightContent({ insight }: Props) {
     );
   }
   
-  // Add default values and null checks
-  const isAggregate = insight?.relationship === 'aggregate';
-  
   // For aggregate view
   const themes = insight?.themes || [];
   
