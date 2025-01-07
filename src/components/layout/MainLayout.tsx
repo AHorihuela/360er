@@ -72,10 +72,12 @@ export function MainLayout({ children }: MainLayoutProps): JSX.Element {
             <div className="flex items-center gap-2">
               <Link 
                 to="/account" 
-                className="hidden md:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                className={cn(
+                  "hidden md:flex items-center justify-center w-8 h-8 text-sm transition-colors hover:text-primary",
+                  isActive('/account') ? "text-primary" : "text-muted-foreground"
+                )}
               >
                 <Settings className="h-4 w-4" />
-                Account
               </Link>
               <Button 
                 variant="ghost" 

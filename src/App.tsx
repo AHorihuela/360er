@@ -86,7 +86,9 @@ function HomePage() {
             </div>
             <div className="space-y-6">
               <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
-                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-[length:200%_100%] bg-clip-text text-transparent animate-gradient">Transform peer feedback into actionable insights</span>
+                <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                  Transform peer feedback into actionable insights
+                </span>
               </h1>
               <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
                 Collect and analyze 360° feedback with confidence-rated insights, competency scoring, and detailed growth recommendations powered by AI.

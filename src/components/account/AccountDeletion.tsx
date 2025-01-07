@@ -72,24 +72,24 @@ export function AccountDeletion() {
   return (
     <Card className="border-destructive">
       <CardHeader>
-        <CardTitle>Delete Account</CardTitle>
-        <CardDescription>Permanently delete your account and all associated data</CardDescription>
+        <CardTitle>Delete All My Data</CardTitle>
+        <CardDescription>Permanently delete all your data from the platform</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Once you delete your account, there is no going back. This action is permanent and will:
+            Once you delete your data, there is no going back. This action is permanent and will:
           </p>
           <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
             <li>Delete all your feedback responses</li>
             <li>Delete all AI reports and analytics</li>
             <li>Remove all your employees and review cycles</li>
-            <li>Permanently delete your account</li>
+            <li>Remove all data associated with your account</li>
           </ul>
           <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" disabled={isLoading} className="w-full">
-                Delete Account
+                Delete All Data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -98,8 +98,8 @@ export function AccountDeletion() {
                 <AlertDialogDescription asChild>
                   <div className="space-y-4">
                     <div className="text-sm text-muted-foreground">
-                      This action cannot be undone. This will permanently delete your account
-                      and remove all associated data from our servers.
+                      This action cannot be undone. This will permanently delete all your data
+                      from our servers.
                     </div>
                     <div className="space-y-2">
                       <div className="font-medium">
@@ -124,7 +124,7 @@ export function AccountDeletion() {
                   }`}
                   disabled={confirmationWord !== CONFIRMATION_WORD || isLoading}
                 >
-                  {isLoading ? 'Deleting...' : 'Delete Account'}
+                  {isLoading ? 'Deleting...' : 'Delete All Data'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
