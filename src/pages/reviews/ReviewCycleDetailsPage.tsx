@@ -236,27 +236,54 @@ export function ReviewCycleDetailsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
-      const feedbackRequestsToAdd = Array.from(selectedEmployeeIds).map(employeeId => ({
-        review_cycle_id: cycleId,
-        employee_id: employeeId,
-        unique_link: crypto.randomUUID(),
-        status: 'pending',
-        target_responses: 10
-      }));
-
-      const { data, error } = await supabase
+      // Simple insert without select
+      const { error: insertError } = await supabase
         .from('feedback_requests')
-        .insert(feedbackRequestsToAdd)
-        .select('*, employee:employees(*)');
+        .insert(
+          Array.from(selectedEmployeeIds).map(employeeId => ({
+            review_cycle_id: cycleId,
+            employee_id: employeeId,
+            unique_link: crypto.randomUUID(),
+            status: 'pending',
+            target_responses: 10,
+            manually_completed: false
+          }))
+        );
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      setFeedbackRequests(prev => [...prev, ...data]);
+      // Separate select after successful insert
+      const { data: newRequests, error: selectError } = await supabase
+        .from('feedback_requests')
+        .select(`
+          id,
+          review_cycle_id,
+          employee_id,
+          unique_link,
+          status,
+          target_responses,
+          manually_completed,
+          created_at,
+          updated_at,
+          employee:employees!inner (
+            id,
+            name,
+            role,
+            user_id
+          )
+        `)
+        .eq('review_cycle_id', cycleId)
+        .in('employee_id', Array.from(selectedEmployeeIds))
+        .order('created_at', { ascending: false });
+
+      if (selectError) throw selectError;
+
+      setFeedbackRequests(prev => [...prev, ...(newRequests as unknown as FeedbackRequest[] || [])]);
       setSelectedEmployeeIds(new Set());
       setShowAddEmployeesDialog(false);
       toast({
         title: "Success",
-        description: `Added ${data.length} employee(s) to the review cycle`,
+        description: `Added ${newRequests?.length || 0} employee(s) to the review cycle`,
       });
     } catch (error) {
       console.error('Error adding employees:', error);
