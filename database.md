@@ -289,3 +289,172 @@ Status types:
 #### feedback_analytics
 - Users can view analytics for feedback requests they have access to
 - Users can create and update analytics for feedback requests they own
+
+## Database Functions
+
+### Core Functions
+1. **delete_user_account()**
+   ```sql
+   RETURNS void
+   SECURITY DEFINER
+   LANGUAGE plpgsql
+   ```
+   Deletes all data associated with the current user's account, including:
+   - All review cycles (cascades to feedback_requests, responses, analytics)
+   - All employees
+   - Verifies complete deletion
+
+2. **create_feedback_response()**
+   ```sql
+   RETURNS uuid
+   SECURITY DEFINER
+   LANGUAGE plpgsql
+   ```
+   Creates a new feedback response with proper validation and returns its ID.
+   Parameters:
+   - p_feedback_request_id: UUID
+   - p_session_id: text
+   - p_relationship: text
+   - p_strengths: text
+   - p_areas_for_improvement: text
+   - p_status: text
+   - p_submitted_at: timestamptz
+
+3. **delete_feedback_with_references()**
+   ```sql
+   RETURNS void
+   LANGUAGE plpgsql
+   ```
+   Safely deletes feedback responses by:
+   - Nulling out references in previous_version_id
+   - Deleting the feedback record
+
+### Trigger Functions
+1. **handle_feedback_response()**
+   ```sql
+   RETURNS trigger
+   SECURITY DEFINER
+   LANGUAGE plpgsql
+   ```
+   Handles feedback response validation and processing:
+   - Validates request status and unique link
+   - Sets default values for text fields
+   - Manages submission timestamps
+   - Links to previous in-progress versions
+
+2. **check_ai_report_content()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Ensures completed AI reports have content.
+
+3. **update_review_cycle_status()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Updates review cycle status based on feedback request changes.
+
+4. **update_feedback_request_status()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Updates feedback request status based on response counts.
+
+5. **set_review_cycle_created_by()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Sets the created_by field on new review cycles.
+
+6. **update_updated_at_column()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Updates the updated_at timestamp on record changes.
+
+### Utility Functions
+1. **log_policy_evaluation()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Logs policy evaluations for debugging purposes.
+
+### Additional Functions
+
+1. **random_feedback_text(category text)**
+   ```sql
+   RETURNS text
+   LANGUAGE plpgsql
+   ```
+   Provides template feedback text for different categories:
+   - Leadership & Management
+   - Technical & Execution
+   - Communication & Collaboration
+   - Initiative & Innovation
+   - Problem Solving & Decision Making
+
+2. **trigger_set_updated_at()**
+   ```sql
+   RETURNS trigger
+   LANGUAGE plpgsql
+   ```
+   Legacy trigger function for updating timestamps.
+
+## Database Extensions
+- pgsodium: For encryption and security features
+- pg_graphql: GraphQL support
+- pg_stat_statements: Query performance monitoring
+- pgcrypto: Cryptographic functions
+- pgjwt: JWT handling
+- supabase_vault: Secure credential storage
+- uuid-ossp: UUID generation
+
+## Schema Management
+- Schema: public
+- Owner: pg_database_owner
+- Search Path: Explicitly set to empty for security
+- Row Security: Enabled globally
+
+## Performance Monitoring
+1. Query Statistics
+   - pg_stat_statements tracks query performance
+   - Execution time monitoring
+   - Query plan analysis
+
+2. Policy Evaluation Logging
+   - Table-level policy evaluation tracking
+   - Operation type logging (INSERT, UPDATE, DELETE)
+   - User context tracking
+
+## Views
+
+### employee_access_paths
+Shows all valid access paths for employees through the system:
+- Direct ownership through user_id
+- Access through feedback requests
+- Access through review cycles
+
+## Triggers
+
+### AI Reports
+- `check_ai_report_content`: BEFORE INSERT OR UPDATE
+- `update_ai_reports_updated_at`: BEFORE UPDATE
+
+### Feedback Responses
+- `handle_feedback_response`: BEFORE INSERT
+- `update_feedback_responses_updated_at`: BEFORE UPDATE
+
+### Review Cycles
+- `set_review_cycle_created_by`: BEFORE INSERT
+- `update_review_cycles_updated_at`: BEFORE UPDATE
+- `update_review_cycle_status`: AFTER UPDATE ON feedback_requests
+
+### Feedback Requests
+- `update_feedback_requests_updated_at`: BEFORE UPDATE
+- `update_feedback_request_status`: AFTER INSERT OR UPDATE ON feedback_responses
