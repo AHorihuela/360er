@@ -127,6 +127,23 @@ Tracks page views for analytics.
    CREATE POLICY "feedback_requests_anon_select" ON feedback_requests
        FOR SELECT TO public
        USING (unique_link IS NOT NULL);
+
+   -- Auth Insert: Through review cycle and employee ownership
+   CREATE POLICY "Users can create feedback requests for their employees and review cycles" ON feedback_requests
+       FOR INSERT TO authenticated
+       WITH CHECK (
+           EXISTS (
+               SELECT 1 FROM review_cycles rc
+               WHERE rc.id = review_cycle_id
+               AND rc.user_id = auth.uid()
+           )
+           AND
+           EXISTS (
+               SELECT 1 FROM employees e
+               WHERE e.id = employee_id
+               AND e.user_id = auth.uid()
+           )
+       );
    ```
 
 3. **Employees** (Direct ownership OR through feedback requests)

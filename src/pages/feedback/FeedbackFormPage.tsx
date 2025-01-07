@@ -10,6 +10,7 @@ import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 import { FeedbackRequest } from '@/types/feedback/submission';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { type RelationshipType } from '@/types/feedback/base';
+import { Employee, ReviewCycle } from '@/types/review';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -74,6 +75,23 @@ export function FeedbackFormPage() {
     }
 
     try {
+      // First, verify the feedback request exists
+      console.log('Fetching feedback request with unique link:', uniqueLink);
+      const { data: requestData, error: requestError } = await supabase
+        .from('feedback_requests')
+        .select('id, unique_link')
+        .eq('unique_link', uniqueLink)
+        .single();
+
+      console.log('Initial request result:', { requestData, requestError });
+
+      if (requestError) {
+        console.error('Error verifying feedback request:', requestError);
+        throw requestError;
+      }
+
+      // Then fetch all the data
+      console.log('Fetching full data for request ID:', requestData.id);
       const { data, error } = await supabase
         .from('feedback_requests')
         .select(`
@@ -83,20 +101,17 @@ export function FeedbackFormPage() {
           status,
           unique_link,
           target_responses,
-          feedback:feedback_responses(
+          employee:employees (
             id,
-            feedback_request_id,
-            submitted_at,
-            status,
-            session_id,
-            strengths,
-            areas_for_improvement,
-            relationship,
-            created_at
+            name,
+            role,
+            user_id
           )
         `)
-        .eq('unique_link', uniqueLink)
+        .eq('id', requestData.id)
         .single();
+
+      console.log('Initial data result:', { data, error });
 
       if (error) {
         console.error('Error fetching feedback request:', error);
@@ -107,9 +122,47 @@ export function FeedbackFormPage() {
         throw new Error('No feedback request found');
       }
 
+      // Fetch review cycle data separately
+      const { data: reviewCycle, error: reviewCycleError } = await supabase
+        .from('review_cycles')
+        .select('id, title, review_by_date, status')
+        .eq('id', data.review_cycle_id)
+        .single();
+
+      console.log('Review cycle result:', { reviewCycle, reviewCycleError });
+
+      if (reviewCycleError) {
+        console.error('Error fetching review cycle:', reviewCycleError);
+        throw reviewCycleError;
+      }
+
+      // Fetch feedback data
+      const { data: feedback, error: feedbackError } = await supabase
+        .from('feedback_responses')
+        .select(`
+          id,
+          feedback_request_id,
+          submitted_at,
+          status,
+          session_id,
+          strengths,
+          areas_for_improvement,
+          relationship,
+          created_at
+        `)
+        .eq('feedback_request_id', data.id);
+
+      console.log('Feedback result:', { feedback, feedbackError });
+
+      if (feedbackError) {
+        console.error('Error fetching feedback:', feedbackError);
+        throw feedbackError;
+      }
+
       // Check for any existing feedback from this session (both submitted and in-progress)
-      if (data.feedback) {
-        const existingFeedback = (data.feedback as CoreFeedbackResponse[]).find(
+      if (feedback) {
+        console.log('Found feedback data:', feedback);
+        const existingFeedback = feedback.find(
           f => f.session_id === sessionId
         );
 
@@ -139,34 +192,15 @@ export function FeedbackFormPage() {
         }
       }
 
-      // Get the employee data
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', data.employee_id)
-        .single();
-
-      if (employeeError) throw employeeError;
-      if (!employeeData) throw new Error('Employee not found');
-
-      // Get the review cycle data
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('review_cycles')
-        .select('*')
-        .eq('id', data.review_cycle_id)
-        .single();
-
-      if (cycleError) throw cycleError;
-      if (!cycleData) throw new Error('Review cycle not found');
-
       // Combine the data
       const combinedData: FeedbackRequest = {
         ...data,
-        employee: employeeData,
-        review_cycle: cycleData,
-        feedback: data.feedback as CoreFeedbackResponse[]
+        employee: (Array.isArray(data.employee) ? data.employee[0] : data.employee) as Employee,
+        review_cycle: reviewCycle as ReviewCycle,
+        feedback: feedback as CoreFeedbackResponse[]
       };
 
+      console.log('Setting feedback request with data:', combinedData);
       setFeedbackRequest(combinedData);
       return combinedData;
 
@@ -376,6 +410,7 @@ export function FeedbackFormPage() {
   }
 
   if (isLoading) {
+    console.log('Rendering loading state');
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-lg">Loading...</div>
@@ -383,13 +418,21 @@ export function FeedbackFormPage() {
     );
   }
 
-  if (!feedbackRequest || !feedbackRequest.employee || !feedbackRequest.review_cycle) return null;
+  if (!feedbackRequest || !feedbackRequest.employee || !feedbackRequest.review_cycle) {
+    console.log('Missing required data:', {
+      hasFeedbackRequest: !!feedbackRequest,
+      hasEmployee: !!feedbackRequest?.employee,
+      hasReviewCycle: !!feedbackRequest?.review_cycle
+    });
+    return null;
+  }
 
   // Only check for review cycle end date, not status
   const isRequestClosed = feedbackRequest.review_cycle.review_by_date && 
     new Date(feedbackRequest.review_cycle.review_by_date) < new Date();
 
   if (isRequestClosed) {
+    console.log('Request is closed, review_by_date:', feedbackRequest.review_cycle.review_by_date);
     return (
       <div className="mx-auto max-w-3xl space-y-8 p-6">
         <div className="text-center">
@@ -404,6 +447,12 @@ export function FeedbackFormPage() {
       </div>
     );
   }
+
+  console.log('Rendering feedback form with data:', {
+    employeeName: feedbackRequest.employee.name,
+    reviewCycleTitle: feedbackRequest.review_cycle.title,
+    formStep: formState.step
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
