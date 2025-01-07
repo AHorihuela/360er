@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
-  DashboardReviewCycle,
   ReviewCycleWithFeedback,
   DashboardEmployee,
   DashboardFeedbackResponse
@@ -50,25 +49,48 @@ export function DashboardPage(): JSX.Element {
   const fetchData = async () => {
     if (!user?.id) return;
     
-    const { data: employeesData, error: employeesError } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('user_id', user.id);
+    try {
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('employees')
+        .select(`
+          id,
+          name,
+          role,
+          user_id,
+          created_at,
+          updated_at
+        `)
+        .eq('user_id', user.id);
 
-    if (employeesError) {
-      toast({
-        title: 'Error fetching employees',
-        description: employeesError.message,
-        variant: 'destructive',
-      });
-      return;
-    }
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+        toast({
+          title: 'Error fetching employees',
+          description: employeesError.message,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    const hasEmployeesData = (employeesData?.length ?? 0) > 0;
-    setHasEmployees(hasEmployeesData);
+      const hasEmployeesData = (employeesData?.length ?? 0) > 0;
+      setHasEmployees(hasEmployeesData);
 
-    if (hasEmployeesData) {
-      // Get most recent active review cycle with feedback requests
+      // Initialize employees with 0 reviews
+      const employeesWithReviews = employeesData?.map(emp => ({
+        ...emp,
+        completed_reviews: 0,
+        total_reviews: 0
+      })) || [];
+
+      setEmployees(employeesWithReviews);
+
+      if (!hasEmployeesData) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Only fetch review cycles if we have employees
       const { data: reviewCycles, error: cyclesError } = await supabase
         .from('review_cycles')
         .select(`
@@ -80,13 +102,15 @@ export function DashboardPage(): JSX.Element {
             status,
             employee_id,
             target_responses,
+            unique_link,
             feedback_responses (
               id,
               status,
               submitted_at,
               relationship,
               strengths,
-              areas_for_improvement
+              areas_for_improvement,
+              feedback_request_id
             )
           )
         `)
@@ -95,49 +119,48 @@ export function DashboardPage(): JSX.Element {
         .limit(1);
 
       if (cyclesError) {
+        console.error('Error fetching review cycles:', cyclesError);
         toast({
           title: 'Error fetching review cycles',
           description: cyclesError.message,
           variant: 'destructive',
         });
-        return;
-      }
-
-      if (reviewCycles && reviewCycles.length > 0) {
-        const currentCycle = reviewCycles[0] as unknown as DashboardReviewCycle;
-        
-        // Calculate total completed requests across all employees
-        const totalRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
-          acc + fr.target_responses, 0);
-        const completedRequests = currentCycle.feedback_requests.reduce((acc, fr) => 
+      } else if (reviewCycles && reviewCycles.length > 0) {
+        const cycle = reviewCycles[0];
+        const totalRequests = cycle.feedback_requests.reduce((acc, fr) => acc + fr.target_responses, 0);
+        const completedRequests = cycle.feedback_requests.reduce((acc, fr) => 
           acc + (fr.feedback_responses?.length ?? 0), 0);
 
-        const reviewCycleWithFeedback: ReviewCycleWithFeedback = {
-          id: currentCycle.id,
-          title: currentCycle.title,
-          review_by_date: currentCycle.review_by_date,
+        setActiveReviewCycle({
+          id: cycle.id,
+          title: cycle.title,
+          review_by_date: cycle.review_by_date,
+          feedback_requests: cycle.feedback_requests,
           total_requests: totalRequests,
-          completed_requests: completedRequests,
-          feedback_requests: currentCycle.feedback_requests
-        };
+          completed_requests: completedRequests
+        });
 
-        setActiveReviewCycle(reviewCycleWithFeedback);
-
-        // Process employees with their review status
-        const employeesWithStatus = employeesData?.map(employee => {
-          const employeeRequest = currentCycle.feedback_requests.find(fr => fr.employee_id === employee.id);
+        // Update employees with their review status
+        const employeesWithStatus = employeesData.map(employee => {
+          const employeeRequest = cycle.feedback_requests.find(fr => fr.employee_id === employee.id);
           return {
             ...employee,
             completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
             total_reviews: employeeRequest?.target_responses ?? 0
           };
         });
-
-        setEmployees(employeesWithStatus || []);
+        setEmployees(employeesWithStatus);
       }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   useEffect(() => {

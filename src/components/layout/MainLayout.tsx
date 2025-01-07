@@ -1,9 +1,9 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { LayoutDashboard, Users, ClipboardList, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardList, LogOut, Menu, X, Settings } from 'lucide-react';
 import { getVersion } from '@/lib/version';
 
 interface MainLayoutProps {
@@ -22,17 +22,10 @@ const navItems: NavItem[] = [
   { label: 'Reviews', path: '/reviews', icon: <ClipboardList className="h-4 w-4" /> },
 ];
 
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserEmail(user?.email || null);
-    });
-  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -77,7 +70,13 @@ export function MainLayout({ children }: MainLayoutProps) {
               ))}
             </nav>
             <div className="flex items-center gap-2">
-              <span className="hidden sm:block text-sm text-muted-foreground">{userEmail}</span>
+              <Link 
+                to="/account" 
+                className="hidden md:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                Account
+              </Link>
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -113,7 +112,14 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Link>
             ))}
             <div className="mt-4 pt-4 border-t">
-              <div className="text-sm text-muted-foreground mb-2">{userEmail}</div>
+              <Link
+                to="/account"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-md p-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                Account Settings
+              </Link>
               <Button 
                 variant="ghost" 
                 className="w-full justify-start" 

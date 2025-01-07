@@ -19,6 +19,8 @@ import { getVersion } from './lib/version';
 import { Trophy, Target, LineChart, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { FeedbackViz } from '@/components/FeedbackViz';
+import { AccountPage } from '@/pages/account/AccountPage';
+import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -399,6 +401,15 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <AccountPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/feedback/thank-you" element={<ThankYouPage />} />
           <Route path="/feedback/:uniqueLink" element={<FeedbackFormPage />} />
           <Route
