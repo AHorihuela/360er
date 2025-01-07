@@ -242,17 +242,17 @@ export function CycleAnalytics({ reviewCycle }: Props) {
         <div className="space-y-6">
           {sortedCompetencies.map(([name, data]) => (
             <div key={name} className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="space-y-1">
+              <div className="flex justify-between items-start gap-4">
+                <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className={cn(
-                      "font-medium text-sm",
+                      "font-semibold text-sm",
                       data.isInsufficientData && "text-muted-foreground"
                     )}>{name}</h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger className="cursor-help">
-                          <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                          <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                         </TooltipTrigger>
                         <TooltipContent side="right" align="start" className="max-w-[280px] p-4 space-y-4">
                           <div>
@@ -315,19 +315,37 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                      comp.name === name
+                    )?.[1]?.aspects?.slice(0, 3).join(' • ')}
+                  </p>
                 </div>
-                <span className={cn(
-                  "font-semibold",
-                  data.isInsufficientData && "text-muted-foreground"
-                )}>
-                  {data.score === null ? 'N/A' : `${data.score.toFixed(1)}/5`}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={cn(
+                    "font-semibold text-sm",
+                    data.isInsufficientData && "text-muted-foreground"
+                  )}>
+                    {data.score === null ? 'N/A' : `${data.score.toFixed(1)}/5`}
+                  </span>
+                  <span className={cn(
+                    "text-xs",
+                    data.confidence === 'high' ? "text-primary" :
+                    data.confidence === 'medium' ? "text-yellow-500" :
+                    "text-muted-foreground"
+                  )}>
+                    {data.confidence} confidence
+                  </span>
+                </div>
               </div>
               <Progress 
                 value={data.score === null ? 0 : data.score * 20} 
                 className={cn(
                   "h-2",
-                  (data.isInsufficientData || data.confidence === 'low') && "bg-gray-200 [&>div]:bg-gray-400"
+                  data.isInsufficientData ? "bg-gray-200 [&>div]:bg-gray-400" :
+                  data.confidence === 'low' ? "bg-muted/30 [&>div]:bg-muted-foreground" :
+                  data.confidence === 'medium' ? "bg-yellow-100 [&>div]:bg-yellow-500" :
+                  "bg-primary/10 [&>div]:bg-primary"
                 )}
               />
             </div>
