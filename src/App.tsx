@@ -67,38 +67,41 @@ function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5" />
         
         {/* Background animation with reduced opacity on mobile */}
-        <div className="absolute inset-0 opacity-20 sm:opacity-30">
+        <div className="absolute inset-0 opacity-[0.03] sm:opacity-30">
           <FeedbackViz />
         </div>
+
+        {/* Additional gradient overlay for mobile */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background/90 sm:hidden" />
         
         {/* Content */}
-        <div className="container max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8 py-8 relative">
+        <div className="container max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-8 py-8 relative px-4 sm:px-6 lg:px-8">
           {/* Left column - Content */}
-          <div className="flex-1 space-y-8 pt-12 lg:pt-24">
-            <div className="inline-flex items-center rounded-full border px-6 py-2 text-sm font-medium bg-background/95 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer w-auto sm:w-auto md:w-auto lg:w-auto">
-              <span className="relative flex h-2.5 w-2.5 mr-3">
+          <div className="flex-1 space-y-6 sm:space-y-8 pt-8 sm:pt-12 lg:pt-24 w-full">
+            <div className="inline-flex items-center rounded-full border px-3 sm:px-6 py-2 text-sm font-medium bg-background/95 backdrop-blur-sm hover:bg-background/90 transition-colors cursor-pointer max-w-full overflow-hidden">
+              <span className="relative flex h-2.5 w-2.5 mr-2 sm:mr-3 flex-shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary"></span>
               </span>
-              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-[length:200%_100%] bg-clip-text text-transparent animate-gradient">
+              <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-[length:200%_100%] bg-clip-text text-transparent animate-gradient whitespace-nowrap text-xs sm:text-sm truncate">
                 Advanced AI Analytics with Confidence Scoring
               </span>
             </div>
-            <div className="space-y-6">
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1">
+            <div className="space-y-4 sm:space-y-6">
+              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1 break-words">
                 <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                   Transform peer feedback into actionable insights
                 </span>
               </h1>
-              <p className="text-xl text-muted-foreground dark:text-gray-400 max-w-xl leading-relaxed">
+              <p className="text-base sm:text-xl text-muted-foreground dark:text-gray-400 leading-relaxed">
                 Collect and analyze 360° feedback with confidence-rated insights, competency scoring, and detailed growth recommendations powered by AI.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
               <Button 
                 size="lg" 
                 onClick={() => navigate('/signup')}
-                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-12 px-8"
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white transition-all duration-300 h-11 sm:h-12 px-4 sm:px-8 w-full sm:w-auto text-sm sm:text-base"
               >
                 Get Started for Free
               </Button>
@@ -106,29 +109,29 @@ function HomePage() {
                 size="lg" 
                 variant="outline" 
                 onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-primary text-primary hover:bg-primary/10 transition-all duration-300 bg-background/80 backdrop-blur-sm h-12 px-8"
+                className="border-primary text-primary hover:bg-primary/10 transition-all duration-300 bg-background/80 backdrop-blur-sm h-11 sm:h-12 px-4 sm:px-8 w-full sm:w-auto text-sm sm:text-base"
               >
                 See How It Works
               </Button>
             </div>
-            <div className="flex items-center gap-6 sm:gap-8 text-sm text-muted-foreground pt-4 overflow-x-auto">
-              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+            <div className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm text-muted-foreground pt-4 overflow-x-auto pb-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 hover:text-primary transition-colors whitespace-nowrap">
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
                 AI-Powered Insights
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 hover:text-primary transition-colors whitespace-nowrap">
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
                 Track Your Progress
               </div>
-              <div className="flex items-center gap-2 hover:text-primary transition-colors whitespace-nowrap">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 hover:text-primary transition-colors whitespace-nowrap">
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
                 Complete Feedback System
               </div>
             </div>
           </div>
 
           {/* Right column - Empty space for animation to show through */}
-          <div className="flex-1 h-[600px]" />
+          <div className="hidden lg:block flex-1 h-[600px]" />
         </div>
       </section>
 
