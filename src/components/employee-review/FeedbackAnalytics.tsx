@@ -6,8 +6,8 @@ import { Loader2, ChevronDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { type RelationshipInsight, type AnalyticsMetadata, type OpenAIAnalysisResponse, type OpenAICompetencyScore } from "@/types/feedback/analysis";
-import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED } from "@/constants/feedback";
-import { normalizeRelationship, createFeedbackHash, formatLastAnalyzed } from "@/utils/feedback";
+import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED, ANALYSIS_STAGES, DETAILED_ANALYSIS_STAGES } from "@/constants/feedback";
+import { normalizeRelationship, createFeedbackHash, formatLastAnalyzed, groupFeedbackByRelationship, analyzeRelationshipFeedback, analyzeAggregatePatterns } from "@/utils/feedback";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { MinimumReviewsMessage } from './MinimumReviewsMessage';
 import { LoadingState } from './LoadingState';
@@ -23,6 +23,17 @@ type ExpandedSections = Record<RelationshipType, boolean>;
 interface Props {
   feedbackResponses: CoreFeedbackResponse[];
   feedbackRequestId: string;
+}
+
+interface AnalysisState {
+  isAnalyzing: boolean;
+  insights: RelationshipInsight[];
+  error: string | null;
+  analysisStage: number;
+  analysisSubstep?: keyof typeof DETAILED_ANALYSIS_STAGES.PROCESSING.substeps;
+  lastAnalyzedAt: string | null;
+  existingAnalysis: AnalyticsMetadata | null;
+  isLoading: boolean;
 }
 
 // Memoized Components
@@ -83,13 +94,14 @@ export function FeedbackAnalytics({
   feedbackRequestId,
 }: Props) {
   // State with optimized initial values
-  const [state, setState] = useState({
+  const [state, setState] = useState<AnalysisState>({
     isAnalyzing: false,
-    insights: [] as RelationshipInsight[],
-    error: null as string | null,
+    insights: [],
+    error: null,
     analysisStage: 0,
-    lastAnalyzedAt: null as string | null,
-    existingAnalysis: null as AnalyticsMetadata | null,
+    analysisSubstep: undefined,
+    lastAnalyzedAt: null,
+    existingAnalysis: null,
     isLoading: true
   });
 
@@ -162,7 +174,8 @@ export function FeedbackAnalytics({
       ...prev,
       isAnalyzing: true,
       error: null,
-      analysisStage: 0
+      analysisStage: 0,
+      analysisSubstep: undefined
     }));
 
     const cleanup = () => {
@@ -170,115 +183,57 @@ export function FeedbackAnalytics({
     };
 
     try {
-      // Stage 1: Generate insights
+      // Stage 1: Prepare data
       if (!isSubscribed) return cleanup;
-      setState(prev => ({
-        ...prev,
-        analysisStage: 1
-      }));
-      
       const openai = new OpenAI({
         apiKey: import.meta.env.VITE_OPENAI_API_KEY,
         dangerouslyAllowBrowser: true
       });
 
-      const formattedFeedback = feedbackResponses.map(f => `
-Relationship: ${f.relationship.replace('_', ' ')}
-Strengths: "${f.strengths}"
-Areas for Improvement: "${f.areas_for_improvement}"
-`).join('\n');
+      // Stage 2: Process each type
+      setState(prev => ({
+        ...prev,
+        analysisStage: 1,
+        analysisSubstep: 'AGGREGATE'
+      }));
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4-1106-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert in 360-degree performance reviews and feedback analysis. Your task is to analyze feedback responses and generate a structured analysis following a specific JSON schema.
-
-Response Requirements:
-1. Return ONLY a valid JSON object
-2. Follow the exact schema structure provided
-3. Include all 7 competencies for each perspective
-4. Use "low" confidence when evidence is limited
-
-Required Competencies:
-1. Leadership & Influence
-2. Execution & Accountability
-3. Collaboration & Communication
-4. Innovation & Problem-Solving
-5. Growth & Development
-6. Technical/Functional Expertise
-7. Emotional Intelligence & Culture Fit
-
-Confidence Level Rules:
-- Confidence levels are determined PER COMPETENCY based on specific evidence:
-  - "low": 0-1 pieces of specific evidence for this competency
-  - "medium": 2-3 pieces of specific evidence for this competency
-  - "high": 4+ pieces of specific evidence for this competency
-- Evidence must be directly related to the competency being evaluated
-- General feedback that doesn't specifically address a competency should not count as evidence
-- Even if there are many reviewers, if few mention a specific competency, confidence should be low
-- Example: If 10 people review but only 1 mentions emotional intelligence, confidence for that competency should be "low"
-
-Schema Description:
-- aggregate: Overall analysis combining all perspectives
-  - themes: Array of key themes identified
-  - competency_scores: Array of competency evaluations
-- senior/peer/junior: Perspective-specific analysis
-  - key_insights: Array of unique insights
-  - competency_scores: Array of competency evaluations
-- Each competency_scores array must include all 7 competencies
-- Each competency evaluation must include:
-  - name: Competency name (from list above)
-  - score: Number 1-5
-  - confidence: "low" | "medium" | "high" (based on evidence for THIS specific competency)
-  - description: String explaining the score and evidence
-  - evidenceCount: Number of specific evidence pieces for this competency
-  - evidenceQuotes: Array of supporting quotes specific to this competency
-
-IMPORTANT: 
-- Evaluate each competency independently based on available evidence
-- Do not inflate confidence levels just because there are many reviewers overall
-- Only count evidence that specifically relates to the competency being evaluated
-- If a competency lacks specific evidence, mark it as "low" confidence regardless of total review count
-
-${formattedFeedback}`
-          },
-          {
-            role: "user",
-            content: `Analyze these feedback responses and return a JSON object matching the required schema:
-
-${formattedFeedback}`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 4000,
-        response_format: { type: "json_object" }
-      });
-
-      let cleanedContent = completion.choices[0].message.content!;
-      
-      let analysisResult: OpenAIAnalysisResponse;
-      try {
-        analysisResult = JSON.parse(cleanedContent);
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Malformed JSON:', cleanedContent);
-        throw new Error('Failed to parse analysis results. Please try again.');
-      }
-
+      // Analyze aggregate patterns
+      const aggregateAnalysis = await analyzeAggregatePatterns(feedbackResponses, openai);
       if (!isSubscribed) return cleanup;
-      
-      if (!analysisResult || !analysisResult.aggregate) {
-        throw new Error('Invalid analysis format. Please try again.');
-      }
 
-      // Transform the OpenAI response into our expected format
+      // Analyze senior feedback
+      setState(prev => ({ ...prev, analysisSubstep: 'SENIOR' }));
+      const seniorAnalysis = await analyzeRelationshipFeedback(
+        'senior',
+        groupedFeedback.senior,
+        openai
+      );
+      if (!isSubscribed) return cleanup;
+
+      // Analyze peer feedback
+      setState(prev => ({ ...prev, analysisSubstep: 'PEER' }));
+      const peerAnalysis = await analyzeRelationshipFeedback(
+        'peer',
+        groupedFeedback.peer,
+        openai
+      );
+      if (!isSubscribed) return cleanup;
+
+      // Analyze junior feedback
+      setState(prev => ({ ...prev, analysisSubstep: 'JUNIOR' }));
+      const juniorAnalysis = await analyzeRelationshipFeedback(
+        'junior',
+        groupedFeedback.junior,
+        openai
+      );
+      if (!isSubscribed) return cleanup;
+
+      // Transform the analyses into our expected format
       const transformedInsights: RelationshipInsight[] = [
         {
           relationship: 'aggregate',
-          themes: analysisResult.aggregate.themes || [],
-          competencies: analysisResult.aggregate.competency_scores?.map((score: OpenAICompetencyScore) => ({
+          themes: aggregateAnalysis.themes || [],
+          competencies: aggregateAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
             confidence: score.confidence,
@@ -291,8 +246,8 @@ ${formattedFeedback}`
         },
         {
           relationship: 'senior',
-          themes: analysisResult.senior.key_insights || [],
-          competencies: analysisResult.senior.competency_scores?.map((score: OpenAICompetencyScore) => ({
+          themes: seniorAnalysis.key_insights || [],
+          competencies: seniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
             confidence: score.confidence,
@@ -305,8 +260,8 @@ ${formattedFeedback}`
         },
         {
           relationship: 'peer',
-          themes: analysisResult.peer.key_insights || [],
-          competencies: analysisResult.peer.competency_scores?.map((score: OpenAICompetencyScore) => ({
+          themes: peerAnalysis.key_insights || [],
+          competencies: peerAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
             confidence: score.confidence,
@@ -319,8 +274,8 @@ ${formattedFeedback}`
         },
         {
           relationship: 'junior',
-          themes: analysisResult.junior.key_insights || [],
-          competencies: analysisResult.junior.competency_scores?.map((score: OpenAICompetencyScore) => ({
+          themes: juniorAnalysis.key_insights || [],
+          competencies: juniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
             score: score.score,
             confidence: score.confidence,
@@ -333,11 +288,12 @@ ${formattedFeedback}`
         }
       ];
 
-      // Stage 2: Save to database
+      // Stage 3: Save to database
       if (!isSubscribed) return cleanup;
       setState(prev => ({
         ...prev,
-        analysisStage: 2
+        analysisStage: 2,
+        analysisSubstep: undefined
       }));
       const timestamp = new Date().toISOString();
       
@@ -361,11 +317,12 @@ ${formattedFeedback}`
         throw new Error(upsertError.message);
       }
 
-      // Stage 3: Update UI
+      // Stage 4: Update UI
       if (!isSubscribed) return cleanup;
       setState(prev => ({
         ...prev,
         analysisStage: 3,
+        analysisSubstep: undefined,
         insights: transformedInsights,
         lastAnalyzedAt: timestamp,
         existingAnalysis: {
@@ -390,13 +347,14 @@ ${formattedFeedback}`
         setState(prev => ({
           ...prev,
           isAnalyzing: false,
-          analysisStage: 0
+          analysisStage: 0,
+          analysisSubstep: undefined
         }));
       }
     }
 
     return cleanup;
-  }, [feedbackResponses, feedbackRequestId, currentFeedbackHash]);
+  }, [feedbackResponses, feedbackRequestId, currentFeedbackHash, groupedFeedback]);
 
   // Effects
   useEffect(() => {
@@ -492,7 +450,7 @@ ${formattedFeedback}`
   }
 
   if (state.isAnalyzing) {
-    return <LoadingState stage={state.analysisStage} />;
+    return <LoadingState stage={state.analysisStage} substep={state.analysisSubstep} />;
   }
 
   if (state.error) {

@@ -102,4 +102,33 @@ export const ANALYSIS_STAGES = [
   "Generating final insights"
 ] as const;
 
+export const DETAILED_ANALYSIS_STAGES = {
+  PREPARING: {
+    step: 0,
+    message: "Preparing feedback data",
+    description: "Organizing and validating feedback responses"
+  },
+  PROCESSING: {
+    step: 1,
+    message: "Processing feedback",
+    description: "Analyzing feedback content and identifying patterns",
+    substeps: {
+      AGGREGATE: "Analyzing overall patterns",
+      SENIOR: "Processing senior feedback",
+      PEER: "Processing peer feedback",
+      JUNIOR: "Processing junior feedback"
+    }
+  },
+  GENERATING: {
+    step: 2,
+    message: "Generating insights",
+    description: "Creating detailed performance insights"
+  },
+  SAVING: {
+    step: 3,
+    message: "Saving analysis",
+    description: "Storing results for future reference"
+  }
+} as const;
+
 export const MINIMUM_REVIEWS_REQUIRED = 5; 
