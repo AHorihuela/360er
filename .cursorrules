@@ -25,33 +25,30 @@ The complete database structure, relationships, and policies are documented in `
   - no extra code beyond what is absolutely necessary to solve the problem the user provides (i.e. no technical debt)
 
 ## Structure
-- Structure repository files as follows:
+- Structure repository files can be found in the `documentation/tree_structure.md` file.
+- The project follows a single application structure:
 
 ```
-server/
+.
 ├── src/
-    ├── components/     # Shared React components
+    ├── components/     # React components
     ├── hooks/          # Custom React hooks
     ├── utils/          # Helper functions
     ├── types/          # TypeScript types
-    └── lib/            # Shared libraries
-extension/
-├── src/
-    ├── background/     # Service worker scripts
-    ├── content/        # Content scripts
-    ├── popup/          # Extension popup UI
-    ├── options/        # Extension options page
-    ├── components/     # Shared React components
-    ├── hooks/          # Custom React hooks
-    ├── utils/          # Helper functions
     ├── lib/            # Shared libraries
-    ├── types/          # TypeScript types
-    └── storage/        # Chrome storage utilities
-shared/
-├── src/
-    ├── types/          # TypeScript types, only used for shared types between server and extension
-    └── utils/          # Helper functions, only used for shared functions between server and extension
+    └── pages/          # Page components
+├── dist/              # Built assets
+├── documentation/     # Project documentation
+├── supabase/         # Database migrations and types
+├── public/           # Static assets
+└── components.json   # Shadcn UI configuration
 ```
+
+Key directories:
+- `src/`: Contains all source code
+- `dist/`: Contains built and optimized assets
+- `documentation/`: Contains project documentation including database schema
+- `supabase/`: Contains database migrations and type definitions
 
 ## Tech Stack
 - React
@@ -91,12 +88,6 @@ shared/
 - Implement proper error boundaries
 - Log errors appropriately for debugging
 
-## Security
-- Implement Content Security Policy
-- Sanitize user inputs
-- Handle sensitive data properly
-- Implement proper CORS handling
-
 ## Git Usage
 Commit Message Prefixes:
 - "fix:" for bug fixes
@@ -109,8 +100,6 @@ Commit Message Prefixes:
 - "chore:" for maintenance tasks
 
 ## Documentation
-- Maintain clear README with setup instructions
-- Document API interactions and data flows
 - Keep manifest.json well-documented
 - Don't include comments unless it's for complex logic
 - Document permission requirements
@@ -150,27 +139,12 @@ When encountering issues, request the following if not already provided:
 4. Screenshots of the UI state when error occurs
 5. Steps to reproduce the error
 
-For data flow issues:
-1. Check the Supabase query structure
-2. Verify property names match between database and code
-3. Check TypeScript types match the actual data shape
-4. Look for any property renames in data processing
-5. Verify calculations use the correct property names
-6. Test with both empty and populated data states
-
 For Supabase specific issues:
 1. RLS policy effectiveness with `auth.uid()` checks
 2. Table permissions via `GRANT` listings
 3. Policy definitions with `\d tablename`
 4. Actual data access patterns with query logs
 5. Run `SELECT * FROM pg_policies WHERE schemaname = 'public';` to review all policies
-
-## Version Control
-- Update version number in `src/lib/version.ts` with every deployment
-- Version format: v{major}.{minor}.{patch} (e.g., v0.1.0)
-  - Major: Breaking changes
-  - Minor: New features
-  - Patch: Bug fixes and small improvements
 
 ## Hosting and Deployment
 - Project is hosted on Vercel (https://vercel.com/ahorihuelas-projects/squad360)

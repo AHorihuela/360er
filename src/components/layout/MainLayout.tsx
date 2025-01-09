@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { LayoutDashboard, Users, ClipboardList, LogOut, Menu, X, Settings } from 'lucide-react';
-import { getVersion } from '@/lib/version';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -142,7 +141,6 @@ export function MainLayout({ children }: MainLayoutProps): JSX.Element {
       <footer className="mt-auto border-t">
         <div className="container flex h-14 items-center justify-between text-sm text-muted-foreground">
           <span>© 2024 Squad360. All rights reserved.</span>
-          <span className="text-xs">{getVersion()}</span>
         </div>
       </footer>
     </div>

@@ -15,7 +15,6 @@ import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/toaster';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { getVersion } from './lib/version';
 import { Trophy, Target, LineChart, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { FeedbackViz } from '@/components/FeedbackViz';
@@ -354,7 +353,6 @@ function HomePage() {
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
             © 2024 Squad360. All rights reserved.
           </p>
-          <p className="text-sm text-muted-foreground">v{getVersion()}</p>
         </div>
       </footer>
     </div>
