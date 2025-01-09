@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Copy, Trash2, Loader2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Copy, Trash2, Loader2, UserPlus, Pencil, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -58,6 +58,8 @@ export function ReviewCycleDetailsPage() {
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [employeeToRemove, setEmployeeToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -392,7 +394,66 @@ export function ReviewCycleDetailsPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{reviewCycle?.title}</h1>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="text-2xl font-bold h-auto py-1 px-2"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const { error } = await supabase
+                        .from('review_cycles')
+                        .update({ title: editedTitle })
+                        .eq('id', cycleId);
+
+                      if (error) throw error;
+                      setReviewCycle(prev => prev ? { ...prev, title: editedTitle } : null);
+                      setIsEditingTitle(false);
+                    } catch (error) {
+                      console.error('Error updating title:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to update review cycle title",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditingTitle(false);
+                    setEditedTitle(reviewCycle?.title || '');
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h1 className="text-2xl font-bold">{reviewCycle?.title}</h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditedTitle(reviewCycle?.title || '');
+                    setIsEditingTitle(true);
+                  }}
+                  className="h-8 w-8"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <p className="text-muted-foreground text-sm">Due {new Date(reviewCycle?.review_by_date || '').toLocaleDateString()}</p>
           </div>
         </div>
