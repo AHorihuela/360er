@@ -32,6 +32,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
 import { CycleAnalytics } from '@/components/review-cycle/CycleAnalytics';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function determineRequestStatus(request: FeedbackRequest): string {
   if (!request.target_responses) return REQUEST_STATUS.PENDING;
@@ -466,76 +472,104 @@ export function ReviewCycleDetailsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {feedbackRequests.map((request) => (
-          <Card 
-            key={request.id}
-            className="group cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => navigate(`/reviews/${cycleId}/employee/${request.employee_id}`)}
-          >
-            <CardContent className="p-3">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="text-sm">
-                    {request.employee?.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm truncate">{request.employee?.name}</h3>
-                  <p className="text-xs text-muted-foreground truncate">{request.employee?.role}</p>
-                  <div className="mt-2 space-y-1.5">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Completion</span>
-                      <span className="font-medium">
-                        {Math.round(((request._count?.responses || 0) / request.target_responses) * 100)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={((request._count?.responses || 0) / request.target_responses) * 100} 
-                      className="h-1.5"
-                    />
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge 
-                        variant={getStatusBadgeVariant(request)}
-                        className="text-xs px-1.5 h-5"
-                      >
-                        {request._count?.responses || 0}/{request.target_responses}
-                      </Badge>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyLink(request.unique_link);
-                          }}
-                          className="h-7 px-2"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveEmployee(request.id, request.employee?.name || 'this employee');
-                          }}
-                          disabled={removingEmployeeId === request.id}
-                          className="h-7 px-2 text-destructive hover:text-destructive-foreground"
-                        >
-                          {removingEmployeeId === request.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
+          <TooltipProvider key={request.id}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card 
+                  className="group cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => navigate(`/reviews/${cycleId}/employee/${request.employee_id}`)}
+                >
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-start gap-4">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                          {request.employee?.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-base truncate">{request.employee?.name}</h3>
+                        <p className="text-sm text-muted-foreground font-medium truncate">{request.employee?.role}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Completion</span>
+                        <span className="text-sm font-medium">
+                          {Math.round((request._count?.responses || 0) / (request.target_responses || 1) * 100)}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(request._count?.responses || 0) / (request.target_responses || 1) * 100} 
+                        className="h-2"
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            determineRequestStatus(request) === REQUEST_STATUS.COMPLETED ? "default" :
+                            determineRequestStatus(request) === REQUEST_STATUS.IN_PROGRESS ? "secondary" :
+                            "outline"
+                          } className="font-medium">
+                            {determineRequestStatus(request)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                          <span>{request._count?.responses || 0}/{request.target_responses}</span>
+                          <div className="flex gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 hover:bg-accent"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(request.unique_link || '');
+                                    toast({
+                                      title: "Link copied",
+                                      description: "The feedback link has been copied to your clipboard.",
+                                    });
+                                  }}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copy feedback link</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEmployeeToRemove({ id: request.employee_id, name: request.employee?.name || '' });
+                                    setShowRemoveDialog(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Remove employee</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View detailed feedback progress</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ))}
       </div>
 
