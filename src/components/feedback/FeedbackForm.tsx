@@ -109,7 +109,7 @@ export function FeedbackForm({
         <label className="block text-base sm:text-lg font-medium">Strengths</label>
         <div className="space-y-1">
           <textarea
-            className={`min-h-[120px] w-full rounded-lg border ${
+            className={`min-h-[160px] w-full rounded-lg border ${
               !validation.strengths.isValid && validation.strengths.showLengthWarning
                 ? 'border-red-500'
                 : validation.strengths.isValid && formData.strengths.length > 0
@@ -142,7 +142,7 @@ export function FeedbackForm({
         <label className="block text-base sm:text-lg font-medium">Areas for Improvement</label>
         <div className="space-y-1">
           <textarea
-            className={`min-h-[120px] w-full rounded-lg border ${
+            className={`min-h-[160px] w-full rounded-lg border ${
               !validation.areas_for_improvement.isValid && validation.areas_for_improvement.showLengthWarning
                 ? 'border-red-500'
                 : validation.areas_for_improvement.isValid && formData.areas_for_improvement.length > 0
