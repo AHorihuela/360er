@@ -1,6 +1,32 @@
-# Squad360 🎯 - AI-Powered Team Feedback Platform
+# Squad360 🎯
 
-A modern, web-based 360-degree feedback platform that enables managers to collect comprehensive, anonymous feedback for their team members. Squad360 uses advanced AI analytics to provide confidence-rated insights, competency scoring, and detailed growth recommendations. ✨
+<div align="center">
+  <img src="public/images/og-preview.png" alt="Squad360 - AI-Powered Team Feedback Platform" width="800"/>
+
+  <h2>AI-Powered Team Feedback Platform</h2>
+  
+  <p>
+    Transform peer feedback into actionable insights with confidence-rated analysis, competency scoring, and AI-powered recommendations.
+  </p>
+
+  <p>
+    <a href="https://squad360.vercel.app">View Demo</a>
+    ·
+    <a href="https://squad360.vercel.app/signup">Get Started</a>
+    ·
+    <a href="#features">Explore Features</a>
+  </p>
+</div>
+
+## About 🚀
+
+Squad360 is a modern, web-based 360-degree feedback platform that enables managers to collect comprehensive, anonymous feedback for their team members. Using advanced AI analytics, we provide:
+
+- 🧠 **Confidence-rated insights** based on evidence patterns
+- 📊 **Competency scoring** across 7 key areas
+- 🎯 **Role-specific analysis** for accurate context
+- 🔒 **Anonymous feedback collection** via unique links
+- 📈 **Visual progress tracking** and analytics
 
 ## Key Features 🚀
 
