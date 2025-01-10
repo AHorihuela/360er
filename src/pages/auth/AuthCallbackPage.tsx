@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { toast } from '@/components/ui/use-toast';
@@ -7,7 +7,6 @@ import { toast } from '@/components/ui/use-toast';
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
 
   useEffect(() => {
     const handleRecovery = async () => {
