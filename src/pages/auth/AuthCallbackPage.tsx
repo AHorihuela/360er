@@ -15,33 +15,44 @@ export default function AuthCallbackPage() {
         console.log('Full URL:', window.location.href);
         console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
-        // Let Supabase handle the auth callback
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
+        // Check for error parameters
+        const error = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
         if (error) {
-          console.error('Session error:', error);
-          throw error;
+          console.error('Error in URL:', { error, description: errorDescription });
+          throw new Error(errorDescription || error);
+        }
+
+        // Check for recovery token
+        const token = searchParams.get('token');
+        if (token) {
+          console.log('Recovery token found, verifying...');
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery'
+          });
+
+          if (verifyError) {
+            console.error('Token verification error:', verifyError);
+            throw verifyError;
+          }
+
+          console.log('Token verified, redirecting to password update');
+          navigate('/update-password');
+          return;
+        }
+
+        // Handle other auth flows
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw sessionError;
         }
 
         if (!session) {
           console.error('No session available');
           throw new Error('No session available');
-        }
-
-        // Check if this is a recovery flow by looking at the session
-        const isRecoveryFlow = session.user?.aud === 'recovery';
-        console.log('Session established', { isRecoveryFlow });
-
-        if (isRecoveryFlow) {
-          console.log('Recovery flow detected, redirecting to password update');
-          navigate('/update-password', { 
-            state: { 
-              recoveryMode: true,
-              accessToken: session.access_token,
-              refreshToken: session.refresh_token
-            }
-          });
-          return;
         }
 
         console.log('Standard auth flow, redirecting to dashboard');
