@@ -488,8 +488,11 @@ export function ReviewCycleDetailsPage() {
                             determineRequestStatus(request) === REQUEST_STATUS.COMPLETED ? "default" :
                             determineRequestStatus(request) === REQUEST_STATUS.IN_PROGRESS ? "secondary" :
                             "outline"
-                          } className="font-medium">
-                            {determineRequestStatus(request)}
+                          } className={cn(
+                            "font-medium capitalize",
+                            determineRequestStatus(request) === REQUEST_STATUS.IN_PROGRESS && "whitespace-nowrap"
+                          )}>
+                            {determineRequestStatus(request).toLowerCase().replace('_', ' ')}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
