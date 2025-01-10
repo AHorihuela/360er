@@ -1,12 +1,22 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const type = searchParams.get('type');
+    
+    if (type === 'recovery') {
+      // For password reset flow, redirect to update password page
+      navigate('/update-password');
+      return;
+    }
+
+    // For other auth flows, check session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate('/dashboard');
@@ -14,7 +24,7 @@ export default function AuthCallbackPage() {
         navigate('/login');
       }
     });
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   return (
     <MainLayout>

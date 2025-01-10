@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { FeedbackViz } from '@/components/FeedbackViz';
 import { AccountPage } from '@/pages/account/AccountPage';
 import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
+import UpdatePasswordPage from '@/pages/auth/UpdatePasswordPage';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -405,6 +406,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route
             path="/account"
             element={
