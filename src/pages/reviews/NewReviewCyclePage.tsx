@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ export function NewReviewCyclePage() {
       setIsSubmitting(true);
 
       // Create the review cycle
-      const { data: cycleData, error: cycleError } = await supabase
+      const { error: cycleError } = await supabase
         .from('review_cycles')
         .insert({
           title: formData.title,

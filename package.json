@@ -71,6 +71,7 @@
     "slate": "^0.112.0",
     "slate-history": "^0.110.3",
     "slate-react": "^0.112.0",
+    "sonner": "^1.7.1",
     "superjson": "^2.2.2",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

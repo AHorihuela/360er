@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Copy, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FeedbackRequestActionsProps {
   reviewCycleId: string;
@@ -11,6 +11,7 @@ interface FeedbackRequestActionsProps {
 
 export function FeedbackRequestActions({ reviewCycleId, employeeId, feedbackLink }: FeedbackRequestActionsProps) {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleCopyLink = async () => {
     try {
