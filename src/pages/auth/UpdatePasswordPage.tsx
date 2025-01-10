@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -11,6 +11,22 @@ export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: 'Session Expired',
+          description: 'Please request a new password reset link',
+          variant: 'destructive',
+        });
+        navigate('/login');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,19 +57,20 @@ export default function UpdatePasswordPage() {
 
       if (error) throw error;
 
+      // Sign out the user
+      await supabase.auth.signOut();
+
       toast({
         title: 'Success',
-        description: 'Password updated successfully',
+        description: 'Password updated successfully. Please log in with your new password.',
       });
 
-      // Sign out and redirect to login
-      await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
       console.error('Error updating password:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update password',
+        description: error.message || 'Failed to update password. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -81,6 +98,7 @@ export default function UpdatePasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                minLength={6}
               />
             </div>
             <div className="space-y-2">
@@ -91,6 +109,7 @@ export default function UpdatePasswordPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                minLength={6}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>

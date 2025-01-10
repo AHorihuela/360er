@@ -12,32 +12,44 @@ export default function AuthCallbackPage() {
     const handleCallback = async () => {
       try {
         console.log('Auth callback initiated');
-        console.log('Full URL:', window.location.href);
-        console.log('Search params:', Object.fromEntries(searchParams.entries()));
+        
+        // Get both search params and hash params
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        // Combine params, with hash taking precedence
+        const allParams = new Map([
+          ...Array.from(urlParams.entries()),
+          ...Array.from(hashParams.entries())
+        ]);
+        
+        console.log('All params:', Object.fromEntries(allParams));
 
         // Check for error parameters
-        const error = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
+        const error = allParams.get('error');
+        const errorDescription = allParams.get('error_description');
         if (error) {
-          console.error('Error in URL:', { error, description: errorDescription });
+          console.error('Error in params:', { error, description: errorDescription });
           throw new Error(errorDescription || error);
         }
 
-        // Check for recovery token
-        const token = searchParams.get('token');
-        if (token) {
-          console.log('Recovery token found, verifying...');
-          const { error: verifyError } = await supabase.auth.verifyOtp({
+        // Check for recovery token in both query and hash
+        const token = urlParams.get('token') || hashParams.get('token');
+        const type = urlParams.get('type') || hashParams.get('type');
+        
+        if (token && type === 'recovery') {
+          console.log('Recovery flow detected');
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'recovery'
           });
 
           if (verifyError) {
-            console.error('Token verification error:', verifyError);
+            console.error('Recovery verification error:', verifyError);
             throw verifyError;
           }
 
-          console.log('Token verified, redirecting to password update');
+          console.log('Recovery verified, redirecting to password update');
           navigate('/update-password');
           return;
         }
@@ -51,11 +63,12 @@ export default function AuthCallbackPage() {
         }
 
         if (!session) {
-          console.error('No session available');
-          throw new Error('No session available');
+          console.log('No session available, redirecting to login');
+          navigate('/login');
+          return;
         }
 
-        console.log('Standard auth flow, redirecting to dashboard');
+        console.log('Auth successful, redirecting to dashboard');
         navigate('/dashboard');
       } catch (error: any) {
         console.error('Auth error:', error);
@@ -65,11 +78,13 @@ export default function AuthCallbackPage() {
           stack: error.stack,
           details: error.details || 'No additional details'
         });
+        
         toast({
-          title: 'Error',
+          title: 'Authentication Error',
           description: error.message || 'An error occurred during authentication',
           variant: 'destructive',
         });
+        
         navigate('/login');
       }
     };
