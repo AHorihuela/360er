@@ -48,7 +48,7 @@ export function MainLayout({ children }: MainLayoutProps): JSX.Element {
                 {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
               <Link to="/" className="flex items-center gap-2">
-                <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                <span className="text-xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent logo-font tracking-tight">
                   Squad360
                 </span>
               </Link>

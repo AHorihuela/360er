@@ -18,4 +18,4 @@ export function generateShortId(): string {
   }
   
   return result;
-} 
+}

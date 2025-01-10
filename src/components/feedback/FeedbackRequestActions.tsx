@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Copy, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface FeedbackRequestActionsProps {
   reviewCycleId: string;
@@ -12,7 +13,20 @@ export function FeedbackRequestActions({ reviewCycleId, employeeId, feedbackLink
   const navigate = useNavigate();
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(feedbackLink);
+    try {
+      await navigator.clipboard.writeText(feedbackLink);
+      toast({
+        title: "Success",
+        description: "Feedback link copied to clipboard",
+      });
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

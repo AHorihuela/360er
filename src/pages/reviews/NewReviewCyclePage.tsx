@@ -7,12 +7,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreateReviewCycleInput } from '@/types/review';
+import { useAuth } from '@/hooks/useAuth';
 
 export function NewReviewCyclePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<CreateReviewCycleInput, 'user_id'>>({
     title: '',
     review_by_date: (() => {
@@ -23,41 +24,33 @@ export function NewReviewCyclePage() {
     status: 'active'
   });
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setUserId(user.id);
-      } else {
-        navigate('/login');
-      }
-    });
-  }, [navigate]);
-
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.title || !formData.review_by_date || !userId) return;
+    if (!user?.id) return;
 
-    setIsSubmitting(true);
     try {
-      const reviewCycleInput: CreateReviewCycleInput = {
-        ...formData,
-        user_id: userId
-      };
+      setIsSubmitting(true);
 
-      const { data, error } = await supabase
+      // Create the review cycle
+      const { data: cycleData, error: cycleError } = await supabase
         .from('review_cycles')
-        .insert([reviewCycleInput])
+        .insert({
+          title: formData.title,
+          review_by_date: formData.review_by_date,
+          user_id: user.id,
+          status: 'active'
+        })
         .select()
         .single();
 
-      if (error) throw error;
+      if (cycleError) throw cycleError;
 
       toast({
         title: "Success",
         description: "Review cycle created successfully",
       });
 
-      navigate(`/reviews/${data.id}/manage`);
+      navigate('/reviews');
     } catch (error) {
       console.error('Error creating review cycle:', error);
       toast({
@@ -68,7 +61,7 @@ export function NewReviewCyclePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">

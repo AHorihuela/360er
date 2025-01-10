@@ -2,6 +2,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 @import 'react-day-picker/dist/style.css';
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@600&display=swap');
 
 @layer base {
   :root {
@@ -70,6 +71,10 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 14 90% 45%;
+  }
+
+  .logo-font {
+    font-family: 'Clash Display', system-ui, sans-serif;
   }
 }
 

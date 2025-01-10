@@ -488,7 +488,8 @@ export function ReviewCycleDetailsPage() {
                                   className="h-8 w-8 hover:bg-accent"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigator.clipboard.writeText(request.unique_link || '');
+                                    const feedbackUrl = `${window.location.origin}/feedback/${request.unique_link}`;
+                                    navigator.clipboard.writeText(feedbackUrl);
                                     toast({
                                       title: "Link copied",
                                       description: "The feedback link has been copied to your clipboard.",
