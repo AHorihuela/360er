@@ -10,46 +10,52 @@ export default function AuthCallbackPage() {
   const location = useLocation();
 
   useEffect(() => {
-    // Check URL hash for error parameters
-    const hashParams = new URLSearchParams(location.hash.replace('#', ''));
-    const error = hashParams.get('error');
-    const errorDescription = hashParams.get('error_description');
+    const handleRecovery = async () => {
+      try {
+        // Get the token from the URL
+        const token = searchParams.get('token');
+        const type = searchParams.get('type');
 
-    if (error) {
-      toast({
-        title: 'Error',
-        description: errorDescription || 'An error occurred during authentication',
-        variant: 'destructive',
-      });
-      navigate('/login');
-      return;
-    }
+        if (type === 'recovery' && token) {
+          // Exchange the recovery token for a session
+          const { data, error } = await supabase.auth.exchangeCodeForSession(token);
 
-    // Check if this is a password recovery flow
-    const type = searchParams.get('type') || hashParams.get('type');
-    
-    if (type === 'recovery') {
-      // For password reset flow, redirect to update password page
-      navigate('/update-password');
-      return;
-    }
+          if (error) throw error;
 
-    // For other auth flows, check session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate('/dashboard');
-      } else {
+          // If exchange successful, redirect to update password with the access token
+          if (data?.session?.access_token) {
+            navigate('/update-password#access_token=' + data.session.access_token);
+            return;
+          }
+        }
+
+        // For other auth flows, check session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/dashboard');
+        } else {
+          navigate('/login');
+        }
+      } catch (error: any) {
+        console.error('Auth error:', error);
+        toast({
+          title: 'Error',
+          description: error.message || 'An error occurred during authentication',
+          variant: 'destructive',
+        });
         navigate('/login');
       }
-    });
-  }, [navigate, searchParams, location]);
+    };
+
+    handleRecovery();
+  }, [navigate, searchParams]);
 
   return (
     <MainLayout>
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
         <div className="animate-pulse space-y-4 text-center">
           <div className="text-2xl font-semibold">360° Feedback</div>
-          <div className="text-muted-foreground">Redirecting...</div>
+          <div className="text-muted-foreground">Verifying...</div>
         </div>
       </div>
     </MainLayout>
