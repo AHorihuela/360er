@@ -430,84 +430,64 @@ export function DashboardPage(): JSX.Element {
       )}
 
       {/* Recent Reviews */}
-      {activeReviewCycle && (
-        <div className="space-y-4 mt-8">
+      {activeReviewCycle && activeReviewCycle.feedback_requests.some(fr => fr.feedback_responses && fr.feedback_responses.length > 0) && (
+        <div className="space-y-4 mt-8 pt-8 border-t">
           <h2 className="text-xl font-semibold">Recent Reviews</h2>
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-            {(activeReviewCycle as ReviewCycleWithFeedback).feedback_requests?.flatMap(request => 
-              request.feedback_responses?.map(response => {
-                const feedbackResponse = {
-                  id: response.id,
-                  feedback_request_id: request.id,
-                  relationship: response.relationship,
-                  strengths: response.strengths,
-                  areas_for_improvement: response.areas_for_improvement,
-                  submitted_at: response.submitted_at,
-                  status: response.status,
-                  employee: employeesData.find(e => e.id === request.employee_id) ? {
-                    id: request.employee_id,
-                    name: employeesData.find(e => e.id === request.employee_id)!.name,
-                    role: employeesData.find(e => e.id === request.employee_id)!.role
-                  } : undefined
-                } as DashboardFeedbackResponse;
-                return feedbackResponse;
-              })
-            )
-            .filter((response): response is DashboardFeedbackResponse => 
-              response !== null && typeof response === 'object' && 'id' in response
-            )
-            .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-            .slice(0, 4)
-            .map((response) => (
-              <Card 
-                key={response.id}
-                className="hover:shadow-lg transition-all duration-300 cursor-pointer"
-                onClick={() => response.employee && navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee.id}`)}
-              >
-                <CardContent className="pt-4 sm:pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                        <AvatarFallback>
-                          {response.employee?.name.split(' ').map((n: string) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold text-sm sm:text-base">{response.employee?.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs sm:text-sm text-muted-foreground">{response.employee?.role}</p>
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {response.relationship.replace('_', ' ')}
-                          </Badge>
+          <div className="grid gap-6 md:grid-cols-2">
+            {activeReviewCycle.feedback_requests
+              .flatMap(fr => fr.feedback_responses || [])
+              .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+              .slice(0, 4)
+              .map((response) => (
+                <Card 
+                  key={response.id}
+                  className="hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => response.employee && navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee.id}`)}
+                >
+                  <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                          <AvatarFallback>
+                            {response.employee?.name.split(' ').map((n: string) => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold text-sm sm:text-base">{response.employee?.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs sm:text-sm text-muted-foreground">{response.employee?.role}</p>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {response.relationship.replace('_', ' ')}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(response.submitted_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(response.submitted_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-3 mt-4">
-                    {response.strengths && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-1">Strengths</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {response.strengths}
-                        </p>
-                      </div>
-                    )}
-                    {response.areas_for_improvement && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-1">Areas for Improvement</h4>
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {response.areas_for_improvement}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    
+                    <div className="space-y-3 mt-4">
+                      {response.strengths && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-1">Strengths</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {response.strengths}
+                          </p>
+                        </div>
+                      )}
+                      {response.areas_for_improvement && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-1">Areas for Improvement</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {response.areas_for_improvement}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
           </div>
         </div>
       )}
