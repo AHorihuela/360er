@@ -39,6 +39,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface EmployeeToRemove {
+  id: string;
+  name: string;
+  employeeId: string;
+}
+
 function determineRequestStatus(request: FeedbackRequest): string {
   if (!request.target_responses) return REQUEST_STATUS.PENDING;
   if (request._count?.responses === 0) return REQUEST_STATUS.PENDING;
@@ -63,7 +69,7 @@ export function ReviewCycleDetailsPage() {
   const [newEmployee, setNewEmployee] = useState({ name: '', role: '' });
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-  const [employeeToRemove, setEmployeeToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [employeeToRemove, setEmployeeToRemove] = useState<EmployeeToRemove | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
 
@@ -137,10 +143,19 @@ export function ReviewCycleDetailsPage() {
     }
   }
 
+  const handleDelete = (request: FeedbackRequest) => {
+    setEmployeeToRemove({ 
+      id: request.id,
+      name: request.employee?.name || '',
+      employeeId: request.employee_id
+    });
+    setShowRemoveDialog(true);
+  };
+
   async function confirmRemoveEmployee() {
     if (!employeeToRemove || removingEmployeeId) return;
 
-    setRemovingEmployeeId(employeeToRemove.id);
+    setRemovingEmployeeId(employeeToRemove.employeeId);
     try {
       const { error } = await supabase
         .from('feedback_requests')
@@ -511,8 +526,7 @@ export function ReviewCycleDetailsPage() {
                                   className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setEmployeeToRemove({ id: request.employee_id, name: request.employee?.name || '' });
-                                    setShowRemoveDialog(true);
+                                    handleDelete(request);
                                   }}
                                 >
                                   <Trash2 className="h-4 w-4" />
