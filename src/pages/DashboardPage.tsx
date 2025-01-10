@@ -19,6 +19,7 @@ import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
 import { DashboardEmployee, ReviewCycleWithFeedback, DashboardFeedbackResponse, DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { FeedbackStatus, RelationshipType } from '@/types/feedback/base';
 import { useAuth } from '@/hooks/useAuth';
+import { generateShortId } from '../utils/uniqueId';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -215,8 +216,8 @@ export function DashboardPage(): JSX.Element {
     }
 
     try {
-      // Generate a unique link using crypto
-      const uniqueLink = crypto.randomUUID();
+      // Generate a short unique link
+      const uniqueLink = generateShortId();
 
       // Create a new feedback request for this employee in the current cycle
       const { error: insertError } = await supabase
