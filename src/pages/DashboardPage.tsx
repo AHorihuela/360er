@@ -225,7 +225,7 @@ export function DashboardPage(): JSX.Element {
           employee_id: employeeId,
           review_cycle_id: activeReviewCycle.id,
           status: 'pending',
-          target_responses: 3,
+          target_responses: 10,
           unique_link: uniqueLink
         });
 
