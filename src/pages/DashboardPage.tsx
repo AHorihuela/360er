@@ -1,66 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowRight, Users, PlusCircle, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ExternalLink, PlusCircle, Users, ArrowRight } from 'lucide-react';
 import {
-  ReviewCycleWithFeedback,
-  DashboardEmployee,
-  DashboardFeedbackResponse
-} from '@/types/feedback/dashboard';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ReviewCycle, FeedbackRequest, FeedbackResponse } from '@/types/review';
+import { DashboardEmployee, ReviewCycleWithFeedback, DashboardFeedbackResponse, DashboardFeedbackRequest } from '@/types/feedback/dashboard';
+import { FeedbackStatus, RelationshipType } from '@/types/feedback/base';
+import { useAuth } from '@/hooks/useAuth';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasEmployees, setHasEmployees] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycleWithFeedback | null>(null);
   const [employees, setEmployees] = useState<DashboardEmployee[]>([]);
-
-  const startRealtimeSubscription = (userId: string) => {
-    const feedbackChannel = supabase
-      .channel('feedback-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'feedback_responses',
-          filter: `user_id=eq.${userId}`
-        },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      feedbackChannel.unsubscribe();
-    };
-  };
+  const [employeesData, setEmployeesData] = useState<DashboardEmployee[]>([]);
+  const [allReviewCycles, setAllReviewCycles] = useState<ReviewCycle[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState<string | null>(() => {
+    // Initialize from localStorage if available
+    return localStorage.getItem('selectedCycleId');
+  });
 
   const fetchData = async () => {
     if (!user?.id) return;
-    
+
     try {
+      setIsLoading(true);
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select(`
-          id,
-          name,
-          role,
-          user_id,
-          created_at,
-          updated_at
-        `)
+        .select('*')
         .eq('user_id', user.id);
+
+      const { data: reviewCycles, error: cyclesError } = await supabase
+        .from('review_cycles')
+        .select(`
+          *,
+          feedback_requests (
+            id,
+            employee_id,
+            target_responses,
+            feedback_responses (
+              id,
+              relationship,
+              strengths,
+              areas_for_improvement,
+              submitted_at,
+              status
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (employeesError) {
         console.error('Error fetching employees:', employeesError);
@@ -69,54 +72,9 @@ export function DashboardPage(): JSX.Element {
           description: employeesError.message,
           variant: 'destructive',
         });
-        setIsLoading(false);
-        return;
+      } else if (employeesData) {
+        setEmployeesData(employeesData as DashboardEmployee[]);
       }
-
-      const hasEmployeesData = (employeesData?.length ?? 0) > 0;
-      setHasEmployees(hasEmployeesData);
-
-      // Initialize employees with 0 reviews
-      const employeesWithReviews = employeesData?.map(emp => ({
-        ...emp,
-        completed_reviews: 0,
-        total_reviews: 0
-      })) || [];
-
-      setEmployees(employeesWithReviews);
-
-      if (!hasEmployeesData) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Only fetch review cycles if we have employees
-      const { data: reviewCycles, error: cyclesError } = await supabase
-        .from('review_cycles')
-        .select(`
-          id,
-          title,
-          review_by_date,
-          feedback_requests (
-            id,
-            status,
-            employee_id,
-            target_responses,
-            unique_link,
-            feedback_responses (
-              id,
-              status,
-              submitted_at,
-              relationship,
-              strengths,
-              areas_for_improvement,
-              feedback_request_id
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
 
       if (cyclesError) {
         console.error('Error fetching review cycles:', cyclesError);
@@ -126,23 +84,98 @@ export function DashboardPage(): JSX.Element {
           variant: 'destructive',
         });
       } else if (reviewCycles && reviewCycles.length > 0) {
-        const cycle = reviewCycles[0];
-        const totalRequests = cycle.feedback_requests.reduce((acc, fr) => acc + fr.target_responses, 0);
-        const completedRequests = cycle.feedback_requests.reduce((acc, fr) => 
-          acc + (fr.feedback_responses?.length ?? 0), 0);
+        setAllReviewCycles(reviewCycles);
+        
+        // If no cycle is selected, use the most recent one
+        const cycleToShow = selectedCycleId 
+          ? reviewCycles.find(c => c.id === selectedCycleId) 
+          : reviewCycles[0];
 
-        setActiveReviewCycle({
-          id: cycle.id,
-          title: cycle.title,
-          review_by_date: cycle.review_by_date,
-          feedback_requests: cycle.feedback_requests,
-          total_requests: totalRequests,
-          completed_requests: completedRequests
-        });
+        if (cycleToShow && cycleToShow.feedback_requests) {
+          const totalRequests = cycleToShow.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 0);
+          const completedRequests = cycleToShow.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
+            acc + (fr.feedback_responses?.length ?? 0), 0);
 
-        // Update employees with their review status
-        const employeesWithStatus = employeesData.map(employee => {
-          const employeeRequest = cycle.feedback_requests.find(fr => fr.employee_id === employee.id);
+          // Map feedback requests to match DashboardFeedbackRequest type
+          const mappedFeedbackRequests = cycleToShow.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
+            ...fr,
+            feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
+              ...response,
+              feedback_request_id: fr.id,
+              status: response.status as FeedbackStatus,
+              relationship: response.relationship as RelationshipType
+            }))
+          }));
+
+          setActiveReviewCycle({
+            id: cycleToShow.id,
+            title: cycleToShow.title,
+            review_by_date: cycleToShow.review_by_date,
+            feedback_requests: mappedFeedbackRequests,
+            total_requests: totalRequests,
+            completed_requests: completedRequests
+          });
+
+          // Update employees with their review status
+          if (employeesData) {
+            const employeesWithStatus = employeesData.map((employee: DashboardEmployee) => {
+              const employeeRequest = cycleToShow.feedback_requests?.find((fr: FeedbackRequest) => fr.employee_id === employee.id);
+              return {
+                ...employee,
+                completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
+                total_reviews: employeeRequest?.target_responses ?? 0
+              };
+            });
+            setEmployees(employeesWithStatus);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch dashboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCycleChange = (cycleId: string) => {
+    // Save to localStorage when cycle changes
+    localStorage.setItem('selectedCycleId', cycleId);
+    setSelectedCycleId(cycleId);
+    const selectedCycle = allReviewCycles.find(c => c.id === cycleId);
+    if (selectedCycle && selectedCycle.feedback_requests) {
+      const totalRequests = selectedCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 0);
+      const completedRequests = selectedCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
+        acc + (fr.feedback_responses?.length ?? 0), 0);
+
+      // Map feedback requests to match DashboardFeedbackRequest type
+      const mappedFeedbackRequests = selectedCycle.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
+        ...fr,
+        feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
+          ...response,
+          feedback_request_id: fr.id,
+          status: response.status as FeedbackStatus,
+          relationship: response.relationship as RelationshipType
+        }))
+      }));
+
+      setActiveReviewCycle({
+        id: selectedCycle.id,
+        title: selectedCycle.title,
+        review_by_date: selectedCycle.review_by_date,
+        feedback_requests: mappedFeedbackRequests,
+        total_requests: totalRequests,
+        completed_requests: completedRequests
+      });
+
+      // Update employees with their review status
+      if (employeesData) {
+        const employeesWithStatus = employeesData.map((employee: DashboardEmployee) => {
+          const employeeRequest = selectedCycle.feedback_requests?.find((fr: FeedbackRequest) => fr.employee_id === employee.id);
           return {
             ...employee,
             completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
@@ -151,22 +184,23 @@ export function DashboardPage(): JSX.Element {
         });
         setEmployees(employeesWithStatus);
       }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  // Clear selected cycle if it doesn't exist in current cycles
+  useEffect(() => {
+    if (selectedCycleId && allReviewCycles.length > 0) {
+      const cycleExists = allReviewCycles.some(c => c.id === selectedCycleId);
+      if (!cycleExists) {
+        localStorage.removeItem('selectedCycleId');
+        setSelectedCycleId(null);
+      }
+    }
+  }, [allReviewCycles, selectedCycleId]);
 
   useEffect(() => {
     if (!user?.id) return;
     fetchData();
-    startRealtimeSubscription(user.id);
   }, [user?.id, toast]);
 
   // Add new function to handle adding employee to current cycle
@@ -223,7 +257,7 @@ export function DashboardPage(): JSX.Element {
   }
 
   // Show onboarding for new users only if they have no employees
-  if (!hasEmployees) {
+  if (!employeesData.length) {
     return (
       <div className="container mx-auto max-w-4xl py-12">
         <div className="space-y-8">
@@ -268,11 +302,28 @@ export function DashboardPage(): JSX.Element {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            {activeReviewCycle 
-              ? `Current Review Cycle: ${activeReviewCycle.title}`
-              : 'No active review cycle'}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-muted-foreground">Current Review Cycle:</p>
+            {allReviewCycles.length > 0 ? (
+              <Select
+                value={activeReviewCycle?.id}
+                onValueChange={handleCycleChange}
+              >
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Select a review cycle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allReviewCycles.map((cycle) => (
+                    <SelectItem key={cycle.id} value={cycle.id}>
+                      {cycle.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className="text-muted-foreground">No active review cycle</span>
+            )}
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           {activeReviewCycle && (
@@ -393,10 +444,10 @@ export function DashboardPage(): JSX.Element {
                   areas_for_improvement: response.areas_for_improvement,
                   submitted_at: response.submitted_at,
                   status: response.status,
-                  employee: employees.find(e => e.id === request.employee_id) ? {
+                  employee: employeesData.find(e => e.id === request.employee_id) ? {
                     id: request.employee_id,
-                    name: employees.find(e => e.id === request.employee_id)!.name,
-                    role: employees.find(e => e.id === request.employee_id)!.role
+                    name: employeesData.find(e => e.id === request.employee_id)!.name,
+                    role: employeesData.find(e => e.id === request.employee_id)!.role
                   } : undefined
                 } as DashboardFeedbackResponse;
                 return feedbackResponse;
@@ -462,23 +513,16 @@ export function DashboardPage(): JSX.Element {
       )}
 
       {/* Other Employees */}
-      {employees.filter(e => e.total_reviews === 0).length > 0 && (
+      {activeReviewCycle && employeesData
+        .filter(employee => !activeReviewCycle.feedback_requests.some(fr => fr.employee_id === employee.id))
+        .length > 0 && (
         <div className="space-y-4 mt-8 pt-8 border-t">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-muted-foreground">Other Employees</h2>
-            {!activeReviewCycle && (
-              <Button
-                variant="outline"
-                onClick={() => navigate('/reviews/new-cycle')}
-                size="sm"
-              >
-                Start New Review Cycle
-              </Button>
-            )}
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {employees
-              .filter(e => e.total_reviews === 0)
+            {employeesData
+              .filter(employee => !activeReviewCycle.feedback_requests.some(fr => fr.employee_id === employee.id))
               .map((employee) => (
                 <Card 
                   key={employee.id}
@@ -506,11 +550,8 @@ export function DashboardPage(): JSX.Element {
                         handleAddEmployeeToCycle(employee.id);
                       }}
                       className="bg-white text-black hover:bg-white/90"
-                      disabled={!activeReviewCycle}
                     >
-                      {activeReviewCycle 
-                        ? 'Add to Current Cycle' 
-                        : 'No Active Cycle'}
+                      Add to Current Cycle
                     </Button>
                   </div>
                 </Card>
