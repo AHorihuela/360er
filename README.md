@@ -50,6 +50,8 @@ Squad360 is a modern, web-based 360-degree feedback platform that enables manage
   - Team-wide analytics dashboard
   - Individual performance insights
   - Review collection progress tracking
+  - Status badges with consistent formatting
+  - Real-time completion tracking
 
 - **Quality Assurance** ✅:
   - Minimum review thresholds
@@ -64,6 +66,8 @@ Squad360 is a modern, web-based 360-degree feedback platform that enables manage
   - Review cycle management
   - Team management
   - Export capabilities
+  - Unique shareable feedback links
+  - Editable review cycle titles
 
 ## Competency Framework 🎯
 
@@ -141,6 +145,7 @@ Our platform evaluates seven core competencies:
   - jsPDF for PDF generation
   - html2canvas for PDF rendering
   - markdown-it for markdown parsing
+  - Sonner for toast notifications
 
 - **Backend** ⚙️:
   - Supabase for database and authentication
