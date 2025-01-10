@@ -11,33 +11,25 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const code = searchParams.get('code');
-        
-        console.log('Auth callback initiated:', { hasCode: !!code });
+        console.log('Auth callback initiated');
         console.log('Full URL:', window.location.href);
         console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
-        if (!code) {
-          console.error('No code found in URL');
-          throw new Error('No code found in URL');
-        }
-
-        // Exchange the code for a session
-        console.log('Exchanging code for session');
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
+        // Let Supabase handle the auth callback
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
-          console.error('Code exchange error:', error);
+          console.error('Session error:', error);
           throw error;
         }
 
-        if (!data.session) {
-          console.error('No session available after code exchange');
-          throw new Error('No session available after code exchange');
+        if (!session) {
+          console.error('No session available');
+          throw new Error('No session available');
         }
 
         // Check if this is a recovery flow by looking at the session
-        const isRecoveryFlow = data.session.user?.aud === 'recovery';
+        const isRecoveryFlow = session.user?.aud === 'recovery';
         console.log('Session established', { isRecoveryFlow });
 
         if (isRecoveryFlow) {
@@ -45,25 +37,15 @@ export default function AuthCallbackPage() {
           navigate('/update-password', { 
             state: { 
               recoveryMode: true,
-              accessToken: data.session.access_token,
-              refreshToken: data.session.refresh_token
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token
             }
           });
           return;
         }
 
-        // For other auth flows (signup, etc)
-        console.log('Standard auth flow, checking session');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-
-        if (session) {
-          console.log('Session found, redirecting to dashboard');
-          navigate('/dashboard');
-        } else {
-          console.log('No session found, redirecting to login');
-          navigate('/login');
-        }
+        console.log('Standard auth flow, redirecting to dashboard');
+        navigate('/dashboard');
       } catch (error: any) {
         console.error('Auth error:', error);
         console.error('Full error details:', {

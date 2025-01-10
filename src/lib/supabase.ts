@@ -13,7 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    debug: process.env.NODE_ENV === 'development'
   }
 });
 
@@ -40,6 +41,6 @@ export async function checkAuthStatus() {
 // Set session ID in storage
 export function setSessionId(sessionId: string) {
   if (typeof window !== 'undefined') {
-    window.sessionStorage.setItem('feedback_session_id', sessionId);
+    window.localStorage.setItem('feedback_session_id', sessionId);
   }
 } 
