@@ -12,9 +12,8 @@ export default function AuthCallbackPage() {
     const handleCallback = async () => {
       try {
         const code = searchParams.get('code');
-        const type = searchParams.get('type');
         
-        console.log('Auth callback initiated:', { type, hasCode: !!code });
+        console.log('Auth callback initiated:', { hasCode: !!code });
         console.log('Full URL:', window.location.href);
         console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
@@ -23,23 +22,26 @@ export default function AuthCallbackPage() {
           throw new Error('No code found in URL');
         }
 
-        if (type === 'recovery') {
-          console.log('Starting password recovery flow');
-          // Exchange the code for a session
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        // Exchange the code for a session
+        console.log('Exchanging code for session');
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-          if (error) {
-            console.error('Code exchange error:', error);
-            throw error;
-          }
+        if (error) {
+          console.error('Code exchange error:', error);
+          throw error;
+        }
 
-          if (!data.session) {
-            console.error('No session available after code exchange');
-            throw new Error('No session available after code exchange');
-          }
+        if (!data.session) {
+          console.error('No session available after code exchange');
+          throw new Error('No session available after code exchange');
+        }
 
-          console.log('Session established successfully, redirecting to password update');
-          // If successful, redirect to update password with the session
+        // Check if this is a recovery flow by looking at the session
+        const isRecoveryFlow = data.session.user?.aud === 'recovery';
+        console.log('Session established', { isRecoveryFlow });
+
+        if (isRecoveryFlow) {
+          console.log('Recovery flow detected, redirecting to password update');
           navigate('/update-password', { 
             state: { 
               recoveryMode: true,
@@ -51,7 +53,7 @@ export default function AuthCallbackPage() {
         }
 
         // For other auth flows (signup, etc)
-        console.log('Handling non-recovery auth flow');
+        console.log('Standard auth flow, checking session');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
 
