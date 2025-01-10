@@ -12,33 +12,45 @@ export default function AuthCallbackPage() {
     const handleCallback = async () => {
       try {
         console.log('Auth callback initiated');
+        console.log('Full URL:', window.location.href);
+        console.log('Search:', window.location.search);
+        console.log('Hash:', window.location.hash);
         
-        // Get both search params and hash params
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        // First try to get the token from the URL fragment
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+        const token = hashParams.get('access_token') || searchParams.get('token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type') || searchParams.get('type');
         
-        // Combine params, with hash taking precedence
-        const allParams = new Map([
-          ...Array.from(urlParams.entries()),
-          ...Array.from(hashParams.entries())
-        ]);
-        
-        console.log('All params:', Object.fromEntries(allParams));
+        console.log('Parsed params:', { token, refreshToken, type });
 
-        // Check for error parameters
-        const error = allParams.get('error');
-        const errorDescription = allParams.get('error_description');
+        // Check for error parameters in both search and hash
+        const error = searchParams.get('error') || hashParams.get('error');
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
+        
         if (error) {
           console.error('Error in params:', { error, description: errorDescription });
+          // Don't throw immediately for OTP errors
+          if (error === 'access_denied' && errorDescription?.includes('Email link is invalid or has expired')) {
+            console.log('Handling expired OTP...');
+            toast({
+              title: 'Link Expired',
+              description: 'The password reset link has expired. Please request a new one.',
+              variant: 'destructive',
+            });
+            navigate('/login');
+            return;
+          }
           throw new Error(errorDescription || error);
         }
 
-        // Check for recovery token in both query and hash
-        const token = urlParams.get('token') || hashParams.get('token');
-        const type = urlParams.get('type') || hashParams.get('type');
-        
-        if (token && type === 'recovery') {
+        // Handle recovery flow
+        if (type === 'recovery' || window.location.hash.includes('type=recovery')) {
           console.log('Recovery flow detected');
+          if (!token) {
+            console.error('No token found for recovery flow');
+            throw new Error('Invalid recovery link');
+          }
           const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'recovery'
@@ -54,7 +66,24 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Handle other auth flows
+        // Handle access token in hash (standard OAuth flow)
+        if (token) {
+          console.log('Access token found, setting session...');
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            throw sessionError;
+          }
+
+          if (session) {
+            console.log('Session established, redirecting to dashboard');
+            navigate('/dashboard');
+            return;
+          }
+        }
+
+        // If we get here without a token or session, check current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
