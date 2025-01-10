@@ -1,14 +1,32 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { toast } from '@/components/ui/use-toast';
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   useEffect(() => {
-    const type = searchParams.get('type');
+    // Check URL hash for error parameters
+    const hashParams = new URLSearchParams(location.hash.replace('#', ''));
+    const error = hashParams.get('error');
+    const errorDescription = hashParams.get('error_description');
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: errorDescription || 'An error occurred during authentication',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
+    // Check if this is a password recovery flow
+    const type = searchParams.get('type') || hashParams.get('type');
     
     if (type === 'recovery') {
       // For password reset flow, redirect to update password page
@@ -24,7 +42,7 @@ export default function AuthCallbackPage() {
         navigate('/login');
       }
     });
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, location]);
 
   return (
     <MainLayout>

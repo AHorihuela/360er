@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,29 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 export default function UpdatePasswordPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTokenValid, setIsTokenValid] = useState(false);
+
+  useEffect(() => {
+    // Check if we have a valid recovery token
+    const hashParams = new URLSearchParams(location.hash.replace('#', ''));
+    const accessToken = hashParams.get('access_token');
+    
+    if (accessToken) {
+      setIsTokenValid(true);
+      // Set the access token for the password update
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: '' });
+    } else {
+      toast({
+        title: 'Invalid recovery link',
+        description: 'Please request a new password reset link.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+    }
+  }, [navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +48,8 @@ export default function UpdatePasswordPage() {
         description: 'You can now log in with your new password.',
       });
 
+      // Clear the session after password update
+      await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
       toast({
@@ -38,6 +61,19 @@ export default function UpdatePasswordPage() {
       setIsLoading(false);
     }
   };
+
+  if (!isTokenValid) {
+    return (
+      <MainLayout>
+        <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-semibold">Invalid Recovery Link</div>
+            <div className="text-muted-foreground">Please request a new password reset link</div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
