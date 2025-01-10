@@ -11,47 +11,57 @@ export default function UpdatePasswordPage() {
   const location = useLocation();
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isTokenValid, setIsTokenValid] = useState(false);
 
   useEffect(() => {
-    // Check if we have a valid recovery token
-    const hashParams = new URLSearchParams(location.hash.replace('#', ''));
-    const accessToken = hashParams.get('access_token');
-    
-    if (accessToken) {
-      setIsTokenValid(true);
-      // Set the access token for the password update
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: '' });
-    } else {
-      toast({
-        title: 'Invalid recovery link',
-        description: 'Please request a new password reset link.',
-        variant: 'destructive',
-      });
-      navigate('/login');
-    }
-  }, [navigate, location]);
+    // Check if we have the recovery state
+    console.log('Update password page mounted', {
+      hasState: !!location.state,
+      isRecoveryMode: location.state?.recoveryMode
+    });
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    console.log('Password update initiated');
 
     try {
+      // Check if we have recovery tokens
+      const recoveryMode = location.state?.recoveryMode;
+      const accessToken = location.state?.accessToken;
+      
+      console.log('Update context:', { 
+        recoveryMode,
+        hasAccessToken: !!accessToken
+      });
+
+      // Update the password directly
       const { error } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Password update failed:', error);
+        throw error;
+      }
 
+      console.log('Password updated successfully');
       toast({
         title: 'Password updated successfully',
         description: 'You can now log in with your new password.',
       });
 
-      // Clear the session after password update
+      // Clear the session and redirect to login
+      console.log('Signing out user');
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
+      console.error('Password update error:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        details: error.details || 'No additional details'
+      });
       toast({
         title: 'Error updating password',
         description: error.message,
@@ -61,19 +71,6 @@ export default function UpdatePasswordPage() {
       setIsLoading(false);
     }
   };
-
-  if (!isTokenValid) {
-    return (
-      <MainLayout>
-        <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-semibold">Invalid Recovery Link</div>
-            <div className="text-muted-foreground">Please request a new password reset link</div>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
