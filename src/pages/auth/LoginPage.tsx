@@ -35,10 +35,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col relative overflow-hidden">
-      {/* Original background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5" />
-      
+    <div className="auth-page">
       {/* Background animation */}
       <div className="absolute inset-0">
         <FeedbackViz />

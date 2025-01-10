@@ -176,3 +176,36 @@
   background-color: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
 }
+
+.auth-page {
+  @apply relative min-h-screen flex items-center justify-center;
+  background: radial-gradient(circle at center, rgb(255, 252, 250) 0%, rgb(255, 220, 210) 100%);
+}
+
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/network-bg.svg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.4;
+  z-index: 1;
+  animation: pulse 30s ease-in-out infinite;
+}
+
+.auth-page > * {
+  z-index: 2;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
