@@ -137,28 +137,6 @@ export function ReviewCycleDetailsPage() {
     }
   }
 
-  async function handleCopyLink(uniqueLink: string) {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/feedback/${uniqueLink}`);
-      toast({
-        title: "Success",
-        description: "Feedback link copied to clipboard",
-      });
-    } catch (error) {
-      console.error('Error copying link:', error);
-      toast({
-        title: "Error",
-        description: "Failed to copy link",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function handleRemoveEmployee(requestId: string, employeeName: string) {
-    setEmployeeToRemove({ id: requestId, name: employeeName });
-    setShowRemoveDialog(true);
-  }
-
   async function confirmRemoveEmployee() {
     if (!employeeToRemove || removingEmployeeId) return;
 
@@ -187,21 +165,6 @@ export function ReviewCycleDetailsPage() {
       setRemovingEmployeeId(null);
       setShowRemoveDialog(false);
       setEmployeeToRemove(null);
-    }
-  }
-
-  function getStatusBadgeVariant(request: FeedbackRequest) {
-    switch (request.status) {
-      case REQUEST_STATUS.COMPLETED:
-        return 'default';
-      case REQUEST_STATUS.IN_PROGRESS:
-        return 'secondary';
-      case REQUEST_STATUS.PENDING:
-        return 'outline';
-      case REQUEST_STATUS.EXCEEDED:
-        return 'destructive';
-      default:
-        return 'outline';
     }
   }
 
