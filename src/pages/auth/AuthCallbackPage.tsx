@@ -39,7 +39,7 @@ export default function AuthCallbackPage() {
         
         if (token && type === 'recovery') {
           console.log('Recovery flow detected');
-          const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'recovery'
           });
