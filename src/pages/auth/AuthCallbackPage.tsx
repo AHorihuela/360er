@@ -11,47 +11,31 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const token = searchParams.get('token');
+        const code = searchParams.get('code');
         const type = searchParams.get('type');
         
-        console.log('Auth callback initiated:', { type, hasToken: !!token });
+        console.log('Auth callback initiated:', { type, hasCode: !!code });
         console.log('Full URL:', window.location.href);
         console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
-        if (!token) {
-          console.error('No token found in URL');
-          throw new Error('No token found in URL');
+        if (!code) {
+          console.error('No code found in URL');
+          throw new Error('No code found in URL');
         }
 
         if (type === 'recovery') {
           console.log('Starting password recovery flow');
-          // For password reset, we need to verify the recovery token
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: 'recovery'
-          });
+          // Exchange the code for a session
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
           if (error) {
-            console.error('Recovery verification error:', error);
+            console.error('Code exchange error:', error);
             throw error;
           }
-          console.log('OTP verification successful');
 
-          // After verification, exchange the token for a session
-          console.log('Attempting to set session with recovery token');
-          const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-            access_token: token,
-            refresh_token: token // Using same token as both since it's a recovery flow
-          });
-
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            throw sessionError;
-          }
-
-          if (!session) {
-            console.error('No session available after verification');
-            throw new Error('No session available after verification');
+          if (!data.session) {
+            console.error('No session available after code exchange');
+            throw new Error('No session available after code exchange');
           }
 
           console.log('Session established successfully, redirecting to password update');
@@ -59,8 +43,8 @@ export default function AuthCallbackPage() {
           navigate('/update-password', { 
             state: { 
               recoveryMode: true,
-              accessToken: session.access_token,
-              refreshToken: session.refresh_token
+              accessToken: data.session.access_token,
+              refreshToken: data.session.refresh_token
             }
           });
           return;
