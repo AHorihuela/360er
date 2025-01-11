@@ -16,21 +16,30 @@ export default function AuthCallbackPage() {
         console.log('Search:', window.location.search);
         console.log('Hash:', window.location.hash);
         
-        // First try to get the token from the URL fragment
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-        const token = hashParams.get('access_token') || searchParams.get('token');
-        const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type') || searchParams.get('type');
-        
-        console.log('Parsed params:', { token, refreshToken, type });
+        // First check if we're already logged in and this is a password reset
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession) {
+          console.log('Existing session found, signing out for password reset...');
+          await supabase.auth.signOut();
+        }
 
-        // Check for error parameters in both search and hash
-        const error = searchParams.get('error') || hashParams.get('error');
-        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
+        // Parse URL parameters
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Try to get recovery token from various locations
+        const token = urlParams.get('token') || hashParams.get('token') || hashParams.get('access_token');
+        const type = urlParams.get('type') || hashParams.get('type');
+        const recoveryFlow = type === 'recovery' || window.location.hash.includes('type=recovery');
+        
+        console.log('Parsed params:', { token, type, recoveryFlow });
+
+        // Check for error parameters
+        const error = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
         
         if (error) {
           console.error('Error in params:', { error, description: errorDescription });
-          // Don't throw immediately for OTP errors
           if (error === 'access_denied' && errorDescription?.includes('Email link is invalid or has expired')) {
             console.log('Handling expired OTP...');
             toast({
@@ -45,12 +54,13 @@ export default function AuthCallbackPage() {
         }
 
         // Handle recovery flow
-        if (type === 'recovery' || window.location.hash.includes('type=recovery')) {
+        if (recoveryFlow) {
           console.log('Recovery flow detected');
           if (!token) {
             console.error('No token found for recovery flow');
             throw new Error('Invalid recovery link');
           }
+
           const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'recovery'
@@ -66,24 +76,7 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Handle access token in hash (standard OAuth flow)
-        if (token) {
-          console.log('Access token found, setting session...');
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            throw sessionError;
-          }
-
-          if (session) {
-            console.log('Session established, redirecting to dashboard');
-            navigate('/dashboard');
-            return;
-          }
-        }
-
-        // If we get here without a token or session, check current session
+        // If we get here, check if we have a valid session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
