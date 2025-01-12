@@ -20,13 +20,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { generateAIReport } from '@/lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
+import { cn } from '@/lib/utils';
 
 interface ReviewCycle {
   id: string;
@@ -768,38 +769,62 @@ export function EmployeeReviewDetailsPage() {
                   <div className="divide-y">
                     {sortedFeedback.map((feedback) => (
                       <div key={feedback.id} className="p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs capitalize">
+                            <Badge variant="outline" className={cn(
+                              "text-xs capitalize flex items-center gap-1",
+                              feedback.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
+                              feedback.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
+                              feedback.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
+                            )}>
+                              {feedback.relationship === 'senior_colleague' && <ArrowUpIcon className="h-3 w-3" />}
+                              {feedback.relationship === 'equal_colleague' && <EqualIcon className="h-3 w-3" />}
+                              {feedback.relationship === 'junior_colleague' && <ArrowDownIcon className="h-3 w-3" />}
                               {feedback.relationship.replace('_', ' ')}
                             </Badge>
+                          </div>
+                          <div className="flex items-center gap-4">
                             <span className="text-xs text-muted-foreground">
                               {new Date(feedback.submitted_at ?? feedback.created_at ?? 0).toLocaleDateString()}
                             </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingFeedbackId === feedback.id}
+                              onClick={() => handleDeleteClick(feedback.id)}
+                              className="h-7 px-2 text-destructive hover:text-destructive-foreground"
+                            >
+                              {deletingFeedbackId === feedback.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deletingFeedbackId === feedback.id}
-                            onClick={() => handleDeleteClick(feedback.id)}
-                            className="h-7 px-2 text-destructive hover:text-destructive-foreground"
-                          >
-                            {deletingFeedbackId === feedback.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
                         </div>
-                        <div className="space-y-2 text-sm">
-                          <div>
-                            <span className="font-medium">Strengths: </span>
-                            <span className="text-muted-foreground">{feedback.strengths}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium">Areas for Improvement: </span>
-                            <span className="text-muted-foreground">{feedback.areas_for_improvement}</span>
-                          </div>
+                        <div className="space-y-4">
+                          {feedback.strengths && (
+                            <div className="bg-slate-50 p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                <StarIcon className="h-4 w-4 text-yellow-500" />
+                                Strengths
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {feedback.strengths}
+                              </p>
+                            </div>
+                          )}
+                          {feedback.areas_for_improvement && (
+                            <div className="bg-slate-50 p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                                Areas for Improvement
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {feedback.areas_for_improvement}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
