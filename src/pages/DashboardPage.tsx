@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, PlusCircle, Users, ArrowRight } from 'lucide-react';
+import { ExternalLink, PlusCircle, Users, ArrowRight, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ import { DashboardEmployee, ReviewCycleWithFeedback, DashboardFeedbackResponse, 
 import { FeedbackStatus, RelationshipType } from '@/types/feedback/base';
 import { useAuth } from '@/hooks/useAuth';
 import { generateShortId } from '../utils/uniqueId';
+import { cn } from '@/lib/utils';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -436,59 +437,98 @@ export function DashboardPage(): JSX.Element {
           <h2 className="text-xl font-semibold">Recent Reviews</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {activeReviewCycle.feedback_requests
-              .flatMap(fr => fr.feedback_responses || [])
+              .flatMap(fr => (fr.feedback_responses || []).map(response => ({
+                ...response,
+                employee_id: fr.employee_id
+              })))
               .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
               .slice(0, 4)
-              .map((response) => (
-                <Card 
-                  key={response.id}
-                  className="hover:shadow-lg transition-all duration-300 cursor-pointer"
-                  onClick={() => response.employee && navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee.id}`)}
-                >
-                  <CardContent className="pt-4 sm:pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                          <AvatarFallback>
-                            {response.employee?.name.split(' ').map((n: string) => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-semibold text-sm sm:text-base">{response.employee?.name}</h3>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs sm:text-sm text-muted-foreground">{response.employee?.role}</p>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {response.relationship.replace('_', ' ')}
-                            </Badge>
+              .map((response) => {
+                // Find the employee from the employees array
+                const employee = employees.find(e => e.id === response.employee_id);
+                if (!employee) return null;
+
+                return (
+                  <Card 
+                    key={response.id}
+                    className={cn(
+                      "hover:shadow-lg transition-all duration-300 cursor-pointer",
+                      response.relationship === 'senior_colleague' && 'border-blue-100',
+                      response.relationship === 'equal_colleague' && 'border-green-100',
+                      response.relationship === 'junior_colleague' && 'border-purple-100'
+                    )}
+                    onClick={() => navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee_id}`)}
+                  >
+                    <CardContent className="pt-4 sm:pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                            <AvatarFallback>
+                              {employee.name.split(' ').map((n: string) => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-semibold text-sm sm:text-base">{employee.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs sm:text-sm text-muted-foreground">{employee.role}</p>
+                              <Badge variant="outline" className={cn(
+                                "text-xs capitalize flex items-center gap-1",
+                                response.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
+                                response.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
+                                response.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
+                              )}>
+                                {response.relationship === 'senior_colleague' && <ArrowUpIcon className="h-3 w-3" />}
+                                {response.relationship === 'equal_colleague' && <EqualIcon className="h-3 w-3" />}
+                                {response.relationship === 'junior_colleague' && <ArrowDownIcon className="h-3 w-3" />}
+                                {response.relationship.replace('_', ' ')}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
+                        <div className="text-right">
+                          <span className="text-xs text-muted-foreground block">
+                            {new Date(response.submitted_at).toLocaleDateString()}
+                          </span>
+                          <span className="text-xs text-muted-foreground mt-1 block">
+                            Review #{employee.completed_reviews}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(response.submitted_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-3 mt-4">
-                      {response.strengths && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Strengths</h4>
-                          <p className="text-sm text-muted-foreground line-clamp-3">
-                            {response.strengths}
-                          </p>
-                        </div>
-                      )}
-                      {response.areas_for_improvement && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Areas for Improvement</h4>
-                          <p className="text-sm text-muted-foreground line-clamp-3">
-                            {response.areas_for_improvement}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                      <div className="space-y-4 mt-4">
+                        {response.strengths && (
+                          <div className="bg-slate-50 p-3 rounded-md">
+                            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <StarIcon className="h-4 w-4 text-yellow-500" />
+                              Strengths
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {response.strengths}
+                            </p>
+                          </div>
+                        )}
+                        {response.areas_for_improvement && (
+                          <div className="bg-slate-50 p-3 rounded-md">
+                            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                              Areas for Improvement
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {response.areas_for_improvement}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex justify-end">
+                        {employee.completed_reviews === 1 && (
+                          <Badge variant="secondary" className="text-xs">First Review</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </div>
       )}
