@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
-import { LoginPage } from './pages/auth/LoginPage';
+import LoginPage from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EmployeesPage } from './pages/employees/EmployeesPage';

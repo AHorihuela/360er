@@ -14,15 +14,31 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error checking session:', error);
+        toast({
+          title: 'Session Error',
+          description: 'Unable to verify your session. Please try again.',
+          variant: 'destructive',
+        });
+        navigate('/login');
+        return;
+      }
+      
       if (!session) {
+        console.log('No active session found');
         toast({
           title: 'Session Expired',
           description: 'Please request a new password reset link',
           variant: 'destructive',
         });
         navigate('/login');
+        return;
       }
+
+      console.log('Valid session found for password update');
     };
     
     checkSession();

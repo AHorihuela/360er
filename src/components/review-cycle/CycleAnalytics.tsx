@@ -315,10 +315,19 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
-                      comp.name === name
-                    )?.[1]?.aspects?.slice(0, 3).join(' • ')}
+                  <p className="text-xs text-muted-foreground leading-relaxed sm:leading-normal">
+                    <span className="hidden sm:inline">
+                      {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                        comp.name === name
+                      )?.[1]?.aspects?.join(' • ')}
+                    </span>
+                    <span className="sm:hidden space-y-0.5 block">
+                      {Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
+                        comp.name === name
+                      )?.[1]?.aspects?.map((aspect, i) => (
+                        <span key={i} className="block">• {aspect}</span>
+                      ))}
+                    </span>
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">

@@ -5,7 +5,7 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { FeedbackViz } from '@/components/FeedbackViz';
 
-export function LoginPage() {
+export default function LoginPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
