@@ -33,23 +33,9 @@ interface AggregateScore {
 const MIN_REVIEWS_REQUIRED = 5;
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
-  console.log('CompetencyHeatmap - Starting render');
-  console.log('feedbackRequests:', feedbackRequests);
-
   // Get all responses that have been submitted
   const responses = feedbackRequests.flatMap(fr => fr.feedback_responses || []);
-  console.log('Total responses:', responses.length);
-  if (responses.length === 0) {
-    console.log('No responses found, returning null');
-    return null;
-  }
-
-  // Get all analytics data
-  const analytics = feedbackRequests
-    .filter(fr => fr.analytics?.insights)
-    .map(fr => fr.analytics!.insights)
-    .flat();
-  console.log('Analytics data:', analytics);
+  if (responses.length === 0) return null;
 
   // Count employees with sufficient responses and analytics
   const employeesWithSufficientData = feedbackRequests
@@ -62,18 +48,14 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   const employeesWithAnalytics = new Set(
     employeesWithSufficientData.map(fr => fr.employee_id)
   );
-  console.log('Employees with sufficient data:', employeesWithAnalytics.size);
 
   // Get total number of employees
   const totalEmployees = new Set(
     feedbackRequests.map(fr => fr.employee_id)
   ).size;
-  console.log('Total employees:', totalEmployees);
 
-  if (employeesWithAnalytics.size < MIN_REVIEWS_REQUIRED) {
-    console.log(`Not enough employees with analytics (${employeesWithAnalytics.size} < ${MIN_REVIEWS_REQUIRED}), returning null`);
-    return null;
-  }
+  // Only proceed if we have at least one employee with sufficient data
+  if (employeesWithAnalytics.size === 0) return null;
 
   // Only use analytics from employees with sufficient data
   const validAnalytics = employeesWithSufficientData
@@ -96,7 +78,6 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     });
     return acc;
   }, {});
-  console.log('Competency scores:', competencyScores);
 
   // Calculate average scores and sort by score
   const sortedScores = Object.entries(competencyScores).map(([name, scores]) => {
@@ -114,12 +95,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0)
     };
   }).sort((a, b) => b.score - a.score);
-  console.log('Sorted scores:', sortedScores);
 
-  if (sortedScores.length === 0) {
-    console.log('No sorted scores, returning null');
-    return null;
-  }
+  if (sortedScores.length === 0) return null;
 
   // Format data for radar chart
   const chartData = sortedScores.map(score => ({
@@ -130,7 +107,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     description: score.description,
     evidenceCount: score.evidenceCount
   }));
-  console.log('Chart data:', chartData);
+
+  const employeeText = employeesWithAnalytics.size === 1 
+    ? "1 employee" 
+    : `${employeesWithAnalytics.size} employees`;
 
   return (
     <Card>
@@ -144,7 +124,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <TooltipContent>
               <p className="max-w-xs text-sm">
                 Radar chart showing team competency scores. Larger area indicates stronger performance.
-                Requires at least {MIN_REVIEWS_REQUIRED} responses per employee for accurate analysis.
+                Each employee needs at least {MIN_REVIEWS_REQUIRED} reviews to be included in the analysis.
               </p>
             </TooltipContent>
           </Tooltip>
@@ -152,7 +132,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-2">
-          Based on {employeesWithAnalytics.size} of {totalEmployees} employees with {MIN_REVIEWS_REQUIRED}+ reviews
+          Based on {employeeText} with {MIN_REVIEWS_REQUIRED}+ reviews
+          {totalEmployees > 1 && ` (out of ${totalEmployees} total)`}
         </p>
         <div className="h-[300px] w-full mt-4">
           <ResponsiveContainer width="100%" height="100%">
