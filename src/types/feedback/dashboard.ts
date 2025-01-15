@@ -33,6 +33,20 @@ export interface DashboardFeedbackRequest {
   target_responses: number;
   unique_link: string;
   feedback_responses?: DashboardFeedbackResponse[];
+  employee?: DashboardEmployeeReference;
+  analytics?: {
+    id: string;
+    insights: Array<{
+      competencies: Array<{
+        name: string;
+        score: number;
+        confidence: 'low' | 'medium' | 'high';
+        description: string;
+        evidenceCount: number;
+      }>;
+      relationship: string;
+    }>;
+  };
 }
 
 export interface DashboardReviewCycle {

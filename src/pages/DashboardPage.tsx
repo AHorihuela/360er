@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { generateShortId } from '../utils/uniqueId';
 import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
+import { CompetencyHeatmap } from '@/components/dashboard/CompetencyHeatmap';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -63,6 +64,10 @@ export function DashboardPage(): JSX.Element {
               areas_for_improvement,
               submitted_at,
               status
+            ),
+            analytics:feedback_analytics (
+              id,
+              insights
             )
           )
         `)
@@ -108,7 +113,11 @@ export function DashboardPage(): JSX.Element {
               feedback_request_id: fr.id,
               status: response.status as FeedbackStatus,
               relationship: response.relationship as RelationshipType
-            }))
+            })),
+            analytics: fr.analytics ? {
+              id: fr.analytics.id,
+              insights: fr.analytics.insights
+            } : undefined
           }));
 
           setActiveReviewCycle({
@@ -164,7 +173,11 @@ export function DashboardPage(): JSX.Element {
           feedback_request_id: fr.id,
           status: response.status as FeedbackStatus,
           relationship: response.relationship as RelationshipType
-        }))
+        })),
+        analytics: fr.analytics ? {
+          id: fr.analytics.id,
+          insights: fr.analytics.insights
+        } : undefined
       }));
 
       setActiveReviewCycle({
@@ -384,11 +397,19 @@ export function DashboardPage(): JSX.Element {
             </CardContent>
           </Card>
 
-          {/* Feedback Timeline */}
-          <FeedbackTimeline 
-            feedbackRequests={activeReviewCycle.feedback_requests}
-            startDate={activeReviewCycle.review_by_date}
-          />
+          {/* Analytics Grid */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+            {/* Feedback Timeline */}
+            <FeedbackTimeline 
+              feedbackRequests={activeReviewCycle.feedback_requests}
+              startDate={activeReviewCycle.review_by_date}
+            />
+
+            {/* Team Competency Heatmap */}
+            <CompetencyHeatmap 
+              feedbackRequests={activeReviewCycle.feedback_requests}
+            />
+          </div>
         </>
       )}
 
