@@ -22,6 +22,7 @@ export function FeedbackTimeline({ feedbackRequests, startDate }: Props) {
     .filter(response => response.submitted_at)
     .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
 
+  // Don't render anything if no responses
   if (responses.length === 0) return null;
 
   // Create a map of dates to response counts
