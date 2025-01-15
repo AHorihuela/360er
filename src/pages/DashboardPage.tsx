@@ -31,6 +31,7 @@ export function DashboardPage(): JSX.Element {
   const [employees, setEmployees] = useState<DashboardEmployee[]>([]);
   const [employeesData, setEmployeesData] = useState<DashboardEmployee[]>([]);
   const [allReviewCycles, setAllReviewCycles] = useState<ReviewCycle[]>([]);
+  const [visibleReviews, setVisibleReviews] = useState<number>(4);
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(() => {
     // Initialize from localStorage if available
     return localStorage.getItem('selectedCycleId');
@@ -442,7 +443,7 @@ export function DashboardPage(): JSX.Element {
                 employee_id: fr.employee_id
               })))
               .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-              .slice(0, 4)
+              .slice(0, visibleReviews)
               .map((response) => {
                 // Find the employee from the employees array
                 const employee = employees.find(e => e.id === response.employee_id);
@@ -530,6 +531,19 @@ export function DashboardPage(): JSX.Element {
                 );
               })}
           </div>
+          {activeReviewCycle.feedback_requests
+            .flatMap(fr => fr.feedback_responses || [])
+            .length > visibleReviews && (
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setVisibleReviews(prev => prev + 4)}
+                className="w-full sm:w-auto"
+              >
+                Load More Reviews
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
