@@ -3,10 +3,8 @@
 <div align="center">
   <img src="public/images/og-preview.png" alt="Squad360 - AI-Powered Team Feedback Platform" width="800"/>
 
-  <h2>AI-Powered Team Feedback Platform</h2>
-  
   <p>
-    Transform peer feedback into actionable insights with confidence-rated analysis, competency scoring, and AI-powered recommendations.
+    Transform your team's feedback process with automated, anonymous 360-degree feedback collection and AI-enhanced insights.
   </p>
 
   <p>
@@ -14,60 +12,36 @@
     ·
     <a href="https://squad360.vercel.app/signup">Get Started</a>
     ·
-    <a href="#features">Explore Features</a>
+    <a href="#how-it-works">Explore Features</a>
   </p>
 </div>
 
-## About 🚀
+## How It Works 🚀
 
-Squad360 is a modern, web-based 360-degree feedback platform that enables managers to collect comprehensive, anonymous feedback for their team members. Using advanced AI analytics, we provide:
+### 1. Anonymous Feedback Collection
+![Feedback Form](/public/images/feedback-form.png)
+Each employee receives a unique feedback link that can be shared with peers, reports, and managers. The feedback is completely anonymous - not even administrators can see who provided specific feedback.
 
-- 🧠 **Confidence-rated insights** based on evidence patterns
-- 📊 **Competency scoring** across 7 key areas
-- 🎯 **Role-specific analysis** for accurate context
-- 🔒 **Anonymous feedback collection** via unique links
-- 📈 **Visual progress tracking** and analytics
+### 2. AI-Enhanced Quality Review ✨
+![Sample AI Review](/public/images/sample-ai-review.png)
+Before submission, feedback is processed through an AI review system that:
+- Ensures specific examples are included
+- Follows feedback best practices
+- Enhances clarity and actionability
 
-## Key Features 🚀
+### 3. Comprehensive Analysis 📊
+![Feedback Analysis](/public/images/feedback-analysis.png)
+The platform aggregates feedback across seven key performance indicators, providing:
+- Detailed performance insights
+- Pattern recognition across feedback sources
+- Visual breakdown of feedback trends
 
-- **Advanced AI Analytics** 🧠:
-  - Confidence-rated feedback analysis
-  - Competency-based scoring framework
-  - Visual progress tracking
-  - Evidence-based insights
-  - Role-specific analysis
-
-- **Comprehensive Feedback Framework** 📊:
-  - Seven core competency areas
-  - Detailed scoring rubrics
-  - Evidence-based confidence ratings
-  - Role-specific context analysis
-  - Relationship-based perspectives
-
-- **Visual Analytics** 📈:
-  - Progress tracking with visual indicators
-  - Confidence-rated competency bars
-  - Team-wide analytics dashboard
-  - Individual performance insights
-  - Review collection progress tracking
-  - Status badges with consistent formatting
-  - Real-time completion tracking
-
-- **Quality Assurance** ✅:
-  - Minimum review thresholds
-  - Confidence level indicators
-  - Evidence count tracking
-  - Data quality monitoring
-  - Automated validation
-
-- **Core Platform Features** 🛠️:
-  - Secure authentication
-  - Anonymous feedback collection
-  - Review cycle management
-  - Team management
-  - Export capabilities
-  - Unique shareable feedback links
-  - Editable review cycle titles
+### 4. Quantitative Assessment 📈
+![Overall Analysis](/public/images/overall-analysis.png)
+Each review generates:
+- Confidence-scored evaluations (High/Medium/Low)
+- Evidence-based competency ratings
+- Actionable growth recommendations
 
 ## Competency Framework 🎯
 
@@ -135,28 +109,27 @@ Our platform evaluates seven core competencies:
 
 ## Tech Stack 🛠️
 
-- **Frontend** 🎨:
-  - React with TypeScript
-  - Tailwind CSS for styling
-  - Shadcn UI components
-  - React Router for navigation
-  - Lucide React for icons
-  - TipTap for rich text editing
-  - jsPDF for PDF generation
-  - html2canvas for PDF rendering
-  - markdown-it for markdown parsing
-  - Sonner for toast notifications
+### Frontend 🎨
+- React with TypeScript
+- Tailwind CSS for styling
+- Shadcn UI components
+- React Router for navigation
+- Lucide React for icons
+- TipTap for rich text editing
+- jsPDF for PDF generation
+- html2canvas for PDF rendering
+- markdown-it for markdown parsing
+- Sonner for toast notifications
 
-- **Backend** ⚙️:
-  - Supabase for database and authentication
-  - Row Level Security (RLS) policies
-  - Real-time data synchronization
-  - OpenAI GPT-4 for report generation
+### Backend ⚙️
+- Supabase for database and authentication
+- Row Level Security (RLS) policies
+- Real-time data synchronization
+- OpenAI GPT-4 for report generation
 
 ## Getting Started 🚀
 
 ### Prerequisites
-
 - Node.js (v16 or higher)
 - npm or yarn
 - Supabase account
