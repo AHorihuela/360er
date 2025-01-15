@@ -398,8 +398,8 @@ export function DashboardPage(): JSX.Element {
           </Card>
 
           {/* Analytics Grid */}
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-            {/* Feedback Timeline */}
+          <div className="space-y-6">
+            {/* Response Timeline */}
             <FeedbackTimeline 
               feedbackRequests={activeReviewCycle.feedback_requests}
               startDate={activeReviewCycle.review_by_date}
