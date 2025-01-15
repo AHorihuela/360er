@@ -210,10 +210,38 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
               <InfoIcon className="h-4 w-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p className="max-w-xs text-sm">
-                Radar chart showing team competency scores. Larger area indicates stronger performance.
-                Each employee needs at least {MIN_REVIEWS_REQUIRED} reviews to be included in the analysis.
-              </p>
+              <div className="max-w-xs space-y-3">
+                <div>
+                  <p className="text-sm font-medium">Team Competency Analysis</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    A comprehensive view of your team's strengths and areas for growth, based on aggregated feedback.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">How to read this:</p>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <div className="w-4 h-4 mt-0.5 rounded-full bg-blue-500/20 flex-shrink-0 border border-blue-500"/>
+                      <p>The blue area shows overall performance - a larger shape means stronger performance across competencies</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-4 h-4 mt-0.5 flex-shrink-0 font-mono text-center text-xs border rounded">5</div>
+                      <p>Each axis shows a competency score from 0-5, with grid lines marking each point</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="h-4 mt-0.5 flex-shrink-0 px-1.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">high</div>
+                      <p>Confidence badges indicate data reliability based on review count, consistency, and diversity</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Note:</span> For reliable insights, each employee needs at least {MIN_REVIEWS_REQUIRED} reviews to be included.
+                  </p>
+                </div>
+              </div>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
