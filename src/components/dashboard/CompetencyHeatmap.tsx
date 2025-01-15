@@ -327,12 +327,12 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="p-4">
-                        <div className="max-w-xs space-y-3">
+                        <div className="max-w-xs">
                           {/* Header with name and confidence badge */}
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold">{score.name}</h3>
+                          <div className="space-y-1.5 mb-4">
+                            <h3 className="font-medium">{score.name}</h3>
                             <span className={cn(
-                              "text-xs px-2 py-1 rounded-full font-medium",
+                              "inline-block text-xs px-2 py-0.5 rounded-full font-medium",
                               score.confidence === 'high' && "bg-blue-100 text-blue-700",
                               score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
                               score.confidence === 'low' && "bg-red-100 text-red-700"
@@ -342,9 +342,9 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                           </div>
 
                           {/* Confidence metrics section */}
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-muted-foreground">Why this confidence level?</h4>
-                            <ul className="space-y-2">
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium mb-2">Why this confidence level?</h4>
+                            <ul className="space-y-1.5">
                               <li className="flex items-center gap-2 text-sm">
                                 <span className={cn(
                                   "w-2 h-2 rounded-full shrink-0",
@@ -379,7 +379,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                           </div>
 
                           {/* Score consistency explanation */}
-                          <div className="pt-3 border-t">
+                          <div className="border-t pt-3 mb-4">
                             <p className="text-xs text-muted-foreground">
                               <span className="font-medium">About Score Consistency:</span><br />
                               A score of {score.confidenceMetrics.scoreVariance.toFixed(1)} means reviewers 
@@ -391,8 +391,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
 
                           {/* Key aspects section */}
                           {Object.values(CORE_COMPETENCIES).find(comp => comp.name === score.name) && (
-                            <div className="pt-3 border-t space-y-2">
-                              <h4 className="text-sm font-semibold text-muted-foreground">Key Aspects:</h4>
+                            <div className="border-t pt-3">
+                              <h4 className="text-sm font-medium mb-2">Key Aspects:</h4>
                               <ul className="space-y-1">
                                 {Object.values(CORE_COMPETENCIES)
                                   .find(comp => comp.name === score.name)?.aspects
