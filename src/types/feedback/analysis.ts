@@ -28,6 +28,7 @@ export interface CompetencyScore {
   description: string;
   evidenceCount: number;
   roleSpecificNotes: string;
+  evidenceQuotes?: string[];
 }
 
 export interface Competency extends Omit<CompetencyScore, 'name' | 'description'> {

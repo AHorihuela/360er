@@ -49,39 +49,37 @@ export function CompetencyScoreCard({ score }: CompetencyScoreCardProps) {
         </TooltipTrigger>
         <TooltipContent side="left" className="p-4">
           <div className="max-w-xs">
-            <div className="space-y-1.5 mb-4">
+            <div className="space-y-1.5 mb-2">
               <h3 className="font-medium">{score.name}</h3>
-              <span className={cn(
-                "inline-block text-xs px-2 py-0.5 rounded-full font-medium",
-                score.confidence === 'high' && "bg-blue-100 text-blue-700",
-                score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
-                score.confidence === 'low' && "bg-red-100 text-red-700"
-              )}>
-                {score.confidence} confidence
-              </span>
-            </div>
-
-            <div className="mb-4">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  score.confidence === 'low' ? "bg-destructive/50" :
+                  score.confidence === 'medium' ? "bg-yellow-500" :
+                  "bg-primary"
+                )} />
+                <span className="text-sm">
+                  Score: {score.score.toFixed(1)}/5
+                  {score.hasOutliers && " (adjusted for outliers)"}
+                </span>
+              </div>
               <p className="text-sm text-muted-foreground">
-                Score: {score.score.toFixed(1)}/5
-                <br />
-                Based on {score.evidenceCount} pieces of evidence
-                <OutlierNotification score={score} />
+                {score.confidence} confidence based on {score.evidenceCount} pieces of evidence
               </p>
-              
-              <MethodologyExplanation score={score} />
             </div>
-
-            {Object.values(CORE_COMPETENCIES).find(comp => comp.name === score.name) && (
-              <div className="border-t pt-3">
-                <h4 className="text-sm font-medium mb-2">Key Aspects:</h4>
-                <ul className="space-y-1">
-                  {Object.values(CORE_COMPETENCIES)
-                    .find(comp => comp.name === score.name)?.aspects
-                    .map((aspect, i) => (
-                      <li key={i} className="text-sm text-muted-foreground">• {aspect}</li>
+            {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
+              <div className="space-y-1 border-t pt-2">
+                <p className="text-sm font-medium">Key Evidence:</p>
+                <div className="space-y-1">
+                  {score.evidenceQuotes.slice(0, 1).map((quote, i) => (
+                    <p key={i} className="text-sm text-muted-foreground italic">"{quote}"</p>
                   ))}
-                </ul>
+                  {score.evidenceQuotes.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{score.evidenceQuotes.length - 1} more examples...
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

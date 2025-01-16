@@ -235,9 +235,9 @@ export function FeedbackAnalytics({
           themes: aggregateAnalysis.themes || [],
           competencies: aggregateAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => {
             // Find corresponding competency scores from each relationship type
-            const seniorScore = seniorAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
-            const peerScore = peerAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
-            const juniorScore = juniorAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
+            const seniorScore = seniorAnalysis.competency_scores?.find(s => s.name === score.name);
+            const peerScore = peerAnalysis.competency_scores?.find(s => s.name === score.name);
+            const juniorScore = juniorAnalysis.competency_scores?.find(s => s.name === score.name);
             
             // Calculate weighted average based on relationship weights and response counts
             const seniorWeight = groupedFeedback.senior.length > 0 ? RELATIONSHIP_WEIGHTS.senior : 0;
@@ -252,10 +252,17 @@ export function FeedbackAnalytics({
             
             // Calculate weighted score
             const weightedScore = (
-              seniorScore * normalizedSeniorWeight +
-              peerScore * normalizedPeerWeight +
-              juniorScore * normalizedJuniorWeight
+              (seniorScore?.score || 0) * normalizedSeniorWeight +
+              (peerScore?.score || 0) * normalizedPeerWeight +
+              (juniorScore?.score || 0) * normalizedJuniorWeight
             );
+
+            // Combine evidence quotes from all perspectives
+            const evidenceQuotes = [
+              ...(seniorScore?.evidenceQuotes || []),
+              ...(peerScore?.evidenceQuotes || []),
+              ...(juniorScore?.evidenceQuotes || [])
+            ];
 
             return {
               name: score.name,
@@ -263,7 +270,8 @@ export function FeedbackAnalytics({
               confidence: score.confidence,
               description: score.description,
               evidenceCount: score.evidenceCount,
-              roleSpecificNotes: ""
+              roleSpecificNotes: "",
+              evidenceQuotes: evidenceQuotes.length > 0 ? evidenceQuotes : undefined
             };
           }) || [],
           responseCount: feedbackResponses.length,
@@ -278,7 +286,8 @@ export function FeedbackAnalytics({
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
-            roleSpecificNotes: ""
+            roleSpecificNotes: "",
+            evidenceQuotes: score.evidenceQuotes
           })) || [],
           responseCount: groupedFeedback.senior.length,
           uniquePerspectives: []
@@ -292,7 +301,8 @@ export function FeedbackAnalytics({
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
-            roleSpecificNotes: ""
+            roleSpecificNotes: "",
+            evidenceQuotes: score.evidenceQuotes
           })) || [],
           responseCount: groupedFeedback.peer.length,
           uniquePerspectives: []
@@ -306,7 +316,8 @@ export function FeedbackAnalytics({
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
-            roleSpecificNotes: ""
+            roleSpecificNotes: "",
+            evidenceQuotes: score.evidenceQuotes
           })) || [],
           responseCount: groupedFeedback.junior.length,
           uniquePerspectives: []

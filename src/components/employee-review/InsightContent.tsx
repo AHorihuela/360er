@@ -18,6 +18,7 @@ interface CompetencyDetail {
   description: string;
   evidenceCount: number;
   roleSpecificNotes: string;
+  evidenceQuotes?: string[];
   details?: {
     name: string;
     aspects: readonly string[];
@@ -172,6 +173,18 @@ export function InsightContent({ insight }: Props) {
               <p className="text-sm text-muted-foreground">{competency.description}</p>
               {competency.roleSpecificNotes && (
                 <p className="text-sm text-muted-foreground italic mt-1">{competency.roleSpecificNotes}</p>
+              )}
+              {competency.evidenceQuotes && competency.evidenceQuotes.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <h5 className="text-xs font-medium text-muted-foreground">Supporting Evidence:</h5>
+                  <div className="space-y-1.5">
+                    {competency.evidenceQuotes.map((quote, i) => (
+                      <div key={i} className="text-sm text-muted-foreground pl-3 border-l-2 border-muted">
+                        "{quote}"
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           ))

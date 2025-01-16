@@ -24,10 +24,9 @@ export interface AggregateScore {
   name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
-  description: string;
   evidenceCount: number;
   hasOutliers?: boolean;
-  adjustmentDetails?: AdjustmentDetail[];
+  evidenceQuotes?: string[];
 }
 
 export interface ChartDataPoint {

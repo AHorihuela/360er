@@ -175,49 +175,48 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <TooltipTrigger>
               <InfoIcon className="h-4 w-4 text-muted-foreground" />
             </TooltipTrigger>
-            <TooltipContent>
-              <div className="max-w-xs p-4">
-                <p className="text-sm font-medium">Team Competency Analysis</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  A comprehensive view of your team's strengths and areas for growth, based on AI-analyzed feedback from peers, managers, and direct reports.
-                </p>
-
-                <p className="text-sm font-medium mt-4">How to read this:</p>
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <div className="w-4 h-4 mt-1 rounded-full bg-blue-500/20 flex-shrink-0 border border-blue-500"/>
-                    <p className="text-sm text-muted-foreground">The blue area shows overall performance - a larger shape means stronger performance across competencies</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="w-4 h-4 mt-1 flex-shrink-0 font-mono text-center text-xs border rounded">5</div>
-                    <p className="text-sm text-muted-foreground">Each axis shows a competency score from 0-5, with grid lines marking each point</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="h-4 mt-1 flex-shrink-0 px-1.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">high</div>
-                    <p className="text-sm text-muted-foreground">
-                      Confidence levels reflect:
-                      <br/>• Number of reviews
-                      <br/>• Evidence quality and consistency
-                      <br/>• Diversity of feedback sources
-                    </p>
-                  </div>
+            <TooltipContent side="right" className="max-w-[400px] p-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Team Competency Analysis</h3>
+                  <p className="text-sm text-muted-foreground">
+                    A comprehensive view of your team's strengths and areas for growth, based on AI-analyzed feedback from peers, managers, and direct reports.
+                  </p>
                 </div>
 
-                <div className="border-t mt-4 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Methodology:</span>
-                  </p>
-                  <ul className="mt-1 text-sm text-muted-foreground space-y-1">
-                    <li>• Scores weighted by relationship (senior 40%, peer 35%, junior 25%)</li>
-                    <li>• Statistical outliers adjusted to maintain balance</li>
-                    <li>• Minimum {MIN_REVIEWS_REQUIRED} reviews per employee for inclusion</li>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">How to read this:</h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex gap-2">
+                      <div className="w-4 h-4 rounded-full bg-blue-100 border border-blue-500 mt-0.5 shrink-0" />
+                      <span>The blue area shows overall performance - a larger shape means stronger performance across competencies</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="w-4 h-4 flex items-center justify-center shrink-0">5</div>
+                      <span>Each axis shows a competency score from 0-5, with grid lines marking each point</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="w-4 h-4 bg-blue-50 text-blue-700 text-xs flex items-center justify-center rounded shrink-0">high</div>
+                      <div>
+                        <span>Confidence levels reflect:</span>
+                        <ul className="mt-1 space-y-1 list-disc pl-4">
+                          <li>Number of reviews</li>
+                          <li>Evidence quality and consistency</li>
+                          <li>Diversity of feedback sources</li>
+                        </ul>
+                      </div>
+                    </li>
                   </ul>
                 </div>
 
-                <div className="border-t mt-4 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Tip:</span> Click on any competency to see detailed scores, evidence count, and methodology explanation.
-                  </p>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Methodology:</h4>
+                  <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
+                    <li>Scores weighted by relationship (senior 40%, peer 35%, junior 25%)</li>
+                    <li>Statistical outliers adjusted to maintain balance</li>
+                    <li>Minimum 5 reviews per employee for inclusion</li>
+                    <li>Confidence based on evidence count, score consistency, and feedback diversity</li>
+                  </ul>
                 </div>
               </div>
             </TooltipContent>
