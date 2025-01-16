@@ -6,7 +6,7 @@ import { Loader2, ChevronDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { type RelationshipInsight, type AnalyticsMetadata, type OpenAICompetencyScore } from "@/types/feedback/analysis";
-import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED, DETAILED_ANALYSIS_STAGES } from "@/constants/feedback";
+import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED, DETAILED_ANALYSIS_STAGES, RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
 import { normalizeRelationship, createFeedbackHash, formatLastAnalyzed, analyzeRelationshipFeedback, analyzeAggregatePatterns } from "@/utils/feedback";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { MinimumReviewsMessage } from './MinimumReviewsMessage';
@@ -233,14 +233,39 @@ export function FeedbackAnalytics({
         {
           relationship: 'aggregate',
           themes: aggregateAnalysis.themes || [],
-          competencies: aggregateAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
-            name: score.name,
-            score: score.score,
-            confidence: score.confidence,
-            description: score.description,
-            evidenceCount: score.evidenceCount,
-            roleSpecificNotes: ""
-          })) || [],
+          competencies: aggregateAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => {
+            // Find corresponding competency scores from each relationship type
+            const seniorScore = seniorAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
+            const peerScore = peerAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
+            const juniorScore = juniorAnalysis.competency_scores?.find(s => s.name === score.name)?.score || 0;
+            
+            // Calculate weighted average based on relationship weights and response counts
+            const seniorWeight = groupedFeedback.senior.length > 0 ? RELATIONSHIP_WEIGHTS.senior : 0;
+            const peerWeight = groupedFeedback.peer.length > 0 ? RELATIONSHIP_WEIGHTS.peer : 0;
+            const juniorWeight = groupedFeedback.junior.length > 0 ? RELATIONSHIP_WEIGHTS.junior : 0;
+            
+            // Normalize weights based on available relationships
+            const totalWeight = seniorWeight + peerWeight + juniorWeight;
+            const normalizedSeniorWeight = totalWeight > 0 ? seniorWeight / totalWeight : 0;
+            const normalizedPeerWeight = totalWeight > 0 ? peerWeight / totalWeight : 0;
+            const normalizedJuniorWeight = totalWeight > 0 ? juniorWeight / totalWeight : 0;
+            
+            // Calculate weighted score
+            const weightedScore = (
+              seniorScore * normalizedSeniorWeight +
+              peerScore * normalizedPeerWeight +
+              juniorScore * normalizedJuniorWeight
+            );
+
+            return {
+              name: score.name,
+              score: weightedScore,
+              confidence: score.confidence,
+              description: score.description,
+              evidenceCount: score.evidenceCount,
+              roleSpecificNotes: ""
+            };
+          }) || [],
           responseCount: feedbackResponses.length,
           uniquePerspectives: []
         },
@@ -249,13 +274,13 @@ export function FeedbackAnalytics({
           themes: seniorAnalysis.key_insights || [],
           competencies: seniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            score: score.score,
+            score: score.score * RELATIONSHIP_WEIGHTS.senior,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
           })) || [],
-          responseCount: groupedFeedback.senior?.length || 0,
+          responseCount: groupedFeedback.senior.length,
           uniquePerspectives: []
         },
         {
@@ -263,13 +288,14 @@ export function FeedbackAnalytics({
           themes: peerAnalysis.key_insights || [],
           competencies: peerAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            score: score.score,
+            // Apply peer relationship weight (35%)
+            score: score.score * RELATIONSHIP_WEIGHTS.peer,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
           })) || [],
-          responseCount: groupedFeedback.peer?.length || 0,
+          responseCount: groupedFeedback.peer.length,
           uniquePerspectives: []
         },
         {
@@ -277,13 +303,14 @@ export function FeedbackAnalytics({
           themes: juniorAnalysis.key_insights || [],
           competencies: juniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            score: score.score,
+            // Apply junior relationship weight (25%)
+            score: score.score * RELATIONSHIP_WEIGHTS.junior,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
             roleSpecificNotes: ""
           })) || [],
-          responseCount: groupedFeedback.junior?.length || 0,
+          responseCount: groupedFeedback.junior.length,
           uniquePerspectives: []
         }
       ];

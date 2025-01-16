@@ -10,6 +10,13 @@ export const RELATIONSHIP_ORDER = [
   RELATIONSHIP_TYPES.JUNIOR
 ] as const;
 
+export const RELATIONSHIP_WEIGHTS = {
+  senior: 0.4,    // 40% weight for senior feedback
+  peer: 0.35,     // 35% weight for peer feedback
+  junior: 0.25,   // 25% weight for junior feedback
+  aggregate: 1    // Used for already aggregated scores
+} as const;
+
 export const CORE_COMPETENCIES = {
   COMMUNICATION: {
     name: "Communication",
