@@ -16,6 +16,7 @@ import { CompetencyScoreCard } from './CompetencyScoreCard';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from 'lucide-react';
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
@@ -285,13 +286,18 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                   <div 
                     key={name} 
                     className={cn(
-                      "p-4 transition-colors",
-                      "cursor-pointer hover:bg-slate-50",
+                      "p-4",
                       isExpanded && "bg-slate-50"
                     )}
-                    onClick={() => setExpandedCompetency(isExpanded ? null : name)}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div 
+                      className={cn(
+                        "flex items-center justify-between mb-2",
+                        "cursor-pointer hover:bg-slate-50/80 -mx-4 px-4 py-2 rounded-sm",
+                        "transition-colors"
+                      )}
+                      onClick={() => setExpandedCompetency(isExpanded ? null : name)}
+                    >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium">{score.name}</h4>
@@ -312,6 +318,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                               Adjusted for outliers
                             </Badge>
                           )}
+                          <ChevronDown className={cn(
+                            "h-4 w-4 text-muted-foreground transition-transform",
+                            isExpanded && "transform rotate-180"
+                          )} />
                         </div>
                         <p className="text-sm text-muted-foreground">{score.description}</p>
                       </div>
@@ -322,6 +332,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                         </div>
                       </div>
                     </div>
+
                     <div className="relative mt-2">
                       <Progress 
                         value={(score.score / 5) * 100} 
@@ -340,122 +351,212 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                     </div>
                     
                     {isExpanded && (
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="space-y-4">
-                          {/* Description Section */}
-                          <div>
-                            <h5 className="text-sm font-medium mb-2">About this Competency</h5>
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap gap-2">
-                                {CORE_COMPETENCIES[score.name]?.aspects?.map((aspect, i) => (
-                                  <Badge key={i} variant="secondary" className="text-xs">
-                                    {aspect}
-                                  </Badge>
-                                ))}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {CORE_COMPETENCIES[score.name]?.rubric[Math.round(score.score)] || 
-                                 "Score description not available"}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Score Breakdown */}
-                          <div>
-                            <h5 className="text-sm font-medium mb-2">Score Breakdown</h5>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="p-3 bg-background rounded border">
-                                <div className="text-sm text-muted-foreground">Confidence Level</div>
-                                <div className="font-medium capitalize flex items-center gap-2">
-                                  {score.confidence}
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="text-sm">
-                                          {score.confidence === 'high' && "Based on consistent feedback across multiple relationships with strong evidence"}
-                                          {score.confidence === 'medium' && "Based on moderate evidence with some variation in feedback"}
-                                          {score.confidence === 'low' && "Limited evidence or significant variation in feedback"}
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                      <div className="mt-4 pt-4 border-t space-y-6">
+                        {/* About Section with Key Metrics */}
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* Left Column: About & Aspects */}
+                          <div className="space-y-4">
+                            <div>
+                              <h5 className="text-sm font-medium mb-2">About this Competency</h5>
+                              <div className="space-y-3">
+                                <div className="text-sm text-muted-foreground">
+                                  {CORE_COMPETENCIES[score.name]?.rubric[Math.round(score.score)] || 
+                                   "Score description not available"}
                                 </div>
-                              </div>
-                              <div className="p-3 bg-background rounded border">
-                                <div className="text-sm text-muted-foreground">Evidence Count</div>
-                                <div className="font-medium flex items-center gap-2">
-                                  {score.evidenceCount} pieces
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="text-sm">
-                                          Number of specific examples found in feedback that demonstrate this competency
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                <div>
+                                  <div className="text-sm text-muted-foreground mb-2">Key behaviors assessed:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {CORE_COMPETENCIES[score.name]?.aspects?.map((aspect, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs">
+                                        {aspect}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* Evidence Section */}
+                          {/* Right Column: Key Metrics */}
+                          <div className="space-y-4">
+                            <div>
+                              <h5 className="text-sm font-medium mb-2">Performance Overview</h5>
+                              <div className="grid gap-3">
+                                <div className="p-3 bg-background rounded border">
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className="text-sm text-muted-foreground">Current Score</div>
+                                      <div className="font-medium text-lg">{score.score.toFixed(1)}</div>
+                                      <div className="text-xs text-muted-foreground">Team average across all reviews</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm text-muted-foreground">Expected Level</div>
+                                      <div className="font-medium text-lg">3.5</div>
+                                      <div className="text-xs text-muted-foreground">Baseline for proficiency</div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3">
+                                    <div className="text-sm mb-1 flex items-center gap-1">
+                                      <span className={score.score >= 3.5 ? "text-green-600" : "text-yellow-600"}>
+                                        {score.score >= 3.5 ? 'Above' : 'Below'} expected level by {Math.abs(score.score - 3.5).toFixed(1)} points
+                                      </span>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-sm">
+                                              3.5 represents the expected proficiency level for this competency. 
+                                              Scores above this indicate strong performance, while scores below suggest areas for development.
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                    <Progress 
+                                      value={(score.score / 5) * 100} 
+                                      className={cn(
+                                        "h-1.5",
+                                        score.score >= 3.5 ? "bg-green-100 [&>div]:bg-green-600" : "bg-yellow-100 [&>div]:bg-yellow-600"
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Score Details */}
+                        <div>
+                          <h5 className="text-sm font-medium mb-3">Analysis Details</h5>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="p-3 bg-background rounded border">
+                              <div className="text-sm text-muted-foreground">Confidence Level</div>
+                              <div className="font-medium capitalize flex items-center gap-2">
+                                {score.confidence}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[250px]">
+                                      <div className="space-y-2">
+                                        <p className="text-sm font-medium">
+                                          {score.confidence === 'high' && "High confidence in this score"}
+                                          {score.confidence === 'medium' && "Moderate confidence in this score"}
+                                          {score.confidence === 'low' && "Limited confidence in this score"}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {score.confidence === 'high' && "Based on consistent feedback across multiple relationships with strong supporting evidence"}
+                                          {score.confidence === 'medium' && "Based on moderate evidence with some variation in feedback patterns"}
+                                          {score.confidence === 'low' && "Limited by either the amount of evidence available or significant variations in feedback"}
+                                        </p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                            <div className="p-3 bg-background rounded border">
+                              <div className="text-sm text-muted-foreground">Evidence Base</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {score.evidenceCount >= 20 ? 'Strong' : 
+                                 score.evidenceCount >= 10 ? 'Moderate' : 'Limited'}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[250px]">
+                                      <div className="space-y-2">
+                                        <p className="text-sm font-medium">
+                                          {score.evidenceCount} specific examples found
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {score.evidenceCount >= 20 ? 'A robust set of examples supporting this assessment' : 
+                                           score.evidenceCount >= 10 ? 'A good foundation of examples, but room for more evidence' : 
+                                           'Limited examples available - more evidence would strengthen this assessment'}
+                                        </p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                            <div className="p-3 bg-background rounded border">
+                              <div className="text-sm text-muted-foreground">Score Distribution</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {score.hasOutliers ? 'High Variance' : 'Consistent'}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[250px]">
+                                      <div className="space-y-2">
+                                        <p className="text-sm font-medium">
+                                          {score.hasOutliers ? 'Significant variation in scores' : 'Consistent scoring patterns'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {score.hasOutliers 
+                                            ? "Individual scores showed notable differences, suggesting varied experiences or perspectives" 
+                                            : "Reviewers generally agreed in their assessment of this competency"}
+                                        </p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Score Adjustments */}
+                        {score.hasOutliers && (
                           <div>
                             <h5 className="text-sm font-medium mb-2">Score Adjustments</h5>
                             <div className="space-y-2">
-                              {score.hasOutliers ? (
-                                <>
-                                  {(score.adjustmentDetails || []).map((detail, i) => (
-                                    <div key={i} className="p-3 bg-background rounded border">
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Badge variant="outline" className="shrink-0">
-                                          {detail.adjustmentType === 'extreme' ? 'Major Adjustment' : 'Minor Adjustment'}
-                                        </Badge>
-                                        <span className="text-muted-foreground">
-                                          {detail.relationship} feedback score of {detail.originalScore.toFixed(1)} was adjusted due to statistical variance
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Adjustments help maintain balanced scoring when feedback varies significantly from the average
-                                  </p>
-                                </>
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  No score adjustments were needed - feedback was consistently within expected ranges
-                                </p>
-                              )}
+                              {(score.adjustmentDetails || []).map((detail, i) => (
+                                <div key={i} className="p-3 bg-background rounded border">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Badge variant="outline" className="shrink-0">
+                                      {detail.adjustmentType === 'extreme' ? 'Major Adjustment' : 'Minor Adjustment'}
+                                    </Badge>
+                                    <span className="text-muted-foreground">
+                                      {detail.relationship} feedback score of {detail.originalScore.toFixed(1)} was adjusted due to statistical variance
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                              <p className="text-sm text-muted-foreground mt-2">
+                                Adjustments help maintain balanced scoring when feedback varies significantly from the average
+                              </p>
                             </div>
                           </div>
+                        )}
 
-                          {/* Methodology Note */}
-                          <div className="text-sm text-muted-foreground bg-slate-100 p-3 rounded">
-                            <p className="font-medium mb-2">How this score is calculated:</p>
-                            <ul className="list-disc pl-4 space-y-2">
-                              <li>
-                                <span className="font-medium">Relationship Weighting:</span>
-                                <ul className="mt-1 pl-4">
-                                  <li>Senior feedback: 40% weight</li>
-                                  <li>Peer feedback: 35% weight</li>
-                                  <li>Junior feedback: 25% weight</li>
-                                </ul>
-                              </li>
-                              <li>
-                                <span className="font-medium">Statistical Adjustments:</span>
-                                {score.hasOutliers ? ' Applied to maintain scoring balance' : ' None needed'}
-                              </li>
-                              <li>
-                                <span className="font-medium">Confidence Assessment:</span> Based on evidence quantity ({score.evidenceCount} pieces) and feedback consistency
-                              </li>
-                            </ul>
-                          </div>
+                        {/* Methodology Note */}
+                        <div className="text-sm text-muted-foreground bg-slate-100 p-3 rounded">
+                          <p className="font-medium mb-2">How this score is calculated:</p>
+                          <ul className="list-disc pl-4 space-y-2">
+                            <li>
+                              <span className="font-medium">Relationship Weighting:</span>
+                              <ul className="mt-1 pl-4">
+                                <li>Senior feedback: 40% weight</li>
+                                <li>Peer feedback: 35% weight</li>
+                                <li>Junior feedback: 25% weight</li>
+                              </ul>
+                            </li>
+                            <li>
+                              <span className="font-medium">Statistical Adjustments:</span>
+                              {score.hasOutliers ? ' Applied to maintain scoring balance' : ' None needed'}
+                            </li>
+                            <li>
+                              <span className="font-medium">Confidence Assessment:</span> Based on evidence quantity ({score.evidenceCount} pieces) and feedback consistency
+                            </li>
+                          </ul>
                         </div>
                       </div>
                     )}
