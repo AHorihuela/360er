@@ -10,6 +10,13 @@ export interface AdjustmentDetail {
   relationship: string;
 }
 
+export interface AspectScore {
+  name: string;
+  score: number;
+  evidenceCount: number;
+  evidenceQuotes?: string[];
+}
+
 export interface ScoreWithOutlier {
   name: string;
   score: number;
@@ -23,6 +30,7 @@ export interface ScoreWithOutlier {
     adjustmentType: 'extreme' | 'moderate';
     relationship: string;
   }>;
+  aspectScores?: AspectScore[];
 }
 
 export interface AggregateScore {
