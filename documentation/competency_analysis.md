@@ -1,0 +1,312 @@
+# Team Competency Analysis Methodology
+
+## Executive Summary
+Our team competency analysis system transforms qualitative feedback into quantitative insights using AI-powered analysis. The system:
+- Collects anonymous written feedback from peers, managers, and direct reports
+- Uses GPT to analyze feedback and extract specific examples of behaviors and impact
+- Maps feedback to seven core competencies with standardized scoring
+- Aggregates individual scores into team-wide insights
+- Provides confidence levels based on evidence quality and quantity
+- Visualizes results through interactive radar charts and detailed breakdowns
+
+The goal is to provide managers with reliable, data-driven insights into team strengths and development areas while maintaining anonymity and ensuring fair evaluation.
+
+## Why This Approach?
+
+### 1. The Challenge
+Traditional performance reviews often suffer from:
+- Subjective scoring without concrete evidence
+- Inconsistent evaluation criteria across reviewers
+- Difficulty in aggregating qualitative feedback
+- Bias in numerical ratings without context
+- Limited insights into team-wide patterns
+
+### 2. Our Solution
+We address these challenges through:
+- AI-powered analysis of written feedback for objectivity
+- Standardized competency framework for consistency
+- Evidence-based scoring with clear examples
+- Conservative confidence assessment for reliability
+- Visual tools for pattern recognition
+- Aggregation methods that prevent individual bias
+
+### 3. Key Benefits
+- **For Managers**:
+  - Data-driven insights for team development
+  - Clear view of team strengths and gaps
+  - Evidence-backed performance discussions
+  - Objective basis for development planning
+
+- **For Employees**:
+  - Fair, consistent evaluation criteria
+  - Anonymous feedback incorporation
+  - Clear competency expectations
+  - Specific, actionable insights
+
+- **For Organizations**:
+  - Standardized performance measurement
+  - Scalable feedback processing
+  - Objective skill gap analysis
+  - Data-driven development planning
+
+## Overview
+Our 360-degree feedback system aggregates individual employee feedback into a team-wide competency analysis. This document outlines our methodology for calculating, aggregating, and displaying team competency scores and confidence levels.
+
+## Core Concepts
+
+### 1. Feedback Analysis Process
+- Each employee receives written feedback from multiple reviewers (peers, managers, direct reports)
+- The feedback is processed by OpenAI's GPT model to:
+  1. Extract specific examples and evidence of behaviors
+  2. Analyze the sentiment and impact of the feedback
+  3. Map feedback to our core competency framework
+  4. Generate quantitative scores (0-5) based on the analysis
+  5. Determine confidence levels based on specificity and context
+
+### 2. Analysis Framework
+Each piece of feedback is analyzed against specific aspects of our core competencies:
+
+#### Technical/Functional Expertise
+- Role-specific skills and knowledge
+- Industry and domain expertise
+- Technical proficiency and best practices
+- Knowledge sharing and documentation
+- Problem-solving capabilities
+
+#### Leadership & Influence
+- Taking initiative and ownership
+- Guiding and inspiring others
+- Influencing outcomes positively
+- Mentoring and role modeling
+- Creating and communicating vision
+
+#### Collaboration & Communication
+- Information sharing effectiveness
+- Cross-team collaboration
+- Clarity of communication
+- Stakeholder management
+- Conflict resolution skills
+
+#### Innovation & Problem-Solving
+- Creative solution generation
+- Adaptability to change
+- Initiative in improvements
+- Collaborative ideation
+- Impact of implemented solutions
+
+#### Execution & Accountability
+- Meeting deadlines and commitments
+- Quality of deliverables
+- Ownership of outcomes
+- Problem resolution
+- Project completion track record
+
+#### Emotional Intelligence & Culture Fit
+- Self-awareness
+- Empathy and respect
+- Cultural alignment
+- Interpersonal effectiveness
+- Conflict management
+
+#### Growth & Development
+- Continuous learning mindset
+- Skill development progress
+- Feedback receptiveness
+- Knowledge sharing
+- Goal setting and achievement
+
+### 3. AI Analysis Process
+For each piece of feedback:
+1. **Text Analysis**
+   - Natural language processing to understand context and sentiment
+   - Identification of specific examples and behaviors
+   - Recognition of impact and outcomes
+
+2. **Competency Mapping**
+   - Matching feedback content to relevant competencies
+   - Identifying which aspects of each competency are evidenced
+   - Determining the strength of evidence for each competency
+
+3. **Score Generation and Display**
+   - Scores are displayed with one decimal precision (e.g., 4.2/5.0)
+   - Progress bars visualize scores with quarter segments
+   - Benchmark of 3.5 represents meeting expectations:
+     - Below 3.0: Needs improvement
+     - 3.0-3.5: Approaching expectations
+     - 3.5: Meeting expectations
+     - 3.5-4.0: Exceeding expectations
+     - 4.0+: Significantly exceeding expectations
+
+4. **Outlier Management**
+   Outlier detection uses a graduated approach:
+   - Extreme outliers (>3σ): 50% weight reduction
+   - Moderate outliers (2-3σ): 25% weight reduction
+   - Normal scores (<2σ): No adjustment
+   
+   This ensures that extreme feedback doesn't disproportionately impact scores while preserving the value of diverse perspectives.
+
+5. **Evidence Organization**
+   Evidence is collected and displayed in three key areas:
+   - Supporting quotes from feedback
+   - Specific examples of impact
+   - Context for score adjustments
+
+### UI Components and Visualization
+
+1. **Competency Summary Cards**
+   - Competency name with confidence badge
+   - Five key aspects displayed with bullet separators
+   - Score display (X.X/5.0)
+   - Evidence count
+   - Progress bar with quarter segments
+   - Expand/collapse functionality for details
+
+2. **Expanded View Details**
+   - Current level performance description
+   - Growth opportunities
+   - Supporting evidence quotes
+   - Analysis details including:
+     - Evidence base metrics
+     - Score consistency indicators
+     - Calculation methodology
+
+3. **Confidence Visualization**
+   Confidence levels are indicated through:
+   - Color-coded badges (green/yellow/red)
+   - Progress bar styling
+   - Detailed tooltips explaining confidence factors
+
+### 4. Confidence Calculation
+Team-wide confidence levels are determined by:
+1. Evidence Count: Minimum threshold of 5 reviews
+2. Score Consistency: Variance analysis across reviews
+3. Relationship Mix: Diversity of feedback sources
+
+Final confidence is calculated as a weighted average:
+- High: ≥ 0.9 weighted confidence score
+- Medium: ≥ 0.7 weighted confidence score
+- Low: < 0.7 weighted confidence score
+
+### 5. Data Requirements
+- Minimum 5 reviews per employee for inclusion
+- Reviews must span multiple relationship types
+- Each review must provide specific examples
+- Regular review cycles for current data
+- Consistent scoring across all competencies
+- Proper relationship tagging for weighting
+- Complete competency coverage in feedback 
+
+## Aggregation Methodology
+
+### 1. Individual Analysis
+- Each relationship type (senior, peer, junior) is analyzed separately by GPT
+- Scores are assigned on a 0-5 scale with one decimal precision (e.g., 4.2/5.0)
+- Evidence quotes are collected to support each score
+- Initial confidence is determined based on evidence count and quality
+
+### 2. Aggregate Score Calculation
+Our weighted scoring system balances multiple factors:
+
+#### Relationship Weights (40/35/25 Split)
+- Senior Feedback (40%): Prioritizes strategic oversight and experience
+- Peer Feedback (35%): Values day-to-day collaboration insights
+- Junior Feedback (25%): Incorporates upward management perspective
+
+Weights are normalized based on available relationships. If a relationship type has no responses, its weight is redistributed proportionally among the available types.
+
+#### Confidence Assessment
+Confidence levels are determined by:
+1. Total Evidence Count
+   - High: 10+ pieces of evidence
+   - Medium: 5-9 pieces of evidence
+   - Low: <5 pieces of evidence
+
+2. Score Consistency
+   - Variance between relationship scores is calculated
+   - Low variance (<1.0) increases confidence
+   - High variance (>2.0) decreases confidence
+
+3. Relationship Coverage
+   - High confidence requires at least 2 different relationship types
+   - Single relationship type limits confidence to medium/low
+
+#### Evidence Collection
+- Evidence quotes are combined from all relationship perspectives
+- Displayed with collapsible UI (2 quotes by default, expandable)
+- Maintains traceability to support scores
+
+#### Outlier Management
+Statistical outliers are detected and adjusted:
+- Extreme scores (>3σ from mean): 50% weight reduction
+- Moderate outliers (2-3σ from mean): 25% weight reduction
+- Normal scores: Full weight maintained
+- Adjustments are clearly indicated in the UI
+- Original scores are preserved for reference
+
+### 3. Display and Visualization
+- Scores shown with consistent precision (X.X/5.0 format)
+- Confidence levels visually indicated through colors and badges
+- Interactive tooltips explain methodology and evidence
+- Radar charts for team-wide pattern visualization
+- Collapsible sections for detailed evidence review
+
+### 4. Confidence Calculation
+Team-wide confidence levels are determined by:
+1. Evidence Count: Minimum threshold of 5 reviews
+2. Score Consistency: Variance analysis across reviews
+3. Relationship Mix: Diversity of feedback sources
+
+Final confidence is calculated as a weighted average:
+- High: ≥ 0.9 weighted confidence score
+- Medium: ≥ 0.7 weighted confidence score
+- Low: < 0.7 weighted confidence score
+
+### 5. Data Requirements
+- Minimum 5 reviews per employee for inclusion
+- Reviews must span multiple relationship types
+- Each review must provide specific examples
+- Regular review cycles for current data
+- Consistent scoring across all competencies
+- Proper relationship tagging for weighting
+- Complete competency coverage in feedback 
+
+## Score Weighting and Aggregation
+
+### Relationship Weighting
+Feedback from different relationship types is weighted according to their relative importance:
+- Senior feedback: 40% weight
+- Peer feedback: 35% weight
+- Junior feedback: 25% weight
+
+### Aggregation Process
+1. Individual Perspective Scores
+   - Each relationship type (senior, peer, junior) provides raw scores for competencies
+   - Scores are kept unweighted at the individual relationship level for transparency
+
+2. Aggregate Score Calculation
+   - For each competency, a weighted average is calculated using:
+     ```typescript
+     weightedScore = (seniorScore * normalizedSeniorWeight) +
+                    (peerScore * normalizedPeerWeight) +
+                    (juniorScore * normalizedJuniorWeight)
+     ```
+   - Weights are normalized based on available relationships:
+     - If a relationship type has no responses, its weight is redistributed proportionally
+     - Example: If no junior feedback, senior weight becomes ~53.3% (40/75) and peer weight becomes ~46.7% (35/75)
+
+3. Dynamic Weight Adjustment
+   - System automatically adjusts weights when certain relationship types are missing
+   - Total weight always sums to 100% after normalization
+   - Preserves relative importance ratios between available relationship types
+
+### Example Calculations
+1. Complete Feedback Set:
+   - Senior score: 4.0 (40% weight)
+   - Peer score: 3.5 (35% weight)
+   - Junior score: 3.0 (25% weight)
+   - Final score: (4.0 * 0.4) + (3.5 * 0.35) + (3.0 * 0.25) = 3.575
+
+2. Missing Junior Feedback:
+   - Senior score: 4.0 (normalized to ~53.3%)
+   - Peer score: 3.5 (normalized to ~46.7%)
+   - Final score: (4.0 * 0.533) + (3.5 * 0.467) = 3.767 
