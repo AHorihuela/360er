@@ -133,21 +133,16 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
     const currentReviewerCount = evidenceByReviewer.get(reviewerId) || 0;
     
     // Apply diminishing returns for multiple pieces from same reviewer
-    const effectiveCount = Math.min(
-      s.evidenceCount,
-      // First piece counts fully, then rapid diminishing returns
+    const effectiveCount = 
       1 + (s.evidenceCount > 1 ? 
         // Additional mentions count for less and diminish rapidly
         Array.from({length: s.evidenceCount - 1})
-          .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
-    );
+          .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0);
     
     evidenceByReviewer.set(reviewerId, currentReviewerCount + effectiveCount);
     
-    // Add to unique evidence tracking
-    for (let i = 0; i < effectiveCount; i++) {
-      uniqueEvidence.add(`${reviewerId}_${s.name}_${i}`);
-    }
+    // Add to unique evidence tracking with decimal precision
+    uniqueEvidence.add(`${reviewerId}_${s.name}_${effectiveCount.toFixed(3)}`);
   });
 
   const totalEvidence = uniqueEvidence.size;
