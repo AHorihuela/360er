@@ -274,7 +274,7 @@ export function FeedbackAnalytics({
           themes: seniorAnalysis.key_insights || [],
           competencies: seniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            score: score.score * RELATIONSHIP_WEIGHTS.senior,
+            score: score.score,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
@@ -288,8 +288,7 @@ export function FeedbackAnalytics({
           themes: peerAnalysis.key_insights || [],
           competencies: peerAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            // Apply peer relationship weight (35%)
-            score: score.score * RELATIONSHIP_WEIGHTS.peer,
+            score: score.score,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
@@ -303,8 +302,7 @@ export function FeedbackAnalytics({
           themes: juniorAnalysis.key_insights || [],
           competencies: juniorAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
             name: score.name,
-            // Apply junior relationship weight (25%)
-            score: score.score * RELATIONSHIP_WEIGHTS.junior,
+            score: score.score,
             confidence: score.confidence,
             description: score.description,
             evidenceCount: score.evidenceCount,
