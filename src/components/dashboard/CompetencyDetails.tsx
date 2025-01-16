@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, TrendingUp, Users, BarChart2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -30,8 +30,62 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
 
   const indicator = getIndicator(score.score);
 
+  // Get performance status
+  const getPerformanceStatus = (score: number) => {
+    if (score >= 4.0) return { label: 'Significantly Exceeding', color: 'text-green-600' };
+    if (score >= 3.5) return { label: 'Exceeding Expectations', color: 'text-green-500' };
+    if (score >= 3.0) return { label: 'Meeting Expectations', color: 'text-yellow-600' };
+    return { label: 'Needs Improvement', color: 'text-red-500' };
+  };
+
+  const performance = getPerformanceStatus(score.score);
+  const progressPercentage = (score.score / 5) * 100;
+
+  // Get next level guidance
+  const getNextLevelGuidance = (currentScore: number) => {
+    const nextLevel = Math.min(5, Math.ceil(currentScore) + 1);
+    return competency?.rubric[nextLevel] || '';
+  };
+
+  // Helper function to get confidence display info
+  const getConfidenceInfo = (confidence: 'low' | 'medium' | 'high') => {
+    switch (confidence) {
+      case 'high':
+        return {
+          icon: <Users className="h-5 w-5 text-green-500" />,
+          color: 'text-green-500',
+          badge: 'bg-green-100 text-green-700',
+          description: 'Based on consistent feedback across multiple relationships with strong supporting evidence'
+        };
+      case 'medium':
+        return {
+          icon: <Users className="h-5 w-5 text-yellow-500" />,
+          color: 'text-yellow-500',
+          badge: 'bg-yellow-100 text-yellow-700',
+          description: 'Based on moderate evidence with some variation in feedback patterns'
+        };
+      case 'low':
+        return {
+          icon: <Users className="h-5 w-5 text-red-500" />,
+          color: 'text-red-500',
+          badge: 'bg-red-100 text-red-700',
+          description: 'Limited by either the amount of evidence available or significant variations in feedback'
+        };
+    }
+  };
+
+  const confidenceInfo = getConfidenceInfo(score.confidence);
+
   return (
     <div className="mt-4 pt-4 border-t space-y-6">
+      {/* Title section with confidence badge */}
+      <div className="flex items-center gap-2">
+        <h3 className="text-lg font-medium">{score.name}</h3>
+        <Badge variant="secondary" className={cn(confidenceInfo.badge)}>
+          {score.confidence.charAt(0).toUpperCase() + score.confidence.slice(1)}
+        </Badge>
+      </div>
+
       {/* About Section with Key Metrics */}
       <div className="grid grid-cols-2 gap-6">
         {/* Left Column: About & Aspects */}
@@ -39,13 +93,42 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
           <div>
             <h5 className="text-sm font-medium mb-2">About this Competency</h5>
             <div className="space-y-4">
-              {/* Current Level Description */}
-              <div className="p-3 bg-background rounded border">
-                <div className="text-sm text-muted-foreground mb-1">Current Level Performance</div>
-                <div className="text-sm">
-                  {competency?.rubric[Math.round(score.score)] || 
-                   "Score description not available"}
+              {/* Enhanced Current Level Description */}
+              <div className="space-y-3">
+                <div className="p-3 bg-background rounded border">
+                  <div className="text-sm text-muted-foreground mb-1">Current Level Performance</div>
+                  <div className="text-sm">
+                    {competency?.rubric[Math.round(score.score)] || 
+                     "Score description not available"}
+                  </div>
                 </div>
+
+                {score.score < 5.0 && (
+                  <div className="p-3 bg-background rounded border">
+                    <div className="text-sm text-muted-foreground mb-1">Path to Next Level</div>
+                    <div className="text-sm">
+                      {getNextLevelGuidance(score.score)}
+                    </div>
+                  </div>
+                )}
+
+                {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
+                  <div className="p-3 bg-background rounded border">
+                    <div className="text-sm text-muted-foreground mb-2">Supporting Evidence</div>
+                    <div className="space-y-2">
+                      {score.evidenceQuotes.slice(0, 2).map((quote, i) => (
+                        <div key={i} className="text-sm italic text-muted-foreground pl-3 border-l-2">
+                          "{quote}"
+                        </div>
+                      ))}
+                      {score.evidenceQuotes.length > 2 && (
+                        <div className="text-sm text-muted-foreground">
+                          +{score.evidenceQuotes.length - 2} more examples
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Evaluation Criteria */}
@@ -87,152 +170,124 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
         <div className="space-y-4">
           <div>
             <h5 className="text-sm font-medium mb-2">Performance Overview</h5>
-            <div className="grid gap-3">
-              <div className="p-3 bg-background rounded border">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Current Score</div>
-                    <div className="font-medium text-lg">{score.score.toFixed(1)}</div>
-                    <div className="text-xs text-muted-foreground">Team average across all reviews</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">Expected Level</div>
-                    <div className="font-medium text-lg">3.5</div>
-                    <div className="text-xs text-muted-foreground">Baseline for proficiency</div>
+            <div className="p-4 bg-background rounded border space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-sm text-muted-foreground">Current Score</div>
+                  <div className="font-medium text-2xl">{score.score.toFixed(1)}</div>
+                  <div className={cn("text-sm font-medium mt-1", performance.color)}>
+                    {performance.label}
                   </div>
                 </div>
-                <div className="mt-3">
-                  <div className="text-sm mb-1 flex items-center gap-1">
-                    <span className={cn(
-                      "font-medium",
-                      score.score >= 4.0 ? "text-green-700" :
-                      score.score >= 3.5 ? "text-green-600" :
-                      score.score >= 3.0 ? "text-yellow-600" :
-                      "text-red-600"
-                    )}>
-                      {score.score >= 4.0 ? 'Significantly Exceeding' :
-                       score.score >= 3.5 ? 'Exceeding' :
-                       score.score >= 3.0 ? 'Approaching' :
-                       'Below'} expectations
-                    </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-[300px]">
-                          <div className="space-y-2">
-                            <p className="text-sm">Score ranges and their meanings:</p>
-                            <ul className="text-sm space-y-1 text-muted-foreground">
-                              <li>4.0+: Significantly exceeding expectations</li>
-                              <li>3.5-4.0: Exceeding expectations</li>
-                              <li>3.5: Meeting expectations</li>
-                              <li>3.0-3.5: Approaching expectations</li>
-                              <li>Below 3.0: Needs improvement</li>
-                            </ul>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Expected Level</div>
+                  <div className="font-medium text-2xl">3.5</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Baseline for proficiency
                   </div>
-                  <Progress 
-                    value={(score.score / 5) * 100} 
-                    className={cn(
-                      "h-1.5",
-                      score.score >= 4.0 ? "bg-green-100 [&>div]:bg-green-700" :
-                      score.score >= 3.5 ? "bg-green-100 [&>div]:bg-green-600" :
-                      score.score >= 3.0 ? "bg-yellow-100 [&>div]:bg-yellow-600" :
-                      "bg-red-100 [&>div]:bg-red-600"
-                    )}
-                  />
                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress to Excellence (5.0)</span>
+                  <span>{progressPercentage.toFixed(0)}%</span>
+                </div>
+                <Progress value={progressPercentage} className="h-2" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Analysis Details */}
-      <div>
-        <h5 className="text-sm font-medium mb-3">Analysis Details</h5>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-3 bg-background rounded border">
-            <div className="text-sm text-muted-foreground">Confidence Level</div>
-            <div className="font-medium capitalize flex items-center gap-2">
-              {score.confidence}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[250px]">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">
-                        {score.confidence === 'high' && "High confidence in this score"}
-                        {score.confidence === 'medium' && "Moderate confidence in this score"}
-                        {score.confidence === 'low' && "Limited confidence in this score"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {score.confidence === 'high' && "Based on consistent feedback across multiple relationships with strong supporting evidence"}
-                        {score.confidence === 'medium' && "Based on moderate evidence with some variation in feedback patterns"}
-                        {score.confidence === 'low' && "Limited by either the amount of evidence available or significant variations in feedback"}
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+      {/* Enhanced Analysis Details */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="p-4 bg-background rounded border">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Confidence Level</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="w-80">
+                  <p className="font-medium mb-1">{score.confidence.charAt(0).toUpperCase() + score.confidence.slice(1)} Confidence Rating</p>
+                  <p className="text-sm">Based on:</p>
+                  <ul className="text-sm list-disc ml-4 mt-1">
+                    <li>{score.evidenceCount} pieces of evidence</li>
+                    {score.confidence === 'high' && (
+                      <>
+                        <li>Consistent feedback across reviewers</li>
+                        <li>Multiple relationship perspectives</li>
+                      </>
+                    )}
+                    {score.confidence === 'medium' && (
+                      <>
+                        <li>Some variation in feedback</li>
+                        <li>Limited relationship perspectives</li>
+                      </>
+                    )}
+                    {score.confidence === 'low' && (
+                      <>
+                        <li>High variation in feedback</li>
+                        <li>Limited evidence or perspectives</li>
+                      </>
+                    )}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <div className="p-3 bg-background rounded border">
-            <div className="text-sm text-muted-foreground">Evidence Base</div>
-            <div className="font-medium flex items-center gap-2">
-              {score.evidenceCount >= 20 ? 'Strong' : 
-               score.evidenceCount >= 10 ? 'Moderate' : 'Limited'}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[250px]">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">
-                        {score.evidenceCount} specific examples found
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {score.evidenceCount >= 20 ? 'A robust set of examples supporting this assessment' : 
-                         score.evidenceCount >= 10 ? 'A good foundation of examples, but room for more evidence' : 
-                         'Limited examples available - more evidence would strengthen this assessment'}
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          <div className="mt-2 flex items-center gap-2">
+            {confidenceInfo.icon}
+            <span className={cn("font-medium", confidenceInfo.color)}>
+              {score.confidence.charAt(0).toUpperCase() + score.confidence.slice(1)}
+            </span>
           </div>
-          <div className="p-3 bg-background rounded border">
-            <div className="text-sm text-muted-foreground">Score Distribution</div>
-            <div className="font-medium flex items-center gap-2">
-              {score.hasOutliers ? 'High Variance' : 'Consistent'}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[250px]">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">
-                        {score.hasOutliers ? 'Significant variation in scores' : 'Consistent scoring patterns'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {score.hasOutliers 
-                          ? "Individual scores showed notable differences, suggesting varied experiences or perspectives" 
-                          : "Reviewers generally agreed in their assessment of this competency"}
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+        </div>
+
+        <div className="p-4 bg-background rounded border">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Evidence Base</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium mb-1">Strong Evidence Base</p>
+                  <p className="text-sm">{score.evidenceCount} specific examples from feedback</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-500" />
+            <span className="font-medium">Strong</span>
+            <span className="text-sm text-muted-foreground">
+              ({score.evidenceCount} examples)
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-background rounded border">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Score Distribution</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium mb-1">High Variance in Scores</p>
+                  <p className="text-sm">Scores range significantly across reviews, indicating diverse perspectives on performance.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <BarChart2 className="h-5 w-5 text-yellow-500" />
+            <span className="font-medium">High Variance</span>
           </div>
         </div>
       </div>

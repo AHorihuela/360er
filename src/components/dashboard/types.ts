@@ -15,11 +15,14 @@ export interface ScoreWithOutlier {
   score: number;
   confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
-  relationship: string;
-  adjustedWeight?: number;
   hasOutliers?: boolean;
-  adjustmentDetails?: AdjustmentDetail[];
-  description?: string;
+  adjustedWeight?: number;
+  evidenceQuotes?: string[];
+  adjustmentDetails?: Array<{
+    originalScore: number;
+    adjustmentType: 'extreme' | 'moderate';
+    relationship: string;
+  }>;
 }
 
 export interface AggregateScore {
