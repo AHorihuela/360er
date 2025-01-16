@@ -11,7 +11,7 @@ dist
 build
 
 # Documentation
-documentation/
+documentation/database.md
 
 # Environment files
 .env
