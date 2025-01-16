@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { CORE_COMPETENCIES } from '@/lib/competencies';
+import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { ScoreWithOutlier } from './types';
 
 interface CompetencyDetailsProps {
@@ -17,6 +17,19 @@ interface CompetencyDetailsProps {
 }
 
 export function CompetencyDetails({ score }: CompetencyDetailsProps) {
+  const competencyKey = COMPETENCY_NAME_TO_KEY[score.name];
+  const competency = competencyKey ? CORE_COMPETENCIES[competencyKey] : null;
+
+  // Helper function to get indicator based on score
+  const getIndicator = (score: number) => {
+    if (score >= 4.0) return { symbol: '✓', color: "bg-green-100 text-green-700", text: 'Strong performance in this area' };
+    if (score >= 3.5) return { symbol: '✓', color: "bg-green-100 text-green-600", text: 'Exceeding expectations' };
+    if (score >= 3.0) return { symbol: '~', color: "bg-yellow-100 text-yellow-700", text: 'Meeting basic expectations' };
+    return { symbol: '!', color: "bg-red-100 text-red-700", text: 'Area for improvement' };
+  };
+
+  const indicator = getIndicator(score.score);
+
   return (
     <div className="mt-4 pt-4 border-t space-y-6">
       {/* About Section with Key Metrics */}
@@ -30,7 +43,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
               <div className="p-3 bg-background rounded border">
                 <div className="text-sm text-muted-foreground mb-1">Current Level Performance</div>
                 <div className="text-sm">
-                  {CORE_COMPETENCIES[score.name]?.rubric[Math.round(score.score)] || 
+                  {competency?.rubric[Math.round(score.score)] || 
                    "Score description not available"}
                 </div>
               </div>
@@ -39,7 +52,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
               <div>
                 <div className="text-sm text-muted-foreground mb-2">Evaluation Criteria</div>
                 <div className="space-y-2">
-                  {CORE_COMPETENCIES[score.name]?.aspects?.map((aspect, i) => (
+                  {competency?.aspects?.map((aspect, i) => (
                     <div 
                       key={i} 
                       className="flex items-center gap-2 p-2 bg-background rounded border"
@@ -50,21 +63,13 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
                             <TooltipTrigger>
                               <div className={cn(
                                 "w-5 h-5 rounded-full flex items-center justify-center text-xs",
-                                score.score >= 4 ? "bg-green-100 text-green-700" :
-                                score.score >= 3 ? "bg-yellow-100 text-yellow-700" :
-                                "bg-red-100 text-red-700"
+                                indicator.color
                               )}>
-                                {score.score >= 4 ? '✓' : 
-                                 score.score >= 3 ? '~' : 
-                                 '!'}
+                                {indicator.symbol}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-sm">
-                                {score.score >= 4 ? 'Strong performance in this area' : 
-                                 score.score >= 3 ? 'Meeting basic expectations' : 
-                                 'Area for improvement'}
-                              </p>
+                              <p className="text-sm">{indicator.text}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
