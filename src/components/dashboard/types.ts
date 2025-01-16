@@ -11,6 +11,7 @@ export interface AdjustmentDetail {
 }
 
 export interface ScoreWithOutlier {
+  name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
@@ -18,6 +19,7 @@ export interface ScoreWithOutlier {
   adjustedWeight?: number;
   hasOutliers?: boolean;
   adjustmentDetails?: AdjustmentDetail[];
+  description?: string;
 }
 
 export interface AggregateScore {
@@ -27,14 +29,6 @@ export interface AggregateScore {
   evidenceCount: number;
   hasOutliers?: boolean;
   evidenceQuotes?: string[];
-}
-
-export interface ChartDataPoint {
-  subject: string;
-  fullName: typeof COMPETENCY_ORDER[number];
-  value: number;
-  confidence: 'low' | 'medium' | 'high';
-  evidenceCount: number;
 }
 
 // Add COMPETENCY_ORDER type
