@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -18,6 +18,8 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
+  const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
+
   // Get all responses that have been submitted
   const responses = feedbackRequests.flatMap(fr => fr.feedback_responses || []);
   if (responses.length === 0) return null;
@@ -168,7 +170,23 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="space-y-1">
-          <CardTitle className="text-base">Team Competency Analysis</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">Team Competency Analysis</CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="text-xs font-normal bg-background">
+                    Beta
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[300px]">
+                  <p className="text-sm">
+                    This feature is in beta. We're actively improving our analysis methodology and visualization. Your feedback helps us enhance the accuracy and usefulness of these insights.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <p className="text-sm text-muted-foreground">
             Based on {employeesWithAnalytics.size} of {totalEmployees} employees ({includedReviewCount} of {totalReviewCount} reviews)
           </p>
@@ -254,15 +272,25 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <div className="p-3 border-b bg-slate-50">
               <h3 className="text-sm font-medium">Team Competency Analysis</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Scores weighted by relationship type and adjusted for confidence
+                Click on any competency to see detailed analysis
               </p>
             </div>
             <div className="divide-y">
               {COMPETENCY_ORDER.map((name) => {
                 const score = sortedScores.find(s => s.name === name);
                 if (!score) return null;
+                const isExpanded = expandedCompetency === name;
+                
                 return (
-                  <div key={name} className="p-4">
+                  <div 
+                    key={name} 
+                    className={cn(
+                      "p-4 transition-colors",
+                      "cursor-pointer hover:bg-slate-50",
+                      isExpanded && "bg-slate-50"
+                    )}
+                    onClick={() => setExpandedCompetency(isExpanded ? null : name)}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -310,6 +338,127 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                         ))}
                       </div>
                     </div>
+                    
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="space-y-4">
+                          {/* Description Section */}
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">About this Competency</h5>
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-2">
+                                {CORE_COMPETENCIES[score.name]?.aspects?.map((aspect, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {aspect}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {CORE_COMPETENCIES[score.name]?.rubric[Math.round(score.score)] || 
+                                 "Score description not available"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Score Breakdown */}
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">Score Breakdown</h5>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-3 bg-background rounded border">
+                                <div className="text-sm text-muted-foreground">Confidence Level</div>
+                                <div className="font-medium capitalize flex items-center gap-2">
+                                  {score.confidence}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-sm">
+                                          {score.confidence === 'high' && "Based on consistent feedback across multiple relationships with strong evidence"}
+                                          {score.confidence === 'medium' && "Based on moderate evidence with some variation in feedback"}
+                                          {score.confidence === 'low' && "Limited evidence or significant variation in feedback"}
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              </div>
+                              <div className="p-3 bg-background rounded border">
+                                <div className="text-sm text-muted-foreground">Evidence Count</div>
+                                <div className="font-medium flex items-center gap-2">
+                                  {score.evidenceCount} pieces
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-sm">
+                                          Number of specific examples found in feedback that demonstrate this competency
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Evidence Section */}
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">Score Adjustments</h5>
+                            <div className="space-y-2">
+                              {score.hasOutliers ? (
+                                <>
+                                  {(score.adjustmentDetails || []).map((detail, i) => (
+                                    <div key={i} className="p-3 bg-background rounded border">
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Badge variant="outline" className="shrink-0">
+                                          {detail.adjustmentType === 'extreme' ? 'Major Adjustment' : 'Minor Adjustment'}
+                                        </Badge>
+                                        <span className="text-muted-foreground">
+                                          {detail.relationship} feedback score of {detail.originalScore.toFixed(1)} was adjusted due to statistical variance
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Adjustments help maintain balanced scoring when feedback varies significantly from the average
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  No score adjustments were needed - feedback was consistently within expected ranges
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Methodology Note */}
+                          <div className="text-sm text-muted-foreground bg-slate-100 p-3 rounded">
+                            <p className="font-medium mb-2">How this score is calculated:</p>
+                            <ul className="list-disc pl-4 space-y-2">
+                              <li>
+                                <span className="font-medium">Relationship Weighting:</span>
+                                <ul className="mt-1 pl-4">
+                                  <li>Senior feedback: 40% weight</li>
+                                  <li>Peer feedback: 35% weight</li>
+                                  <li>Junior feedback: 25% weight</li>
+                                </ul>
+                              </li>
+                              <li>
+                                <span className="font-medium">Statistical Adjustments:</span>
+                                {score.hasOutliers ? ' Applied to maintain scoring balance' : ' None needed'}
+                              </li>
+                              <li>
+                                <span className="font-medium">Confidence Assessment:</span> Based on evidence quantity ({score.evidenceCount} pieces) and feedback consistency
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
