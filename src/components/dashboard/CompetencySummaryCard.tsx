@@ -43,17 +43,41 @@ function getConfidenceOpacity(confidence: 'low' | 'medium' | 'high') {
 
 export function CompetencySummaryCard({ score, isExpanded, onToggle }: CompetencySummaryCardProps) {
   const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number, effectiveEvidenceCount: number, hasOutliers: boolean) => {
-    let explanation = `${evidenceCount} total mentions → ${effectiveEvidenceCount} effective evidence (after applying diminishing returns)`;
-    
-    if (confidence === 'low') {
-      explanation += '. More diverse feedback sources needed.';
-    }
+    const mainContent = (
+      <div className="space-y-3 p-1">
+        <div>
+          <p className="font-medium mb-1.5">Evidence Calculation:</p>
+          <p className="text-sm">{evidenceCount} total mentions → {effectiveEvidenceCount} effective evidence</p>
+        </div>
+        <div>
+          <p className="font-medium mb-1.5">Diminishing Returns:</p>
+          <ul className="text-sm space-y-1">
+            <li className="flex items-baseline gap-2">
+              <span className="text-muted-foreground">•</span>
+              <span>First mention from each reviewer counts fully</span>
+            </li>
+            <li className="flex items-baseline gap-2">
+              <span className="text-muted-foreground">•</span>
+              <span>Additional mentions count as: 0.5, 0.25, 0.125...</span>
+            </li>
+          </ul>
+        </div>
+        {(hasOutliers || confidence === 'low') && (
+          <div className="border-t border-border pt-2">
+            {confidence === 'low' && (
+              <p className="text-sm text-muted-foreground">More diverse feedback sources needed.</p>
+            )}
+            {hasOutliers && (
+              <p className="text-sm text-muted-foreground">
+                Some scores were adjusted to account for statistical outliers.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
 
-    if (hasOutliers) {
-      explanation += '\n\nSome scores were adjusted to account for statistical outliers.';
-    }
-
-    return explanation;
+    return mainContent;
   };
 
   const scoreColor = getScoreColor(score.score);
@@ -104,13 +128,13 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
                     score.hasOutliers ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground"
                   )} />
                 </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-[300px] whitespace-pre-line">
-                  <p className="text-sm">{getConfidenceTooltip(
+                <TooltipContent side="left" className="max-w-[300px]">
+                  {getConfidenceTooltip(
                     score.confidence, 
                     score.evidenceCount, 
                     score.effectiveEvidenceCount, 
                     score.hasOutliers ?? false
-                  )}</p>
+                  )}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
