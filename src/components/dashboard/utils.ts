@@ -163,7 +163,9 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
       rawCount: s.evidenceCount,
       effectiveCount: Math.min(
         s.evidenceCount,
-        2 + Math.floor(Math.log2(Math.max(1, s.evidenceCount - 1)) / 2)
+        1 + (s.evidenceCount > 1 ? 
+          Array.from({length: s.evidenceCount - 1})
+            .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
       )
     })),
     evidenceByReviewer: Object.fromEntries(evidenceByReviewer)
