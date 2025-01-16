@@ -102,7 +102,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Badge variant="outline" className="text-xs font-normal bg-background">
+                  <Badge variant="default" className="text-xs font-normal bg-black text-white">
                     Beta
                   </Badge>
                 </TooltipTrigger>
