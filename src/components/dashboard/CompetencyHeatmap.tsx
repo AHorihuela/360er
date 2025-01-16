@@ -13,6 +13,9 @@ import { MIN_REVIEWS_REQUIRED, RELATIONSHIP_WEIGHTS, CONFIDENCE_WEIGHTS } from '
 import { detectOutliers, calculateConfidence } from './utils';
 import { CompetencyRadarChart } from './CompetencyRadarChart';
 import { CompetencyScoreCard } from './CompetencyScoreCard';
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   // Get all responses that have been submitted
@@ -224,17 +227,91 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         </TooltipProvider>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-8 md:grid-cols-2">
-          <CompetencyRadarChart chartData={chartData} />
-          <div className="space-y-4 bg-white shadow-sm rounded-lg border">
-            <div className="p-3 border-b">
-              <h3 className="text-sm font-medium">Detailed Scores</h3>
+        <div className="space-y-6">
+          {/* Summary Stats */}
+          <div className="grid gap-4 grid-cols-3">
+            <div className="p-4 border rounded-lg bg-slate-50">
+              <div className="text-sm font-medium text-muted-foreground mb-1">Team Coverage</div>
+              <div className="text-2xl font-semibold">{employeesWithAnalytics.size}/{totalEmployees}</div>
+              <div className="text-sm text-muted-foreground">employees analyzed</div>
+            </div>
+            <div className="p-4 border rounded-lg bg-slate-50">
+              <div className="text-sm font-medium text-muted-foreground mb-1">Total Reviews</div>
+              <div className="text-2xl font-semibold">{includedReviewCount}/{totalReviewCount}</div>
+              <div className="text-sm text-muted-foreground">reviews processed</div>
+            </div>
+            <div className="p-4 border rounded-lg bg-slate-50">
+              <div className="text-sm font-medium text-muted-foreground mb-1">Average Evidence</div>
+              <div className="text-2xl font-semibold">
+                {(sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length).toFixed(1)}
+              </div>
+              <div className="text-sm text-muted-foreground">pieces per competency</div>
+            </div>
+          </div>
+
+          {/* Detailed Scores */}
+          <div className="border rounded-lg">
+            <div className="p-3 border-b bg-slate-50">
+              <h3 className="text-sm font-medium">Team Competency Analysis</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Scores weighted by relationship type and adjusted for confidence
+              </p>
             </div>
             <div className="divide-y">
               {COMPETENCY_ORDER.map((name) => {
                 const score = sortedScores.find(s => s.name === name);
                 if (!score) return null;
-                return <CompetencyScoreCard key={name} score={score} />;
+                return (
+                  <div key={name} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{score.name}</h4>
+                          <Badge 
+                            variant={score.confidence === 'low' ? 'destructive' : 
+                                   score.confidence === 'medium' ? 'outline' : 
+                                   'secondary'}
+                            className={cn(
+                              "text-xs capitalize",
+                              score.confidence === 'medium' && "bg-yellow-50 text-yellow-700",
+                              score.confidence === 'high' && "bg-green-50 text-green-700"
+                            )}
+                          >
+                            {score.confidence}
+                          </Badge>
+                          {score.hasOutliers && (
+                            <Badge variant="outline" className="text-xs">
+                              Adjusted for outliers
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{score.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-semibold">{score.score.toFixed(1)}/5.0</div>
+                        <div className="text-sm text-muted-foreground">
+                          {score.evidenceCount} pieces of evidence
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative mt-2">
+                      <Progress 
+                        value={(score.score / 5) * 100} 
+                        className={cn(
+                          "h-2",
+                          score.confidence === 'low' ? "bg-destructive/10 [&>div]:bg-destructive/50" :
+                          score.confidence === 'medium' ? "bg-yellow-100 [&>div]:bg-yellow-500" :
+                          "bg-primary/10 [&>div]:bg-primary"
+                        )}
+                      />
+                      <div className="absolute inset-0 grid grid-cols-5 -mx-[1px]">
+                        {[1,2,3,4,5].map(n => (
+                          <div key={n} className="border-l border-muted last:border-r" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
               })}
             </div>
           </div>
