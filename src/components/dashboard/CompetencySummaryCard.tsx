@@ -117,19 +117,50 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           </div>
         </div>
 
-        {/* Calculation Method Section */}
+        {/* Confidence Factors Section */}
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Calculation Method
+            Confidence Factors
           </div>
           <div className="space-y-1.5">
+            <div className="text-sm space-y-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-emerald-500 shrink-0">•</span>
+                <span>Evidence Quantity (35%): {effectiveEvidenceCount >= 12 ? "High" : effectiveEvidenceCount >= 8 ? "Medium" : "Low"}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-emerald-500 shrink-0">•</span>
+                <span>Relationship Coverage (25%): Need feedback from senior, peer, and junior relationships</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-emerald-500 shrink-0">•</span>
+                <span>Score Consistency (25%): Based on variance between scores</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-emerald-500 shrink-0">•</span>
+                <span>Distribution Quality (15%): How evenly feedback is spread across relationships</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Requirements Section */}
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Confidence Requirements
+          </div>
+          <div className="space-y-1.5 text-sm">
             <div className="flex items-baseline gap-2">
-              <span className="text-emerald-500 shrink-0">•</span>
-              <span className="text-sm">First mention from each reviewer counts as <span className="font-medium">1.0</span></span>
+              <span className="text-green-500 shrink-0">•</span>
+              <span><span className="font-medium">High</span>: 12+ evidence pieces AND at least 2 relationship types</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-yellow-500 shrink-0">•</span>
-              <span className="text-sm">Additional mentions diminish: <span className="font-medium">0.5</span> → <span className="font-medium">0.25</span> → <span className="font-medium">0.125</span></span>
+              <span><span className="font-medium">Medium</span>: 8+ evidence pieces AND at least 2 relationship types</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-red-500 shrink-0">•</span>
+              <span><span className="font-medium">Low</span>: Single relationship type OR less than 8 evidence pieces</span>
             </div>
           </div>
         </div>
