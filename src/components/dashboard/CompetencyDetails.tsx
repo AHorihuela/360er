@@ -141,17 +141,32 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
 
         <div className="mt-4 space-y-1">
           <div className="flex justify-between text-sm">
-            <span>Progress to Excellence</span>
-            <span>{progressPercentage.toFixed(0)}%</span>
+            <span>Distance from Target (3.5)</span>
+            <span>{Math.abs(score.score - 3.5).toFixed(1)} points {score.score >= 3.5 ? 'above' : 'below'}</span>
           </div>
-          <Progress 
-            value={progressPercentage} 
-            className="h-2"
-            aria-label={`Progress to excellence: ${progressPercentage.toFixed(0)}%`}
-          />
+          <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-0.5 h-full bg-slate-300" />
+            </div>
+            {score.score >= 3.5 ? (
+              <div 
+                className="absolute top-0 bottom-0 left-1/2 bg-green-500"
+                style={{ width: `${((score.score - 3.5) / 1.5) * 50}%` }}
+              />
+            ) : (
+              <div 
+                className="absolute top-0 bottom-0 bg-red-500"
+                style={{ 
+                  right: '50%',
+                  width: `${((3.5 - score.score) / 1.5) * 50}%`
+                }}
+              />
+            )}
+          </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>Expected Level: 3.5</span>
-            <span>Excellence: 5.0</span>
+            <span>-1.5</span>
+            <span className="text-slate-500">Target</span>
+            <span>+1.5</span>
           </div>
         </div>
       </div>
