@@ -40,15 +40,4 @@ export interface AggregateScore {
   evidenceCount: number;
   hasOutliers?: boolean;
   evidenceQuotes?: string[];
-}
-
-// Add COMPETENCY_ORDER type
-export const COMPETENCY_ORDER = [
-  'Technical/Functional Expertise',
-  'Leadership & Influence',
-  'Collaboration & Communication',
-  'Innovation & Problem-Solving',
-  'Execution & Accountability',
-  'Emotional Intelligence & Culture Fit',
-  'Growth & Development'
-] as const; 
+} 
