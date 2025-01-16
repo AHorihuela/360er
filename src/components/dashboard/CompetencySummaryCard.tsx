@@ -103,7 +103,12 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Evidence Summary</div>
           <div className="mt-1.5">
             <div>
-              <span className="text-2xl font-semibold">{effectiveEvidenceCount.toFixed(1)}</span>
+              <span className="text-2xl font-semibold">
+                {Number(effectiveEvidenceCount).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2
+                })}
+              </span>
               <span className="text-sm font-normal text-muted-foreground ml-1">effective evidence</span>
             </div>
             <div className="text-xs text-muted-foreground">
