@@ -39,7 +39,7 @@ export interface ScoreWithOutlier {
   relationship: string;
   description: string;
   hasOutliers?: boolean;
-  adjustmentDetails?: string[];
+  adjustmentDetails?: AdjustmentDetail[];
   adjustedWeight?: number;
   evidenceQuotes?: string[];
   confidenceMetrics?: ConfidenceMetrics;

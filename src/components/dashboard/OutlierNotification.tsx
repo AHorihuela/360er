@@ -22,7 +22,7 @@ export function OutlierNotification({ score }: OutlierNotificationProps) {
               • {extremeAdjustments.length} extreme {extremeAdjustments.length === 1 ? 'score' : 'scores'} reduced to 50% impact
               {extremeAdjustments.map((adj: AdjustmentDetail, i: number) => (
                 <div key={i} className="pl-2 text-muted-foreground">
-                  {adj.relationship} feedback: {adj.originalScore.toFixed(1)} → {(adj.originalScore * OUTLIER_THRESHOLDS.maxReduction).toFixed(1)}
+                  {adj.relationship} feedback: {adj.originalScore.toFixed(3)} → {(adj.originalScore * OUTLIER_THRESHOLDS.maxReduction).toFixed(3)}
                 </div>
               ))}
             </li>
@@ -32,7 +32,7 @@ export function OutlierNotification({ score }: OutlierNotificationProps) {
               • {moderateAdjustments.length} moderate {moderateAdjustments.length === 1 ? 'score' : 'scores'} reduced to 75% impact
               {moderateAdjustments.map((adj: AdjustmentDetail, i: number) => (
                 <div key={i} className="pl-2 text-muted-foreground">
-                  {adj.relationship} feedback: {adj.originalScore.toFixed(1)} → {(adj.originalScore * OUTLIER_THRESHOLDS.moderateReduction).toFixed(1)}
+                  {adj.relationship} feedback: {adj.originalScore.toFixed(3)} → {(adj.originalScore * OUTLIER_THRESHOLDS.moderateReduction).toFixed(3)}
                 </div>
               ))}
             </li>

@@ -413,7 +413,7 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                     "font-semibold text-sm",
                     data.isInsufficientData && "text-muted-foreground"
                   )}>
-                    {data.score === null ? 'N/A' : `${data.score.toFixed(1)}/5`}
+                    {data.score === null ? 'N/A' : `${data.score.toFixed(3)}/5`}
                   </span>
                   <span className={cn(
                     "text-xs",

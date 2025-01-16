@@ -83,8 +83,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       const totalWeight = adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]), 0);
       
-      const weightedScore = adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
-        sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight;
+      const weightedScore = Number((adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
+        sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight).toFixed(3));
 
       // Calculate confidence based on evidence and consistency
       const confidenceResult = calculateConfidence(scores);

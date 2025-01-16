@@ -137,7 +137,7 @@ export function InsightContent({ insight }: Props) {
                                 </div>
                               </div>
                               <div>
-                                <p className="font-medium mb-1">Score Meaning ({competency.score.toFixed(1)}/5.0):</p>
+                                <p className="font-medium mb-1">Score Meaning ({competency.score.toFixed(3)}/5.0):</p>
                                 <p className="text-sm">
                                   {details.rubric[Math.round(competency.score) as keyof typeof details.rubric]}
                                 </p>
@@ -178,7 +178,7 @@ export function InsightContent({ insight }: Props) {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className="font-medium w-8 text-right">{competency.score.toFixed(1)}/5.0</span>
+                  <span className="font-medium w-8 text-right">{competency.score.toFixed(3)}/5.0</span>
                 </div>
               </div>
               <div className="relative">
