@@ -19,24 +19,25 @@ export function CompetencyRadarChart({ chartData }: CompetencyRadarChartProps) {
         <RadarChart 
           cx="50%" 
           cy="50%" 
-          outerRadius="65%" 
+          outerRadius="60%"
           data={chartData}
           startAngle={90}
           endAngle={-270}
         >
           <PolarGrid 
             stroke="#e5e7eb" 
-            strokeOpacity={0.3}
+            strokeOpacity={0.2}
             gridType="polygon"
           />
-          {[1, 2, 3, 4, 5].map((value) => (
+          {[0, 1, 2, 3, 4, 5].map((value) => (
             <PolarGrid
               key={value}
-              stroke="none"
+              stroke="#e5e7eb"
+              strokeOpacity={0.1}
               gridType="circle"
-              radius={value * 20}
+              radius={(value / 5) * 100}
               fill={value % 2 ? "#f8fafc" : "#ffffff"}
-              fillOpacity={0.5}
+              fillOpacity={0.3}
             />
           ))}
           <PolarAngleAxis
@@ -50,27 +51,35 @@ export function CompetencyRadarChart({ chartData }: CompetencyRadarChartProps) {
                   textAnchor="middle"
                   fill="#6b7280"
                   fontSize={11}
+                  className="font-medium"
                 >
                   {payload.value}
                 </text>
               </g>
             )}
+            tickLine={false}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 5]}
             axisLine={false}
-            tick={{ fill: '#6b7280', fontSize: 10 }}
+            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            tickCount={6}
             stroke="#e5e7eb"
-            strokeOpacity={0.3}
+            strokeOpacity={0.2}
           />
           <Radar
             name="Team Score"
             dataKey="value"
-            stroke="#2563eb"
+            stroke="#3b82f6"
+            strokeWidth={2}
             fill="#3b82f6"
-            fillOpacity={0.7}
-            dot
+            fillOpacity={0.15}
+            dot={{
+              fill: '#3b82f6',
+              strokeWidth: 0,
+              r: 3
+            }}
             isAnimationActive={false}
           />
         </RadarChart>

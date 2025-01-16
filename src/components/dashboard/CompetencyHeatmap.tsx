@@ -90,19 +90,17 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       // Apply outlier detection
       const adjustedScores = detectOutliers(scores);
       
-      // Calculate weighted average score with outlier adjustment
+      // Calculate weighted average score with outlier and confidence adjustments only
+      // Note: Relationship weights are already applied in individual employee aggregation
       const weightedScores = adjustedScores.map(s => ({
         ...s,
         weightedScore: s.score * 
-          (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1) *
+          (s.adjustedWeight || 1) * // Outlier adjustment if any, otherwise keep original score
           CONFIDENCE_WEIGHTS[s.confidence]
       }));
       
       const totalWeight = weightedScores.reduce((sum, s) => 
-        sum + (
-          (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1) *
-          CONFIDENCE_WEIGHTS[s.confidence]
-        ), 0);
+        sum + ((s.adjustedWeight || 1) * CONFIDENCE_WEIGHTS[s.confidence]), 0);
       
       const avgScore = weightedScores.reduce((sum, s) => sum + s.weightedScore, 0) / totalWeight;
       
@@ -111,7 +109,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         confidence: calculateConfidence(scores),
         evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
         relationship: scores[0].relationship,
-        hasOutliers: adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])
+        hasOutliers: adjustedScores.some(s => s.adjustedWeight !== 1) // Changed from RELATIONSHIP_WEIGHTS check
       });
     });
   });
@@ -155,13 +153,21 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     ? "1 employee" 
     : `${employeesWithAnalytics.size} employees`;
 
+  // Calculate total reviews for included employees
+  const includedReviewCount = employeesWithSufficientData
+    .reduce((sum, fr) => sum + (fr.feedback_responses?.length || 0), 0);
+
+  // Calculate total reviews across all employees
+  const totalReviewCount = feedbackRequests
+    .reduce((sum, fr) => sum + (fr.feedback_responses?.length || 0), 0);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="space-y-1">
           <CardTitle className="text-base">Team Competency Analysis</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Based on {employeesWithAnalytics.size} of {totalEmployees} employees
+            Based on {employeesWithAnalytics.size} of {totalEmployees} employees ({includedReviewCount} of {totalReviewCount} reviews)
           </p>
         </div>
         <TooltipProvider>
@@ -173,7 +179,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
               <div className="max-w-xs p-4">
                 <p className="text-sm font-medium">Team Competency Analysis</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  A comprehensive view of your team's strengths and areas for growth, based on aggregated feedback.
+                  A comprehensive view of your team's strengths and areas for growth, based on AI-analyzed feedback from peers, managers, and direct reports.
                 </p>
 
                 <p className="text-sm font-medium mt-4">How to read this:</p>
@@ -188,13 +194,29 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                   </div>
                   <div className="flex items-start gap-2">
                     <div className="h-4 mt-1 flex-shrink-0 px-1.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">high</div>
-                    <p className="text-sm text-muted-foreground">Confidence badges indicate data reliability based on review count, consistency, and diversity</p>
+                    <p className="text-sm text-muted-foreground">
+                      Confidence levels reflect:
+                      <br/>• Number of reviews
+                      <br/>• Evidence quality and consistency
+                      <br/>• Diversity of feedback sources
+                    </p>
                   </div>
                 </div>
 
                 <div className="border-t mt-4 pt-2">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Note:</span> For reliable insights, each employee needs at least {MIN_REVIEWS_REQUIRED} reviews to be included.
+                    <span className="font-medium">Methodology:</span>
+                  </p>
+                  <ul className="mt-1 text-sm text-muted-foreground space-y-1">
+                    <li>• Scores weighted by relationship (senior 40%, peer 35%, junior 25%)</li>
+                    <li>• Statistical outliers adjusted to maintain balance</li>
+                    <li>• Minimum {MIN_REVIEWS_REQUIRED} reviews per employee for inclusion</li>
+                  </ul>
+                </div>
+
+                <div className="border-t mt-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Tip:</span> Click on any competency to see detailed scores, evidence count, and methodology explanation.
                   </p>
                 </div>
               </div>

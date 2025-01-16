@@ -9,6 +9,33 @@ export function MethodologyExplanation({ score }: MethodologyExplanationProps) {
   return (
     <div className="mt-4 space-y-3">
       <div>
+        <p className="text-sm font-medium">Confidence Level Meaning:</p>
+        <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
+          <li className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs px-1.5 rounded-full font-medium",
+              "bg-blue-100 text-blue-700"
+            )}>high</span>
+            Multiple specific examples with clear impact metrics
+          </li>
+          <li className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs px-1.5 rounded-full font-medium",
+              "bg-yellow-100 text-yellow-700"
+            )}>medium</span>
+            Some examples but limited metrics or consistency
+          </li>
+          <li className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs px-1.5 rounded-full font-medium",
+              "bg-red-100 text-red-700"
+            )}>low</span>
+            Vague feedback or inconsistent observations
+          </li>
+        </ul>
+      </div>
+
+      <div>
         <p className="text-sm font-medium">Score Weighting:</p>
         <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
           <li className="flex items-center gap-2">
@@ -27,28 +54,19 @@ export function MethodologyExplanation({ score }: MethodologyExplanationProps) {
       </div>
 
       <div>
-        <p className="text-sm font-medium">Confidence Impact:</p>
+        <p className="text-sm font-medium">Confidence Impact on Scores:</p>
         <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
           <li className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs px-1.5 rounded-full font-medium",
-              "bg-blue-100 text-blue-700"
-            )}>high</span>
-            100% weight - Strong evidence & consistency
+            <span className="w-2 h-2 rounded-full bg-green-300 flex-shrink-0" />
+            High confidence scores: Full weight (100%)
           </li>
           <li className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs px-1.5 rounded-full font-medium",
-              "bg-yellow-100 text-yellow-700"
-            )}>medium</span>
-            80% weight - Good evidence with some gaps
+            <span className="w-2 h-2 rounded-full bg-green-300 flex-shrink-0" />
+            Medium confidence: Reduced to 80% weight
           </li>
           <li className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs px-1.5 rounded-full font-medium",
-              "bg-red-100 text-red-700"
-            )}>low</span>
-            50% weight - Limited or inconsistent evidence
+            <span className="w-2 h-2 rounded-full bg-green-300 flex-shrink-0" />
+            Low confidence: Reduced to 50% weight
           </li>
         </ul>
       </div>
