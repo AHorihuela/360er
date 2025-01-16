@@ -165,7 +165,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
           </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>-1.5</span>
-            <span className="text-slate-500">Target</span>
+            <span className="text-slate-500">Target (3.5)</span>
             <span>+1.5</span>
           </div>
         </div>
