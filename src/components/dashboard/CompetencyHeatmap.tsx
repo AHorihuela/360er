@@ -313,11 +313,6 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                           >
                             {score.confidence}
                           </Badge>
-                          {score.hasOutliers && (
-                            <Badge variant="outline" className="text-xs">
-                              Adjusted for outliers
-                            </Badge>
-                          )}
                           <ChevronDown className={cn(
                             "h-4 w-4 text-muted-foreground transition-transform",
                             isExpanded && "transform rotate-180"
@@ -397,19 +392,36 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                                   </div>
                                   <div className="mt-3">
                                     <div className="text-sm mb-1 flex items-center gap-1">
-                                      <span className={score.score >= 3.5 ? "text-green-600" : "text-yellow-600"}>
-                                        {score.score >= 3.5 ? 'Above' : 'Below'} expected level by {Math.abs(score.score - 3.5).toFixed(1)} points
+                                      <span className={cn(
+                                        "font-medium",
+                                        score.score >= 4.0 ? "text-green-700" :
+                                        score.score >= 3.5 ? "text-green-600" :
+                                        score.score >= 3.0 ? "text-yellow-600" :
+                                        "text-red-600"
+                                      )}>
+                                        {score.score >= 4.0 ? 'Significantly Exceeding' :
+                                         score.score >= 3.5 ? 'Exceeding' :
+                                         score.score >= 3.0 ? 'Approaching' :
+                                         'Below'} expectations
                                       </span>
                                       <TooltipProvider>
                                         <Tooltip>
                                           <TooltipTrigger>
                                             <InfoIcon className="h-4 w-4 text-muted-foreground" />
                                           </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-sm">
-                                              3.5 represents the expected proficiency level for this competency. 
-                                              Scores above this indicate strong performance, while scores below suggest areas for development.
-                                            </p>
+                                          <TooltipContent className="max-w-[300px]">
+                                            <div className="space-y-2">
+                                              <p className="text-sm">
+                                                Score ranges and their meanings:
+                                              </p>
+                                              <ul className="text-sm space-y-1 text-muted-foreground">
+                                                <li>4.0+: Significantly exceeding expectations</li>
+                                                <li>3.5-4.0: Exceeding expectations</li>
+                                                <li>3.5: Meeting expectations</li>
+                                                <li>3.0-3.5: Approaching expectations</li>
+                                                <li>Below 3.0: Needs improvement</li>
+                                              </ul>
+                                            </div>
                                           </TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
@@ -418,7 +430,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                                       value={(score.score / 5) * 100} 
                                       className={cn(
                                         "h-1.5",
-                                        score.score >= 3.5 ? "bg-green-100 [&>div]:bg-green-600" : "bg-yellow-100 [&>div]:bg-yellow-600"
+                                        score.score >= 4.0 ? "bg-green-100 [&>div]:bg-green-700" :
+                                        score.score >= 3.5 ? "bg-green-100 [&>div]:bg-green-600" :
+                                        score.score >= 3.0 ? "bg-yellow-100 [&>div]:bg-yellow-600" :
+                                        "bg-red-100 [&>div]:bg-red-600"
                                       )}
                                     />
                                   </div>
