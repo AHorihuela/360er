@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronDown, Info } from 'lucide-react';
+import { ChevronDown, Info, AlertCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -42,15 +42,18 @@ function getConfidenceOpacity(confidence: 'low' | 'medium' | 'high') {
 }
 
 export function CompetencySummaryCard({ score, isExpanded, onToggle }: CompetencySummaryCardProps) {
-  const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number) => {
-    switch (confidence) {
-      case 'high':
-        return `High confidence based on ${evidenceCount} effective pieces of evidence (after diminishing returns)`;
-      case 'medium':
-        return `Medium confidence with ${evidenceCount} effective supporting examples (after diminishing returns)`;
-      case 'low':
-        return `Limited evidence (${evidenceCount} effective examples after diminishing returns) - interpret with caution`;
+  const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number, effectiveEvidenceCount: number, hasOutliers: boolean) => {
+    let explanation = `${evidenceCount} total mentions → ${effectiveEvidenceCount} effective evidence (after applying diminishing returns)`;
+    
+    if (confidence === 'low') {
+      explanation += '. More diverse feedback sources needed.';
     }
+
+    if (hasOutliers) {
+      explanation += '\n\nSome scores were adjusted to account for statistical outliers.';
+    }
+
+    return explanation;
   };
 
   const scoreColor = getScoreColor(score.score);
@@ -70,27 +73,18 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h4 className="font-medium">{score.name}</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge 
-                    variant={score.confidence === 'low' ? 'destructive' : 
-                           score.confidence === 'medium' ? 'outline' : 
-                           'secondary'}
-                    className={cn(
-                      "text-xs capitalize",
-                      score.confidence === 'medium' && "bg-yellow-50 text-yellow-700",
-                      score.confidence === 'high' && "bg-green-50 text-green-700"
-                    )}
-                  >
-                    {score.confidence}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p className="text-sm">{getConfidenceTooltip(score.confidence, score.evidenceCount)}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Badge 
+              variant={score.confidence === 'low' ? 'destructive' : 
+                     score.confidence === 'medium' ? 'outline' : 
+                     'secondary'}
+              className={cn(
+                "text-xs capitalize",
+                score.confidence === 'medium' && "bg-yellow-50 text-yellow-700",
+                score.confidence === 'high' && "bg-green-50 text-green-700"
+              )}
+            >
+              {score.confidence}
+            </Badge>
             <ChevronDown className={cn(
               "h-4 w-4 text-muted-foreground transition-transform",
               isExpanded && "transform rotate-180"
@@ -102,18 +96,24 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           <div className="text-2xl font-semibold">{score.score.toFixed(1)}/5.0</div>
           <div className="flex items-center justify-end gap-1 text-sm text-muted-foreground">
             <span>{score.effectiveEvidenceCount} effective pieces of evidence</span>
-            {score.hasOutliers && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-4 w-4 text-yellow-500" />
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    <p className="text-sm">Some scores were adjusted to account for statistical outliers</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className={cn(
+                    "h-4 w-4 hover:text-foreground transition-colors",
+                    score.hasOutliers ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[300px] whitespace-pre-line">
+                  <p className="text-sm">{getConfidenceTooltip(
+                    score.confidence, 
+                    score.evidenceCount, 
+                    score.effectiveEvidenceCount, 
+                    score.hasOutliers ?? false
+                  )}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>
