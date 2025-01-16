@@ -23,12 +23,22 @@ interface CompetencyHeatmapProps {
   feedbackRequests: DashboardFeedbackRequest[];
 }
 
+interface ScoreWithOutlier {
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
+  evidenceCount: number;
+  relationship: string;
+  adjustedWeight?: number;
+  hasOutliers?: boolean;
+}
+
 interface AggregateScore {
   name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
+  hasOutliers?: boolean;
 }
 
 const MIN_REVIEWS_REQUIRED = 5;
@@ -52,24 +62,77 @@ const RELATIONSHIP_WEIGHTS = {
   aggregate: 1 // Used for already aggregated scores
 };
 
+// Add confidence weight constants
+const CONFIDENCE_WEIGHTS = {
+  low: 0.5,
+  medium: 0.8,
+  high: 1.0
+} as const;
+
+// Add outlier detection constants
+const OUTLIER_THRESHOLDS = {
+  minZScore: -2,    // Scores more than 2 standard deviations below mean
+  maxZScore: 2,     // Scores more than 2 standard deviations above mean
+  varianceThreshold: 1.5,  // Maximum acceptable variance
+  // Add graduated reduction factors
+  maxReduction: 0.5,      // Maximum 50% reduction for extreme outliers (>3 std dev)
+  moderateReduction: 0.75 // 25% reduction for moderate outliers (2-3 std dev)
+} as const;
+
+// Add outlier detection function
+function detectOutliers(scores: ScoreWithOutlier[]): ScoreWithOutlier[] {
+  if (scores.length < 3) return scores;
+
+  const values = scores.map(s => s.score);
+  const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+  const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+
+  if (variance <= OUTLIER_THRESHOLDS.varianceThreshold) return scores;
+
+  return scores.map(score => {
+    const zScore = (score.score - mean) / stdDev;
+    const baseWeight = RELATIONSHIP_WEIGHTS[score.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
+    
+    // Apply graduated reduction based on z-score
+    if (Math.abs(zScore) > 3) {
+      // Extreme outlier (>3 std dev): 50% reduction
+      return {
+        ...score,
+        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.maxReduction
+      };
+    } else if (Math.abs(zScore) > OUTLIER_THRESHOLDS.maxZScore) {
+      // Moderate outlier (2-3 std dev): 25% reduction
+      return {
+        ...score,
+        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.moderateReduction
+      };
+    }
+    
+    return {
+      ...score,
+      adjustedWeight: baseWeight
+    };
+  });
+}
+
+// Update calculateConfidence to return a weighted confidence score
 function calculateConfidence(scores: Array<{
   score: number;
   confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
   relationship: string;
 }>): 'low' | 'medium' | 'high' {
-  // Start with high confidence
-  let result: 'low' | 'medium' | 'high' = 'high';
-  
-  // Update confidence level (take the most conservative)
-  scores.forEach(score => {
-    if (score.confidence === 'low' || 
-       (score.confidence === 'medium' && result === 'high')) {
-      result = score.confidence;
-    }
-  });
-  
-  return result;
+  // Calculate weighted average confidence
+  const totalWeight = scores.reduce((sum, s) => sum + s.evidenceCount, 0);
+  const weightedConfidence = scores.reduce((sum, s) => {
+    return sum + (CONFIDENCE_WEIGHTS[s.confidence] * s.evidenceCount);
+  }, 0) / totalWeight;
+
+  // Map weighted confidence back to categorical values
+  if (weightedConfidence >= 0.9) return 'high';
+  if (weightedConfidence >= 0.7) return 'medium';
+  return 'low';
 }
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
@@ -136,12 +199,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   });
 
   // Now calculate averages and confidence per competency
-  const competencyScores = new Map<string, Array<{
-    score: number;
-    confidence: 'low' | 'medium' | 'high';
-    evidenceCount: number;
-    relationship: string;
-  }>>();
+  const competencyScores = new Map<string, Array<ScoreWithOutlier>>();
 
   // Aggregate scores per competency across employees
   employeeCompetencies.forEach((employeeMap) => {
@@ -150,14 +208,22 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         competencyScores.set(competencyName, []);
       }
       
-      // Calculate weighted average score for this employee for this competency
-      const weightedScores = scores.map(s => ({
+      // Apply outlier detection
+      const adjustedScores = detectOutliers(scores);
+      
+      // Calculate weighted average score with outlier adjustment
+      const weightedScores = adjustedScores.map(s => ({
         ...s,
-        weightedScore: s.score * (RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1)
+        weightedScore: s.score * 
+          (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1) *
+          CONFIDENCE_WEIGHTS[s.confidence]
       }));
       
       const totalWeight = weightedScores.reduce((sum, s) => 
-        sum + (RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1), 0);
+        sum + (
+          (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1) *
+          CONFIDENCE_WEIGHTS[s.confidence]
+        ), 0);
       
       const avgScore = weightedScores.reduce((sum, s) => sum + s.weightedScore, 0) / totalWeight;
       
@@ -165,7 +231,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         score: avgScore,
         confidence: calculateConfidence(scores),
         evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
-        relationship: scores[0].relationship
+        relationship: scores[0].relationship,
+        hasOutliers: adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])
       });
     });
   });
@@ -174,13 +241,15 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   const sortedScores = Array.from(competencyScores.entries()).map(([name, scores]) => {
     const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
     const confidence = calculateConfidence(scores);
+    const hasOutliers = scores.some(s => s.hasOutliers);
 
     return {
       name,
       score: avgScore,
       confidence,
       description: CORE_COMPETENCIES[name]?.aspects?.join(' • ') || '',
-      evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0)
+      evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
+      hasOutliers
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -381,6 +450,14 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                               Score: {score.score.toFixed(1)}/5
                               <br />
                               Based on {score.evidenceCount} pieces of evidence
+                              {score.hasOutliers && (
+                                <>
+                                  <br />
+                                  <span className="text-yellow-600">
+                                    Note: Some outlier scores were adjusted to maintain balance
+                                  </span>
+                                </>
+                              )}
                             </p>
                             
                             {/* Add confidence explanation */}
