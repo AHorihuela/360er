@@ -230,15 +230,21 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
 
 1. **Evidence Quantity (35% weight)**
    - Measures unique pieces of evidence across all reviews with diminishing returns
-   - First piece of evidence from each reviewer counts fully
-   - Additional pieces from the same reviewer follow diminishing returns:
-     - Second piece: 0.5 weight
-     - Third piece: 0.25 weight
-     - Fourth piece: 0.125 weight
-     - And so on...
+   - Evidence is tracked per reviewer per competency using a unique identifier (relationship + reviewerId)
+   - First piece of evidence from each reviewer counts fully (1.0)
+   - Additional pieces from the same reviewer for the same competency follow diminishing returns:
+     ```
+     2nd piece: 0.5
+     3rd piece: 0.25
+     4th piece: 0.125
+     5th piece: 0.0625
+     ...and so on
+     ```
+   - Formula: effectiveCount = 1 + sum(0.5^n) for n = 1 to (totalPieces - 1)
    - Normalized score (0-1) with maximum at 15 unique effective pieces
    - Formula: `min(1, totalEffectiveEvidence / 15)`
    - Prevents over-inflation from repeated mentions by the same reviewer
+   - Each reviewer's contributions are calculated independently
 
 2. **Score Consistency (25% weight)**
    - Analyzes variance in scores across all feedback
@@ -280,23 +286,19 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
      - Assigned when neither high nor medium criteria are met
      - Indicates need for more diverse feedback or evidence
 
-#### Transparency and Reporting
-Each confidence assessment includes detailed metrics:
-- Individual factor scores (0-1 scale)
-- Raw measurements (evidence count, variance, etc.)
-- Final weighted score
-- Contributing factors for the confidence level
-
-This granular approach allows:
-- Clear understanding of confidence drivers
-- Identification of areas needing more data
-- Transparent reasoning for confidence levels
-- Actionable feedback for improving confidence
-
 #### Example
 For a competency assessment with:
 - Raw evidence count: 15 pieces total
-  - Reviewer A (Senior): 6 pieces → 2.97 effective (1 + 0.5 + 0.25 + 0.125 + 0.0625 + 0.03125)
+  - Reviewer A (Senior): 6 pieces → 2.97 effective
+    ```
+    1st: 1.0
+    2nd: 0.5
+    3rd: 0.25
+    4th: 0.125
+    5th: 0.0625
+    6th: 0.03125
+    Total: 2.97
+    ```
   - Reviewer B (Peer): 5 pieces → 2.875 effective
   - Reviewer C (Junior): 4 pieces → 2.75 effective
 - Total effective evidence count: 8.595 pieces (evidenceScore = 0.573)
@@ -312,9 +314,11 @@ finalScore = (0.573 * 0.35) + (0.75 * 0.25) + (1.0 * 0.25) + (0.7 * 0.15)
 ```
 
 This example demonstrates how:
-1. Raw evidence counts are adjusted using diminishing returns
+1. Raw evidence counts are adjusted using diminishing returns per reviewer per competency
 2. Multiple pieces from the same reviewer have decreasing impact
 3. Final confidence level is determined by both quantity and quality metrics
+4. Each reviewer's contributions are calculated independently
+5. The system prevents gaming through repeated mentions
 
 ### 5. Data Requirements
 - Minimum 5 reviews per employee for inclusion
