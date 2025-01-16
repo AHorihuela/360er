@@ -111,30 +111,41 @@ export const ANALYSIS_STAGES = [
 
 export const DETAILED_ANALYSIS_STAGES = {
   PREPARING: {
-    step: 0,
-    message: "Preparing feedback data",
-    description: "Organizing and validating feedback responses"
+    title: "Preparing feedback data",
+    description: "Organizing feedback responses for analysis",
+    substeps: {}
   },
   PROCESSING: {
-    step: 1,
-    message: "Processing feedback",
+    title: "Processing feedback",
     description: "Analyzing feedback content and identifying patterns",
     substeps: {
-      AGGREGATE: "Analyzing overall patterns",
-      SENIOR: "Processing senior feedback",
-      PEER: "Processing peer feedback",
-      JUNIOR: "Processing junior feedback"
+      SENIOR: {
+        title: "Processing senior feedback",
+        description: "Analyzing feedback from senior colleagues"
+      },
+      PEER: {
+        title: "Processing peer feedback",
+        description: "Analyzing feedback from peers"
+      },
+      JUNIOR: {
+        title: "Processing junior feedback",
+        description: "Analyzing feedback from junior colleagues"
+      },
+      AGGREGATE: {
+        title: "Calculating aggregate scores",
+        description: "Computing weighted scores and confidence levels"
+      }
     }
   },
   GENERATING: {
-    step: 2,
-    message: "Generating insights",
-    description: "Creating detailed performance insights"
+    title: "Generating insights",
+    description: "Synthesizing analysis results into actionable insights",
+    substeps: {}
   },
   SAVING: {
-    step: 3,
-    message: "Saving analysis",
-    description: "Storing results for future reference"
+    title: "Saving analysis",
+    description: "Storing results in the database",
+    substeps: {}
   }
 } as const;
 

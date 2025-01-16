@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { CORE_COMPETENCIES } from "@/lib/competencies";
 import { cn } from '@/lib/utils';
 import { type RelationshipInsight } from "@/types/feedback/analysis";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   insight: RelationshipInsight | undefined;
@@ -49,13 +50,38 @@ export function InsightContent({ insight }: Props) {
     [insight.competencies]
   );
 
+  const [isThemesExpanded, setIsThemesExpanded] = useState(false);
+  const [expandedEvidence, setExpandedEvidence] = useState<Set<string>>(new Set());
+
+  const toggleEvidence = (competencyName: string) => {
+    const newExpandedEvidence = new Set(expandedEvidence);
+    if (newExpandedEvidence.has(competencyName)) {
+      newExpandedEvidence.delete(competencyName);
+    } else {
+      newExpandedEvidence.add(competencyName);
+    }
+    setExpandedEvidence(newExpandedEvidence);
+  };
+
   return (
     <>
       {/* Key Themes */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">Key Themes</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Key Themes</h4>
+          {themes.length > 3 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setIsThemesExpanded(!isThemesExpanded)}
+            >
+              {isThemesExpanded ? 'Show Less' : `Show All (${themes.length})`}
+            </Button>
+          )}
+        </div>
         <div className="grid gap-2">
-          {themes.map((theme: string, i: number) => (
+          {(isThemesExpanded ? themes : themes.slice(0, 3)).map((theme: string, i: number) => (
             <div key={i} className="text-sm text-muted-foreground">
               • {theme}
             </div>
@@ -110,9 +136,9 @@ export function InsightContent({ insight }: Props) {
                                 </div>
                               </div>
                               <div>
-                                <p className="font-medium mb-1">Score Meaning ({competency.score}/5):</p>
+                                <p className="font-medium mb-1">Score Meaning ({competency.score.toFixed(1)}/5.0):</p>
                                 <p className="text-sm">
-                                  {details.rubric[competency.score as keyof typeof details.rubric]}
+                                  {details.rubric[Math.round(competency.score) as keyof typeof details.rubric]}
                                 </p>
                               </div>
                             </>
@@ -151,7 +177,7 @@ export function InsightContent({ insight }: Props) {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className="font-medium w-8 text-right">{competency.score}/5</span>
+                  <span className="font-medium w-8 text-right">{competency.score.toFixed(1)}/5.0</span>
                 </div>
               </div>
               <div className="relative">
@@ -176,9 +202,24 @@ export function InsightContent({ insight }: Props) {
               )}
               {competency.evidenceQuotes && competency.evidenceQuotes.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  <h5 className="text-xs font-medium text-muted-foreground">Supporting Evidence:</h5>
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-medium text-muted-foreground">Supporting Evidence:</h5>
+                    {competency.evidenceQuotes.length > 2 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => toggleEvidence(competency.name)}
+                      >
+                        {expandedEvidence.has(competency.name) ? 'Show Less' : `Show All (${competency.evidenceQuotes.length})`}
+                      </Button>
+                    )}
+                  </div>
                   <div className="space-y-1.5">
-                    {competency.evidenceQuotes.map((quote, i) => (
+                    {(expandedEvidence.has(competency.name) 
+                      ? competency.evidenceQuotes 
+                      : competency.evidenceQuotes.slice(0, 2)
+                    ).map((quote, i) => (
                       <div key={i} className="text-sm text-muted-foreground pl-3 border-l-2 border-muted">
                         "{quote}"
                       </div>

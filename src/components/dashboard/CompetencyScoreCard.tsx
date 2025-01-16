@@ -59,7 +59,7 @@ export function CompetencyScoreCard({ score }: CompetencyScoreCardProps) {
                   "bg-primary"
                 )} />
                 <span className="text-sm">
-                  Score: {score.score.toFixed(1)}/5
+                  Score: {score.score.toFixed(1)}/5.0
                   {score.hasOutliers && " (adjusted for outliers)"}
                 </span>
               </div>
