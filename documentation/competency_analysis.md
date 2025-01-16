@@ -138,12 +138,59 @@ For each piece of feedback:
      - 4.0+: Significantly exceeding expectations
 
 4. **Outlier Management**
-   Outlier detection uses a graduated approach:
-   - Extreme outliers (>3σ): 50% weight reduction
-   - Moderate outliers (2-3σ): 25% weight reduction
-   - Normal scores (<2σ): No adjustment
-   
-   This ensures that extreme feedback doesn't disproportionately impact scores while preserving the value of diverse perspectives.
+   Our sophisticated outlier detection system uses multiple methods to ensure fair and accurate score adjustments:
+
+   1. **Multi-Method Detection**
+      - Z-score Analysis: Identifies statistical deviations from mean
+      - Boxplot Method: Uses interquartile range (IQR) for outlier boundaries
+      - Contextual Validation: Applies domain-specific thresholds by competency type
+
+   2. **Relationship-Aware Processing**
+      - Groups scores by relationship type (senior, peer, junior)
+      - Requires minimum sample size per relationship (default: 2)
+      - Considers both global and relationship-specific outliers
+      - Only applies adjustments if score is outlier in both contexts
+
+   3. **Confidence-Based Weighting**
+      Incorporates feedback confidence in outlier calculations:
+      - High confidence scores: 100% of base weight
+      - Medium confidence: 85% of base weight
+      - Low confidence: 70% of base weight
+
+   4. **Contextual Thresholds**
+      Different valid ranges for different competency types:
+      - Technical skills: 1.5 - 5.0 (rarely below intermediate level)
+      - Leadership: 1.0 - 5.0 (wider acceptable range)
+      - Collaboration: 2.0 - 5.0 (higher minimum threshold)
+
+   5. **Graduated Adjustment System**
+      Three-tier adjustment based on severity:
+      - Extreme outliers: 
+        - Beyond 3σ from mean
+        - Outside IQR bounds with high z-score
+        - Violating contextual thresholds
+        - Result: 50% weight reduction
+      - Moderate outliers:
+        - Beyond 2σ from mean
+        - Outside IQR bounds
+        - Result: 25% weight reduction
+      - Normal scores:
+        - Within acceptable statistical bounds
+        - Result: No adjustment
+
+   6. **Implementation Details**
+      - Minimum 3 samples required for outlier detection
+      - Uses IQR multiplier of 1.5 for boxplot boundaries
+      - Preserves original scores while adjusting weights
+      - Maintains detailed adjustment audit trail
+      - Provides visual indicators for adjusted scores
+
+   This comprehensive approach ensures that:
+   - Extreme feedback doesn't disproportionately impact scores
+   - Different competency types are evaluated appropriately
+   - Relationship context is properly considered
+   - Confidence levels influence score impact
+   - Adjustments are transparent and traceable
 
 5. **Evidence Organization**
    Evidence is collected and displayed in three key areas:
