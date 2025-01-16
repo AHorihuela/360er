@@ -163,23 +163,6 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <p className="text-sm text-muted-foreground">
               Based on {analyzedReviewCount} of {includedReviewCount} completed reviews
             </p>
-            {hasLowConfidenceScores && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Low Confidence Detected
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-[300px]">
-                    <p className="text-sm">
-                      Some competencies have low confidence scores. This may be due to limited feedback or high variance in responses.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
         </div>
         <TooltipProvider>
