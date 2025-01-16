@@ -194,15 +194,10 @@ export function FeedbackAnalytics({
       setState(prev => ({
         ...prev,
         analysisStage: 1,
-        analysisSubstep: 'AGGREGATE'
+        analysisSubstep: 'SENIOR'
       }));
 
-      // Analyze aggregate patterns
-      const aggregateAnalysis = await analyzeAggregatePatterns(feedbackResponses, openai);
-      if (!isSubscribed) return cleanup;
-
-      // Analyze senior feedback
-      setState(prev => ({ ...prev, analysisSubstep: 'SENIOR' }));
+      // Analyze senior feedback first
       const seniorAnalysis = await analyzeRelationshipFeedback(
         'senior',
         groupedFeedback.senior,
@@ -228,16 +223,33 @@ export function FeedbackAnalytics({
       );
       if (!isSubscribed) return cleanup;
 
+      // Calculate aggregate scores from relationship analyses
+      setState(prev => ({ ...prev, analysisSubstep: 'AGGREGATE' }));
+      
+      // Get all unique competency names
+      const competencyNames = new Set([
+        ...(seniorAnalysis.competency_scores || []).map(s => s.name),
+        ...(peerAnalysis.competency_scores || []).map(s => s.name),
+        ...(juniorAnalysis.competency_scores || []).map(s => s.name)
+      ]);
+
+      // Calculate aggregate themes
+      const allThemes = [
+        ...(seniorAnalysis.key_insights || []),
+        ...(peerAnalysis.key_insights || []),
+        ...(juniorAnalysis.key_insights || [])
+      ];
+
       // Transform the analyses into our expected format
       const transformedInsights: RelationshipInsight[] = [
         {
           relationship: 'aggregate',
-          themes: aggregateAnalysis.themes || [],
-          competencies: aggregateAnalysis.competency_scores?.map((score: OpenAICompetencyScore) => {
+          themes: allThemes,
+          competencies: Array.from(competencyNames).map(name => {
             // Find corresponding competency scores from each relationship type
-            const seniorScore = seniorAnalysis.competency_scores?.find(s => s.name === score.name);
-            const peerScore = peerAnalysis.competency_scores?.find(s => s.name === score.name);
-            const juniorScore = juniorAnalysis.competency_scores?.find(s => s.name === score.name);
+            const seniorScore = seniorAnalysis.competency_scores?.find(s => s.name === name);
+            const peerScore = peerAnalysis.competency_scores?.find(s => s.name === name);
+            const juniorScore = juniorAnalysis.competency_scores?.find(s => s.name === name);
             
             // Calculate weighted average based on relationship weights and response counts
             const seniorWeight = groupedFeedback.senior.length > 0 ? RELATIONSHIP_WEIGHTS.senior : 0;
@@ -264,16 +276,39 @@ export function FeedbackAnalytics({
               ...(juniorScore?.evidenceQuotes || [])
             ];
 
+            // Calculate aggregate confidence based on evidence and consistency
+            const totalEvidence = (seniorScore?.evidenceCount || 0) + 
+                                (peerScore?.evidenceCount || 0) + 
+                                (juniorScore?.evidenceCount || 0);
+            
+            // Calculate score variance to affect confidence
+            const scores = [
+              seniorScore?.score,
+              peerScore?.score,
+              juniorScore?.score
+            ].filter((s): s is number => s !== undefined);
+            
+            const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+            const variance = scores.reduce((sum, s) => sum + Math.pow(s - avgScore, 2), 0) / scores.length;
+            
+            // Determine confidence level
+            let confidence: 'low' | 'medium' | 'high' = 'low';
+            if (totalEvidence >= 10 && variance < 1 && scores.length >= 2) {
+              confidence = 'high';
+            } else if (totalEvidence >= 5 && variance < 2 && scores.length >= 2) {
+              confidence = 'medium';
+            }
+
             return {
-              name: score.name,
+              name,
               score: weightedScore,
-              confidence: score.confidence,
-              description: score.description,
-              evidenceCount: score.evidenceCount,
+              confidence,
+              description: "", // Will be filled from competency definitions
+              evidenceCount: totalEvidence,
               roleSpecificNotes: "",
               evidenceQuotes: evidenceQuotes.length > 0 ? evidenceQuotes : undefined
             };
-          }) || [],
+          }),
           responseCount: feedbackResponses.length,
           uniquePerspectives: []
         },
