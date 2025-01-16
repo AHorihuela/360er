@@ -141,6 +141,18 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                     <li>Confidence based on evidence count, score consistency, and feedback diversity</li>
                   </ul>
                 </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Color Scheme:</h4>
+                  <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
+                    <li>Green (≥4.0): Significantly exceeding expectations</li>
+                    <li>Blue (≥3.5): Exceeding expectations</li>
+                    <li>Yellow (≥3.0): Meeting expectations</li>
+                    <li>Orange (≥2.5): Approaching expectations</li>
+                    <li>Red (&lt;2.5): Needs improvement</li>
+                    <li>Opacity indicates confidence level (100% high, 70% medium, 40% low)</li>
+                  </ul>
+                </div>
               </div>
             </TooltipContent>
           </Tooltip>

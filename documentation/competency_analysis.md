@@ -250,6 +250,21 @@ Statistical outliers are detected and adjusted:
 - Radar charts for team-wide pattern visualization
 - Collapsible sections for detailed evidence review
 
+#### Progress Bar Color Scheme
+Progress bars use a semantic color system to indicate performance levels:
+- Green (≥4.0): Significantly exceeding expectations
+- Blue (≥3.5): Exceeding expectations
+- Yellow (≥3.0): Meeting expectations
+- Orange (≥2.5): Approaching expectations
+- Red (<2.5): Needs improvement
+
+Confidence levels are reflected through opacity:
+- High confidence: 100% opacity
+- Medium confidence: 70% opacity
+- Low confidence: 40% opacity
+
+This dual-encoding (color + opacity) helps quickly identify both performance level and confidence in the assessment.
+
 ### 4. Confidence Calculation
 Team-wide confidence levels are determined by:
 1. Evidence Count: Minimum threshold of 5 reviews

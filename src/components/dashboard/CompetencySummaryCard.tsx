@@ -17,6 +17,30 @@ interface CompetencySummaryCardProps {
   onToggle: () => void;
 }
 
+function getScoreColor(score: number) {
+  if (score >= 4.0) return '[&>div]:bg-emerald-500';
+  if (score >= 3.5) return '[&>div]:bg-blue-500';
+  if (score >= 3.0) return '[&>div]:bg-yellow-500';
+  if (score >= 2.5) return '[&>div]:bg-orange-500';
+  return '[&>div]:bg-red-500';
+}
+
+function getScoreBgColor(score: number) {
+  if (score >= 4.0) return 'bg-emerald-100';
+  if (score >= 3.5) return 'bg-blue-100';
+  if (score >= 3.0) return 'bg-yellow-100';
+  if (score >= 2.5) return 'bg-orange-100';
+  return 'bg-red-100';
+}
+
+function getConfidenceOpacity(confidence: 'low' | 'medium' | 'high') {
+  switch (confidence) {
+    case 'high': return '[&>div]:opacity-100';
+    case 'medium': return '[&>div]:opacity-70';
+    case 'low': return '[&>div]:opacity-40';
+  }
+}
+
 export function CompetencySummaryCard({ score, isExpanded, onToggle }: CompetencySummaryCardProps) {
   const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number) => {
     switch (confidence) {
@@ -28,6 +52,10 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
         return `Limited evidence (${evidenceCount} examples) - interpret with caution`;
     }
   };
+
+  const scoreColor = getScoreColor(score.score);
+  const scoreBgColor = getScoreBgColor(score.score);
+  const confidenceOpacity = getConfidenceOpacity(score.confidence);
 
   return (
     <div>
@@ -95,9 +123,9 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           value={(score.score / 5) * 100} 
           className={cn(
             "h-2",
-            score.confidence === 'low' ? "bg-destructive/10 [&>div]:bg-destructive/50" :
-            score.confidence === 'medium' ? "bg-yellow-100 [&>div]:bg-yellow-500" :
-            "bg-primary/10 [&>div]:bg-primary"
+            scoreBgColor,
+            scoreColor,
+            confidenceOpacity
           )}
         />
         <div className="absolute inset-0 grid grid-cols-5 -mx-[1px]">
