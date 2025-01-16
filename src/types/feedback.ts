@@ -13,6 +13,7 @@ export interface Competency {
 
 export interface RelationshipInsight {
   relationship: string;
+  reviewerId?: string;
   themes: string[];
   uniquePerspectives: string[];
   competencies: Competency[];

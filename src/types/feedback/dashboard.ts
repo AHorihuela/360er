@@ -45,6 +45,7 @@ export interface DashboardFeedbackRequest {
         evidenceCount: number;
       }>;
       relationship: string;
+      reviewerId?: string;
     }>;
   };
 }

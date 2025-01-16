@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronDown, Info, AlertCircle } from 'lucide-react';
+import { ChevronDown, Info } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -41,37 +41,114 @@ function getConfidenceOpacity(confidence: 'low' | 'medium' | 'high') {
   }
 }
 
+// Define the areas of evaluation for each competency
+const COMPETENCY_AREAS = {
+  'Technical/Functional Expertise': [
+    'Role-specific skills and knowledge',
+    'Industry and domain expertise',
+    'Technical proficiency and best practices',
+    'Knowledge sharing and documentation',
+    'Problem-solving capabilities'
+  ],
+  'Leadership & Influence': [
+    'Taking initiative and ownership',
+    'Guiding and inspiring others',
+    'Influencing outcomes positively',
+    'Mentoring and role modeling',
+    'Creating and communicating vision'
+  ],
+  'Collaboration & Communication': [
+    'Information sharing effectiveness',
+    'Cross-team collaboration',
+    'Clarity of communication',
+    'Stakeholder management',
+    'Conflict resolution skills'
+  ],
+  'Innovation & Problem-Solving': [
+    'Creative solution generation',
+    'Adaptability to change',
+    'Initiative in improvements',
+    'Collaborative ideation',
+    'Impact of implemented solutions'
+  ],
+  'Execution & Accountability': [
+    'Meeting deadlines and commitments',
+    'Quality of deliverables',
+    'Ownership of outcomes',
+    'Problem resolution',
+    'Project completion track record'
+  ],
+  'Emotional Intelligence & Culture Fit': [
+    'Self-awareness',
+    'Empathy and respect',
+    'Cultural alignment',
+    'Interpersonal effectiveness',
+    'Conflict management'
+  ],
+  'Growth & Development': [
+    'Continuous learning mindset',
+    'Skill development progress',
+    'Feedback receptiveness',
+    'Knowledge sharing',
+    'Goal setting and achievement'
+  ]
+} as const;
+
 export function CompetencySummaryCard({ score, isExpanded, onToggle }: CompetencySummaryCardProps) {
   const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number, effectiveEvidenceCount: number, hasOutliers: boolean) => {
     const mainContent = (
-      <div className="space-y-3 p-1">
-        <div>
-          <p className="font-medium mb-1.5">Evidence Calculation:</p>
-          <p className="text-sm">{evidenceCount} total mentions → {effectiveEvidenceCount} effective evidence</p>
+      <div className="space-y-4 text-left">
+        {/* Evidence Summary Section */}
+        <div className="pb-3 border-b border-border">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Evidence Summary</div>
+          <div className="mt-1.5">
+            <div>
+              <span className="text-2xl font-semibold">{effectiveEvidenceCount.toFixed(1)}</span>
+              <span className="text-sm font-normal text-muted-foreground ml-1">effective evidence</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              from {evidenceCount} total mentions
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="font-medium mb-1.5">Diminishing Returns:</p>
-          <ul className="text-sm space-y-1">
-            <li className="flex items-baseline gap-2">
-              <span className="text-muted-foreground">•</span>
-              <span>First mention from each reviewer counts fully</span>
-            </li>
-            <li className="flex items-baseline gap-2">
-              <span className="text-muted-foreground">•</span>
-              <span>Additional mentions count as: 0.5, 0.25, 0.125...</span>
-            </li>
-          </ul>
+
+        {/* Calculation Method Section */}
+        <div className="space-y-2">
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Calculation Method
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-baseline gap-2">
+              <span className="text-emerald-500 shrink-0">•</span>
+              <span className="text-sm">First mention from each reviewer counts as <span className="font-medium">1.0</span></span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-yellow-500 shrink-0">•</span>
+              <span className="text-sm">Additional mentions diminish: <span className="font-medium">0.5</span> → <span className="font-medium">0.25</span> → <span className="font-medium">0.125</span></span>
+            </div>
+          </div>
         </div>
+
+        {/* Notices Section */}
         {(hasOutliers || confidence === 'low') && (
-          <div className="border-t border-border pt-2">
-            {confidence === 'low' && (
-              <p className="text-sm text-muted-foreground">More diverse feedback sources needed.</p>
-            )}
-            {hasOutliers && (
-              <p className="text-sm text-muted-foreground">
-                Some scores were adjusted to account for statistical outliers.
-              </p>
-            )}
+          <div className="pt-3 border-t border-border space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Notices
+            </div>
+            <div className="space-y-1.5">
+              {confidence === 'low' && (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-red-500 shrink-0">•</span>
+                  <span className="text-sm">More diverse feedback sources needed</span>
+                </div>
+              )}
+              {hasOutliers && (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-yellow-500 shrink-0">•</span>
+                  <span className="text-sm">Some scores were adjusted to account for statistical outliers</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -83,6 +160,7 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
   const scoreColor = getScoreColor(score.score);
   const scoreBgColor = getScoreBgColor(score.score);
   const confidenceOpacity = getConfidenceOpacity(score.confidence);
+  const areas = COMPETENCY_AREAS[score.name as keyof typeof COMPETENCY_AREAS] || [];
 
   return (
     <div>
@@ -114,12 +192,13 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
               isExpanded && "transform rotate-180"
             )} />
           </div>
-          <p className="text-sm text-muted-foreground">{score.description}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground mt-0.5">
+            {areas.join(' • ')}
+          </p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-semibold">{score.score.toFixed(1)}/5.0</div>
-          <div className="flex items-center justify-end gap-1 text-sm text-muted-foreground">
-            <span>{score.effectiveEvidenceCount} effective pieces of evidence</span>
+          <div className="flex items-center justify-end gap-1.5">
+            <div className="text-2xl font-semibold">{score.score.toFixed(1)}/5.0</div>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>

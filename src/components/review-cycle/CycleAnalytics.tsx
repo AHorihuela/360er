@@ -170,6 +170,7 @@ export function CycleAnalytics({ reviewCycle }: Props) {
       aggregateAnalytics[name].totalWeight! += RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
       aggregateAnalytics[name].sampleSize++;
       aggregateAnalytics[name].evidenceCount += comp.evidenceCount;
+      aggregateAnalytics[name].effectiveEvidenceCount += (comp.effectiveEvidenceCount || comp.evidenceCount);
       
       // Update confidence level (take the most conservative)
       if (comp.confidence === 'low' || 

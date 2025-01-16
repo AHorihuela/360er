@@ -46,7 +46,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
           score: comp.score,
           confidence: comp.confidence,
           evidenceCount: comp.evidenceCount,
-          effectiveEvidenceCount: comp.effectiveEvidenceCount || Math.round((comp.evidenceCount * 0.6) * 10) / 10, // Estimate if not provided
+          effectiveEvidenceCount: 0,
           relationship: insight.relationship,
           description: comp.description,
           reviewerId: insight.reviewerId || undefined
@@ -82,12 +82,12 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       score: weightedScore,
       confidence: confidenceResult.level,
       evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
-      effectiveEvidenceCount: Math.round(confidenceResult.metrics.factors.evidenceCount * 10) / 10, // Round to 1 decimal
+      effectiveEvidenceCount: confidenceResult.metrics.factors.evidenceCount,
       relationship: 'aggregate',
       hasOutliers,
       adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
       description: CORE_COMPETENCIES[competencyName]?.aspects?.join(' • ') || '',
-      confidenceMetrics: confidenceResult.metrics // Store the detailed metrics for potential UI use
+      confidenceMetrics: confidenceResult.metrics
     } as ScoreWithOutlier;
   }).filter((score): score is ScoreWithOutlier => score !== null);
 
