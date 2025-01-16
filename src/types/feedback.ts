@@ -5,6 +5,7 @@ export interface Competency {
   description: string;
   roleSpecificNotes?: string;
   evidenceCount?: number;
+  effectiveEvidenceCount?: number;
   evidenceQuotes?: string[];
   scoreJustification?: string;
   isInsufficientData?: boolean;

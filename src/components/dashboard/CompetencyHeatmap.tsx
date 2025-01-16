@@ -46,8 +46,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
           score: comp.score,
           confidence: comp.confidence,
           evidenceCount: comp.evidenceCount,
+          effectiveEvidenceCount: comp.effectiveEvidenceCount || Math.round((comp.evidenceCount * 0.6) * 10) / 10, // Estimate if not provided
           relationship: insight.relationship,
-          description: comp.description
+          description: comp.description,
+          reviewerId: insight.reviewerId || undefined
         });
       });
     });
@@ -80,6 +82,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       score: weightedScore,
       confidence: confidenceResult.level,
       evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
+      effectiveEvidenceCount: Math.round(confidenceResult.metrics.factors.evidenceCount * 10) / 10, // Round to 1 decimal
       relationship: 'aggregate',
       hasOutliers,
       adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,

@@ -17,35 +17,33 @@ export interface AspectScore {
   evidenceQuotes?: string[];
 }
 
+export interface ConfidenceMetrics {
+  evidenceScore: number;
+  consistencyScore: number;
+  relationshipScore: number;
+  finalScore: number;
+  factors: {
+    evidenceCount: number;
+    variance: number;
+    relationshipCount: number;
+    distributionQuality: number;
+  };
+}
+
 export interface ScoreWithOutlier {
   name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
-  description: string;
+  effectiveEvidenceCount: number;
   relationship: string;
-  reviewerId?: string;
+  description: string;
   hasOutliers?: boolean;
+  adjustmentDetails?: string[];
   adjustedWeight?: number;
   evidenceQuotes?: string[];
-  adjustmentDetails?: Array<{
-    originalScore: number;
-    adjustmentType: 'extreme' | 'moderate';
-    relationship: string;
-  }>;
-  aspectScores?: AspectScore[];
-  confidenceMetrics?: {
-    evidenceScore: number;
-    consistencyScore: number;
-    relationshipScore: number;
-    finalScore: number;
-    factors: {
-      evidenceCount: number;
-      variance: number;
-      relationshipCount: number;
-      distributionQuality: number;
-    };
-  };
+  confidenceMetrics?: ConfidenceMetrics;
+  reviewerId?: string;
 }
 
 export interface AggregateScore {

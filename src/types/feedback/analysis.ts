@@ -27,6 +27,7 @@ export interface CompetencyScore {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
+  effectiveEvidenceCount?: number;
   roleSpecificNotes: string;
   evidenceQuotes?: string[];
 }
@@ -38,6 +39,7 @@ export interface Competency extends Omit<CompetencyScore, 'name' | 'description'
 
 interface BaseInsight {
   relationship: string;
+  reviewerId?: string;
 }
 
 export interface AggregateInsight extends BaseInsight {
@@ -86,6 +88,7 @@ export interface OpenAICompetencyScore {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
+  effectiveEvidenceCount: number;
   evidenceQuotes?: string[];
 }
 

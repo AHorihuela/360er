@@ -229,10 +229,16 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
 #### Confidence Factors
 
 1. **Evidence Quantity (35% weight)**
-   - Measures total pieces of evidence across all reviews
-   - Normalized score (0-1) with maximum at 15 pieces
-   - More evidence increases confidence linearly up to cap
-   - Formula: `min(1, totalEvidence / 15)`
+   - Measures unique pieces of evidence across all reviews with diminishing returns
+   - First piece of evidence from each reviewer counts fully
+   - Additional pieces from the same reviewer follow diminishing returns:
+     - Second piece: 0.5 weight
+     - Third piece: 0.25 weight
+     - Fourth piece: 0.125 weight
+     - And so on...
+   - Normalized score (0-1) with maximum at 15 unique effective pieces
+   - Formula: `min(1, totalEffectiveEvidence / 15)`
+   - Prevents over-inflation from repeated mentions by the same reviewer
 
 2. **Score Consistency (25% weight)**
    - Analyzes variance in scores across all feedback
@@ -263,9 +269,16 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
    ```
 
 2. **Confidence Level Determination**
-   - High: finalScore ≥ 0.8
-   - Medium: finalScore ≥ 0.6
-   - Low: finalScore < 0.6
+   - High confidence requires:
+     - 12+ effective evidence pieces
+     - Consistency score ≥ 0.5 (low variance)
+     - Final weighted score ≥ 0.65
+   - Medium confidence requires either:
+     - 8+ effective evidence pieces AND consistency score ≥ 0.3
+     - OR consistency score ≥ 0.5 AND final score ≥ 0.55
+   - Low confidence:
+     - Assigned when neither high nor medium criteria are met
+     - Indicates need for more diverse feedback or evidence
 
 #### Transparency and Reporting
 Each confidence assessment includes detailed metrics:
@@ -282,17 +295,26 @@ This granular approach allows:
 
 #### Example
 For a competency assessment with:
-- 12 pieces of evidence (evidenceScore = 0.8)
+- Raw evidence count: 15 pieces total
+  - Reviewer A (Senior): 6 pieces → 2.97 effective (1 + 0.5 + 0.25 + 0.125 + 0.0625 + 0.03125)
+  - Reviewer B (Peer): 5 pieces → 2.875 effective
+  - Reviewer C (Junior): 4 pieces → 2.75 effective
+- Total effective evidence count: 8.595 pieces (evidenceScore = 0.573)
 - Low variance of 0.5 (consistencyScore = 0.75)
 - All relationship types (relationshipScore = 1.0)
 - Slightly uneven distribution (distributionQuality = 0.7)
 
 Final calculation:
 ```typescript
-finalScore = (0.8 * 0.35) + (0.75 * 0.25) + (1.0 * 0.25) + (0.7 * 0.15)
-           = 0.28 + 0.1875 + 0.25 + 0.105
-           = 0.8225 // Results in 'high' confidence
+finalScore = (0.573 * 0.35) + (0.75 * 0.25) + (1.0 * 0.25) + (0.7 * 0.15)
+           = 0.201 + 0.1875 + 0.25 + 0.105
+           = 0.744 // Results in 'medium' confidence
 ```
+
+This example demonstrates how:
+1. Raw evidence counts are adjusted using diminishing returns
+2. Multiple pieces from the same reviewer have decreasing impact
+3. Final confidence level is determined by both quantity and quality metrics
 
 ### 5. Data Requirements
 - Minimum 5 reviews per employee for inclusion

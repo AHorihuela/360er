@@ -18,6 +18,7 @@ interface CompetencyDetail {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
+  effectiveEvidenceCount: number;
   roleSpecificNotes: string;
   evidenceQuotes?: string[];
   details?: {

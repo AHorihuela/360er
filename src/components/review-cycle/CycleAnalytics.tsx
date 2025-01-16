@@ -21,6 +21,7 @@ interface CompetencyScore {
   confidence: 'low' | 'medium' | 'high';
   sampleSize: number;
   evidenceCount: number;
+  effectiveEvidenceCount?: number;  // Optional since it may not be available in legacy data
   isInsufficientData?: boolean;
   totalWeight?: number;
 }
@@ -156,29 +157,24 @@ export function CycleAnalytics({ reviewCycle }: Props) {
     employeeCompetencies.forEach((comp, name) => {
       if (!aggregateAnalytics[name]) {
         aggregateAnalytics[name] = {
-          score: comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1),
-          confidence: comp.confidence,
-          sampleSize: 1,
-          evidenceCount: comp.evidenceCount,
+          score: 0,
+          confidence: 'low',
+          sampleSize: 0,
+          evidenceCount: 0,
+          effectiveEvidenceCount: 0,
           isInsufficientData: false,
-          totalWeight: RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1
+          totalWeight: 0
         };
-      } else {
-        if (aggregateAnalytics[name].score === null) {
-          aggregateAnalytics[name].score = comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1);
-          aggregateAnalytics[name].totalWeight = RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
-        } else {
-          aggregateAnalytics[name].score! += comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1);
-          aggregateAnalytics[name].totalWeight! += RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
-        }
-        aggregateAnalytics[name].sampleSize++;
-        aggregateAnalytics[name].evidenceCount += comp.evidenceCount;
-        
-        // Update confidence level (take the most conservative)
-        if (comp.confidence === 'low' || 
-           (comp.confidence === 'medium' && aggregateAnalytics[name].confidence === 'high')) {
-          aggregateAnalytics[name].confidence = comp.confidence;
-        }
+      }
+      aggregateAnalytics[name].score! += comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1);
+      aggregateAnalytics[name].totalWeight! += RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
+      aggregateAnalytics[name].sampleSize++;
+      aggregateAnalytics[name].evidenceCount += comp.evidenceCount;
+      
+      // Update confidence level (take the most conservative)
+      if (comp.confidence === 'low' || 
+         (comp.confidence === 'medium' && aggregateAnalytics[name].confidence === 'high')) {
+        aggregateAnalytics[name].confidence = comp.confidence;
       }
     });
 
@@ -224,7 +220,9 @@ export function CycleAnalytics({ reviewCycle }: Props) {
       confidence: 'low',
       sampleSize: 0,
       evidenceCount: 0,
-      isInsufficientData: true
+      effectiveEvidenceCount: 0,
+      isInsufficientData: true,
+      totalWeight: 0
     };
     return [name, data] as [string, CompetencyScore];
   });

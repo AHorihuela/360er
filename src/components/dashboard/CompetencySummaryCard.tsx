@@ -45,11 +45,11 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
   const getConfidenceTooltip = (confidence: 'low' | 'medium' | 'high', evidenceCount: number) => {
     switch (confidence) {
       case 'high':
-        return `High confidence based on ${evidenceCount} pieces of evidence`;
+        return `High confidence based on ${evidenceCount} effective pieces of evidence (after diminishing returns)`;
       case 'medium':
-        return `Medium confidence with ${evidenceCount} supporting examples`;
+        return `Medium confidence with ${evidenceCount} effective supporting examples (after diminishing returns)`;
       case 'low':
-        return `Limited evidence (${evidenceCount} examples) - interpret with caution`;
+        return `Limited evidence (${evidenceCount} effective examples after diminishing returns) - interpret with caution`;
     }
   };
 
@@ -101,7 +101,7 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
         <div className="text-right">
           <div className="text-2xl font-semibold">{score.score.toFixed(1)}/5.0</div>
           <div className="flex items-center justify-end gap-1 text-sm text-muted-foreground">
-            <span>{score.evidenceCount} pieces of evidence</span>
+            <span>{score.effectiveEvidenceCount} effective pieces of evidence</span>
             {score.hasOutliers && (
               <TooltipProvider>
                 <Tooltip>
