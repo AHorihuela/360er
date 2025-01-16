@@ -125,12 +125,11 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
 
   // 1. Evidence Quantity Assessment with reviewer-based diminishing returns
   const evidenceByReviewer = new Map<string, number>();
-  const uniqueEvidence = new Set<string>();
+  let totalEffectiveEvidence = 0;
   
   scores.forEach(s => {
     // Track evidence per reviewer
     const reviewerId = `${s.relationship}_${s.reviewerId || 'unknown'}`;
-    const currentReviewerCount = evidenceByReviewer.get(reviewerId) || 0;
     
     // Apply diminishing returns for multiple pieces from same reviewer
     const effectiveCount = 
@@ -139,29 +138,23 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
         Array.from({length: s.evidenceCount - 1})
           .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0);
     
-    evidenceByReviewer.set(reviewerId, currentReviewerCount + effectiveCount);
-    
-    // Add to unique evidence tracking with decimal precision
-    uniqueEvidence.add(`${reviewerId}_${s.name}_${effectiveCount.toFixed(3)}`);
+    evidenceByReviewer.set(reviewerId, effectiveCount);
+    totalEffectiveEvidence += effectiveCount;
   });
 
-  const totalEvidence = uniqueEvidence.size;
   // Adjust thresholds based on effective evidence count
-  const evidenceScore = Math.min(1, totalEvidence / 15); // Increased threshold since we now count effective evidence
+  const evidenceScore = Math.min(1, totalEffectiveEvidence / 15);
 
   console.log('Evidence Analysis:', {
-    totalEvidence,
+    totalEffectiveEvidence,
     evidenceScore,
     rawEvidenceCounts: scores.map(s => ({
       relationship: s.relationship,
       reviewerId: s.reviewerId || 'unknown',
       rawCount: s.evidenceCount,
-      effectiveCount: Math.min(
-        s.evidenceCount,
-        1 + (s.evidenceCount > 1 ? 
-          Array.from({length: s.evidenceCount - 1})
-            .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
-      )
+      effectiveCount: 1 + (s.evidenceCount > 1 ? 
+        Array.from({length: s.evidenceCount - 1})
+          .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
     })),
     evidenceByReviewer: Object.fromEntries(evidenceByReviewer)
   });
@@ -237,11 +230,11 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
   let level: 'low' | 'medium' | 'high';
   
   // High confidence requires good evidence AND consistency
-  if (totalEvidence >= 12 && consistencyScore >= 0.5 && finalScore >= 0.65) {
+  if (totalEffectiveEvidence >= 12 && consistencyScore >= 0.5 && finalScore >= 0.65) {
     level = 'high';
   }
   // Medium confidence needs decent evidence OR good consistency
-  else if ((totalEvidence >= 8 && consistencyScore >= 0.3) || 
+  else if ((totalEffectiveEvidence >= 8 && consistencyScore >= 0.3) || 
            (consistencyScore >= 0.5 && finalScore >= 0.55)) {
     level = 'medium';
   }
@@ -253,7 +246,7 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
   console.log('Confidence Level Determination:', {
     level,
     checks: {
-      evidence: totalEvidence,
+      evidence: totalEffectiveEvidence,
       consistencyScore,
       finalScore
     }
@@ -269,7 +262,7 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
       relationshipScore,
       finalScore,
       factors: {
-        evidenceCount: totalEvidence,
+        evidenceCount: totalEffectiveEvidence,
         variance,
         relationshipCount,
         distributionQuality
