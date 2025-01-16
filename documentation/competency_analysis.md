@@ -264,61 +264,31 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
    - Perfect distribution = equal representation from each relationship
    - Formula: `1 - Σ|actualCount - idealCount| / (totalScores * 2)`
 
-#### Confidence Score Calculation
+#### Confidence Level Determination
 
-1. **Weighted Aggregation**
-   ```typescript
-   finalScore = (evidenceScore * 0.35) +
-                (consistencyScore * 0.25) +
-                (relationshipScore * 0.25) +
-                (distributionQuality * 0.15)
-   ```
+The final confidence level is determined by both the weighted score and specific thresholds:
 
-2. **Confidence Level Determination**
-   - High confidence requires:
-     - 12+ effective evidence pieces
-     - Consistency score ≥ 0.5 (low variance)
-     - Final weighted score ≥ 0.65
-   - Medium confidence requires either:
-     - 8+ effective evidence pieces AND consistency score ≥ 0.3
-     - OR consistency score ≥ 0.5 AND final score ≥ 0.55
-   - Low confidence:
-     - Assigned when neither high nor medium criteria are met
-     - Indicates need for more diverse feedback or evidence
+1. **High Confidence** requires ALL of:
+   - 12+ effective evidence pieces
+   - Consistency score ≥ 0.5
+   - Final weighted score ≥ 0.65
 
-#### Example
-For a competency assessment with:
-- Raw evidence count: 15 pieces total
-  - Reviewer A (Senior): 6 pieces → 2.97 effective
-    ```
-    1st: 1.0
-    2nd: 0.5
-    3rd: 0.25
-    4th: 0.125
-    5th: 0.0625
-    6th: 0.03125
-    Total: 2.97
-    ```
-  - Reviewer B (Peer): 5 pieces → 2.875 effective
-  - Reviewer C (Junior): 4 pieces → 2.75 effective
-- Total effective evidence count: 8.595 pieces (evidenceScore = 0.573)
-- Low variance of 0.5 (consistencyScore = 0.75)
-- All relationship types (relationshipScore = 1.0)
-- Slightly uneven distribution (distributionQuality = 0.7)
+2. **Medium Confidence** requires EITHER:
+   - 8+ effective evidence pieces AND consistency score ≥ 0.3
+   - OR consistency score ≥ 0.5 AND final weighted score ≥ 0.55
 
-Final calculation:
+3. **Low Confidence**:
+   - Assigned when neither high nor medium criteria are met
+
+#### Final Score Calculation
 ```typescript
-finalScore = (0.573 * 0.35) + (0.75 * 0.25) + (1.0 * 0.25) + (0.7 * 0.15)
-           = 0.201 + 0.1875 + 0.25 + 0.105
-           = 0.744 // Results in 'medium' confidence
+finalScore = (evidenceScore * 0.35) +
+             (consistencyScore * 0.25) +
+             (relationshipScore * 0.25) +
+             (distributionQuality * 0.15)
 ```
 
-This example demonstrates how:
-1. Raw evidence counts are adjusted using diminishing returns per reviewer per competency
-2. Multiple pieces from the same reviewer have decreasing impact
-3. Final confidence level is determined by both quantity and quality metrics
-4. Each reviewer's contributions are calculated independently
-5. The system prevents gaming through repeated mentions
+This comprehensive scoring system ensures that confidence levels accurately reflect both the quantity and quality of feedback, while considering the diversity and distribution of feedback sources.
 
 ### 5. Data Requirements
 - Minimum 5 reviews per employee for inclusion
