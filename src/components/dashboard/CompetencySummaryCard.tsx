@@ -104,7 +104,7 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           <div className="mt-1.5">
             <div>
               <span className="text-2xl font-semibold">
-                {effectiveEvidenceCount.toFixed(3)}
+                {effectiveEvidenceCount.toFixed(1)}
               </span>
               <span className="text-sm font-normal text-muted-foreground ml-1">effective evidence</span>
             </div>
