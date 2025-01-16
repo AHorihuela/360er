@@ -143,15 +143,43 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium mb-1">Color Scheme:</h4>
-                  <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
-                    <li>Green (≥4.0): Significantly exceeding expectations</li>
-                    <li>Blue (≥3.5): Exceeding expectations</li>
-                    <li>Yellow (≥3.0): Meeting expectations</li>
-                    <li>Orange (≥2.5): Approaching expectations</li>
-                    <li>Red (&lt;2.5): Needs improvement</li>
-                    <li>Opacity indicates confidence level (100% high, 70% medium, 40% low)</li>
+                  <h4 className="text-sm font-medium mb-2">Color Scheme:</h4>
+                  <ul className="space-y-1.5 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                      Green (≥4.0): Significantly exceeding expectations
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                      Blue (≥3.5): Exceeding expectations
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                      Yellow (≥3.0): Meeting expectations
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                      Orange (≥2.5): Approaching expectations
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                      Red (&lt;2.5): Needs improvement
+                    </li>
                   </ul>
+                  <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div>
+                      100% opacity: High
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-gray-500 opacity-70"></div>
+                      70%: Medium
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-gray-500 opacity-40"></div>
+                      40%: Low
+                    </div>
+                  </div>
                 </div>
               </div>
             </TooltipContent>
