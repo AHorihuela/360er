@@ -23,6 +23,12 @@ interface CompetencyHeatmapProps {
   feedbackRequests: DashboardFeedbackRequest[];
 }
 
+interface AdjustmentDetail {
+  originalScore: number;
+  adjustmentType: 'extreme' | 'moderate';
+  relationship: string;
+}
+
 interface ScoreWithOutlier {
   score: number;
   confidence: 'low' | 'medium' | 'high';
@@ -30,6 +36,7 @@ interface ScoreWithOutlier {
   relationship: string;
   adjustedWeight?: number;
   hasOutliers?: boolean;
+  adjustmentDetails?: AdjustmentDetail[];
 }
 
 interface AggregateScore {
@@ -39,6 +46,7 @@ interface AggregateScore {
   description: string;
   evidenceCount: number;
   hasOutliers?: boolean;
+  adjustmentDetails?: AdjustmentDetail[];
 }
 
 const MIN_REVIEWS_REQUIRED = 5;
@@ -94,18 +102,27 @@ function detectOutliers(scores: ScoreWithOutlier[]): ScoreWithOutlier[] {
     const zScore = (score.score - mean) / stdDev;
     const baseWeight = RELATIONSHIP_WEIGHTS[score.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
     
-    // Apply graduated reduction based on z-score
     if (Math.abs(zScore) > 3) {
-      // Extreme outlier (>3 std dev): 50% reduction
+      const adjustmentDetail: AdjustmentDetail = {
+        originalScore: score.score,
+        adjustmentType: 'extreme',
+        relationship: score.relationship
+      };
       return {
         ...score,
-        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.maxReduction
+        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.maxReduction,
+        adjustmentDetails: [adjustmentDetail]
       };
     } else if (Math.abs(zScore) > OUTLIER_THRESHOLDS.maxZScore) {
-      // Moderate outlier (2-3 std dev): 25% reduction
+      const adjustmentDetail: AdjustmentDetail = {
+        originalScore: score.score,
+        adjustmentType: 'moderate',
+        relationship: score.relationship
+      };
       return {
         ...score,
-        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.moderateReduction
+        adjustedWeight: baseWeight * OUTLIER_THRESHOLDS.moderateReduction,
+        adjustmentDetails: [adjustmentDetail]
       };
     }
     
@@ -135,6 +152,254 @@ function calculateConfidence(scores: Array<{
   return 'low';
 }
 
+// First, let's create the methodology explanation component
+const MethodologyExplanation = ({ score }: { score: AggregateScore }) => (
+  <div className="mt-4 space-y-3">
+    <div>
+      <p className="text-sm font-medium">Score Weighting:</p>
+      <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
+        <li className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-300 flex-shrink-0" />
+          Senior feedback (40%): Strategic oversight and experience
+        </li>
+        <li className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-300 flex-shrink-0" />
+          Peer feedback (35%): Day-to-day collaboration insights
+        </li>
+        <li className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-300 flex-shrink-0" />
+          Junior feedback (25%): Upward management perspective
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <p className="text-sm font-medium">Confidence Impact:</p>
+      <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
+        <li className="flex items-center gap-2">
+          <span className={cn(
+            "text-xs px-1.5 rounded-full font-medium",
+            "bg-blue-100 text-blue-700"
+          )}>high</span>
+          100% weight - Strong evidence & consistency
+        </li>
+        <li className="flex items-center gap-2">
+          <span className={cn(
+            "text-xs px-1.5 rounded-full font-medium",
+            "bg-yellow-100 text-yellow-700"
+          )}>medium</span>
+          80% weight - Good evidence with some gaps
+        </li>
+        <li className="flex items-center gap-2">
+          <span className={cn(
+            "text-xs px-1.5 rounded-full font-medium",
+            "bg-red-100 text-red-700"
+          )}>low</span>
+          50% weight - Limited or inconsistent evidence
+        </li>
+      </ul>
+    </div>
+
+    {score.hasOutliers && (
+      <div>
+        <p className="text-sm font-medium">Outlier Handling:</p>
+        <ul className="text-xs space-y-1.5 text-muted-foreground mt-1">
+          <li className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-yellow-300 flex-shrink-0" />
+            Extreme scores (greater than 3σ) reduced to 50% impact
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-yellow-300 flex-shrink-0" />
+            Moderate outliers (2-3σ) reduced to 75% impact
+          </li>
+        </ul>
+      </div>
+    )}
+  </div>
+);
+
+// Create a component for the radar chart
+const CompetencyRadarChart = ({ chartData }: { chartData: any[] }) => (
+  <div className="h-[350px] w-full">
+    <ResponsiveContainer width="100%" height="100%">
+      <RadarChart 
+        cx="50%" 
+        cy="50%" 
+        outerRadius="65%" 
+        data={chartData}
+        startAngle={90}
+        endAngle={-270}
+      >
+        <PolarGrid 
+          stroke="#e5e7eb" 
+          strokeOpacity={0.3}
+          gridType="polygon"
+        />
+        {[1, 2, 3, 4, 5].map((value) => (
+          <PolarGrid
+            key={value}
+            stroke="none"
+            gridType="circle"
+            radius={value * 20}
+            fill={value % 2 ? "#f8fafc" : "#ffffff"}
+            fillOpacity={0.5}
+          />
+        ))}
+        <PolarAngleAxis
+          dataKey="subject"
+          tick={({ x, y, payload }) => (
+            <g transform={`translate(${x},${y})`}>
+              <text
+                x={0}
+                y={0}
+                dy={-4}
+                textAnchor="middle"
+                fill="#6b7280"
+                fontSize={11}
+              >
+                {payload.value}
+              </text>
+            </g>
+          )}
+        />
+        <PolarRadiusAxis
+          angle={90}
+          domain={[0, 5]}
+          axisLine={false}
+          tick={{ fill: '#6b7280', fontSize: 10 }}
+          stroke="#e5e7eb"
+          strokeOpacity={0.3}
+        />
+        <Radar
+          name="Team Score"
+          dataKey="value"
+          stroke="#2563eb"
+          fill="#3b82f6"
+          fillOpacity={0.7}
+          dot
+          isAnimationActive={false}
+        />
+      </RadarChart>
+    </ResponsiveContainer>
+  </div>
+);
+
+// Update the score card to use the new notification component
+const OutlierNotification = ({ score }: { score: AggregateScore }) => {
+  if (!score.hasOutliers || !score.adjustmentDetails?.length) return null;
+
+  const extremeAdjustments = score.adjustmentDetails.filter(d => d.adjustmentType === 'extreme');
+  const moderateAdjustments = score.adjustmentDetails.filter(d => d.adjustmentType === 'moderate');
+
+  return (
+    <>
+      <br />
+      <div className="text-yellow-600 space-y-1">
+        <p>Note: Some outlier scores were adjusted:</p>
+        <ul className="text-xs pl-4 space-y-0.5">
+          {extremeAdjustments.length > 0 && (
+            <li>
+              • {extremeAdjustments.length} extreme {extremeAdjustments.length === 1 ? 'score' : 'scores'} reduced to 50% impact
+              {extremeAdjustments.map((adj: AdjustmentDetail, i: number) => (
+                <div key={i} className="pl-2 text-muted-foreground">
+                  {adj.relationship} feedback: {adj.originalScore.toFixed(1)} → {(adj.originalScore * OUTLIER_THRESHOLDS.maxReduction).toFixed(1)}
+                </div>
+              ))}
+            </li>
+          )}
+          {moderateAdjustments.length > 0 && (
+            <li>
+              • {moderateAdjustments.length} moderate {moderateAdjustments.length === 1 ? 'score' : 'scores'} reduced to 75% impact
+              {moderateAdjustments.map((adj: AdjustmentDetail, i: number) => (
+                <div key={i} className="pl-2 text-muted-foreground">
+                  {adj.relationship} feedback: {adj.originalScore.toFixed(1)} → {(adj.originalScore * OUTLIER_THRESHOLDS.moderateReduction).toFixed(1)}
+                </div>
+              ))}
+            </li>
+          )}
+        </ul>
+      </div>
+    </>
+  );
+};
+
+// Create a component for the competency score card
+const CompetencyScoreCard = ({ score }: { score: AggregateScore }) => (
+  <TooltipProvider key={score.name}>
+    <Tooltip>
+      <TooltipTrigger className="w-full p-3 hover:bg-slate-50 transition-colors">
+        <div className="space-y-2 text-left">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{score.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{score.score.toFixed(1)}/5</span>
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full font-medium",
+                score.confidence === 'high' && "bg-blue-100 text-blue-700",
+                score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
+                score.confidence === 'low' && "bg-red-100 text-red-700"
+              )}>
+                {score.confidence}
+              </span>
+            </div>
+          </div>
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div 
+              className={cn(
+                "h-full transition-all",
+                score.confidence === 'high' && "bg-blue-500",
+                score.confidence === 'medium' && "bg-yellow-500",
+                score.confidence === 'low' && "bg-red-500"
+              )}
+              style={{ width: `${(score.score / 5) * 100}%` }}
+            />
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="left" className="p-4">
+        <div className="max-w-xs">
+          <div className="space-y-1.5 mb-4">
+            <h3 className="font-medium">{score.name}</h3>
+            <span className={cn(
+              "inline-block text-xs px-2 py-0.5 rounded-full font-medium",
+              score.confidence === 'high' && "bg-blue-100 text-blue-700",
+              score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
+              score.confidence === 'low' && "bg-red-100 text-red-700"
+            )}>
+              {score.confidence} confidence
+            </span>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              Score: {score.score.toFixed(1)}/5
+              <br />
+              Based on {score.evidenceCount} pieces of evidence
+              <OutlierNotification score={score} />
+            </p>
+            
+            <MethodologyExplanation score={score} />
+          </div>
+
+          {Object.values(CORE_COMPETENCIES).find(comp => comp.name === score.name) && (
+            <div className="border-t pt-3">
+              <h4 className="text-sm font-medium mb-2">Key Aspects:</h4>
+              <ul className="space-y-1">
+                {Object.values(CORE_COMPETENCIES)
+                  .find(comp => comp.name === score.name)?.aspects
+                  .map((aspect, i) => (
+                    <li key={i} className="text-sm text-muted-foreground">• {aspect}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
+
+// Main component remains the same but uses the new subcomponents
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   // Get all responses that have been submitted
   const responses = feedbackRequests.flatMap(fr => fr.feedback_responses || []);
@@ -242,6 +507,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
     const confidence = calculateConfidence(scores);
     const hasOutliers = scores.some(s => s.hasOutliers);
+    const adjustmentDetails = scores.flatMap(s => s.adjustmentDetails || []);
 
     return {
       name,
@@ -249,7 +515,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       confidence,
       description: CORE_COMPETENCIES[name]?.aspects?.join(' • ') || '',
       evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
-      hasOutliers
+      hasOutliers,
+      adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -323,72 +590,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       </CardHeader>
       <CardContent>
         <div className="grid gap-8 md:grid-cols-2">
-          {/* Radar Chart */}
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart 
-                cx="50%" 
-                cy="50%" 
-                outerRadius="65%" 
-                data={chartData}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <PolarGrid 
-                  stroke="#e5e7eb" 
-                  strokeOpacity={0.3}
-                  gridType="polygon"
-                />
-                {/* Add background circles */}
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <PolarGrid
-                    key={value}
-                    stroke="none"
-                    gridType="circle"
-                    radius={value * 20}
-                    fill={value % 2 ? "#f8fafc" : "#ffffff"}
-                    fillOpacity={0.5}
-                  />
-                ))}
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={({ x, y, payload }) => (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        x={0}
-                        y={0}
-                        dy={-4}
-                        textAnchor="middle"
-                        fill="#6b7280"
-                        fontSize={11}
-                      >
-                        {payload.value}
-                      </text>
-                    </g>
-                  )}
-                />
-                <PolarRadiusAxis
-                  angle={90}
-                  domain={[0, 5]}
-                  axisLine={false}
-                  tick={{ fill: '#6b7280', fontSize: 10 }}
-                  stroke="#e5e7eb"
-                  strokeOpacity={0.3}
-                />
-                <Radar
-                  name="Team Score"
-                  dataKey="value"
-                  stroke="#2563eb"
-                  fill="#3b82f6"
-                  fillOpacity={0.7}
-                  dot
-                  isAnimationActive={false}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Competency Scores */}
+          <CompetencyRadarChart chartData={chartData} />
           <div className="space-y-4 bg-white shadow-sm rounded-lg border">
             <div className="p-3 border-b">
               <h3 className="text-sm font-medium">Detailed Scores</h3>
@@ -397,110 +599,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
               {COMPETENCY_ORDER.map((name) => {
                 const score = sortedScores.find(s => s.name === name);
                 if (!score) return null;
-                return (
-                  <TooltipProvider key={score.name}>
-                    <Tooltip>
-                      <TooltipTrigger className="w-full p-3 hover:bg-slate-50 transition-colors">
-                        <div className="space-y-2 text-left">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{score.name}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{score.score.toFixed(1)}/5</span>
-                              <span className={cn(
-                                "text-xs px-2 py-0.5 rounded-full font-medium",
-                                score.confidence === 'high' && "bg-blue-100 text-blue-700",
-                                score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
-                                score.confidence === 'low' && "bg-red-100 text-red-700"
-                              )}>
-                                {score.confidence}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                            <div 
-                              className={cn(
-                                "h-full transition-all",
-                                score.confidence === 'high' && "bg-blue-500",
-                                score.confidence === 'medium' && "bg-yellow-500",
-                                score.confidence === 'low' && "bg-red-500"
-                              )}
-                              style={{ width: `${(score.score / 5) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="p-4">
-                        <div className="max-w-xs">
-                          {/* Header with name and confidence badge */}
-                          <div className="space-y-1.5 mb-4">
-                            <h3 className="font-medium">{score.name}</h3>
-                            <span className={cn(
-                              "inline-block text-xs px-2 py-0.5 rounded-full font-medium",
-                              score.confidence === 'high' && "bg-blue-100 text-blue-700",
-                              score.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
-                              score.confidence === 'low' && "bg-red-100 text-red-700"
-                            )}>
-                              {score.confidence} confidence
-                            </span>
-                          </div>
-
-                          {/* Score and evidence count */}
-                          <div className="mb-4">
-                            <p className="text-sm text-muted-foreground">
-                              Score: {score.score.toFixed(1)}/5
-                              <br />
-                              Based on {score.evidenceCount} pieces of evidence
-                              {score.hasOutliers && (
-                                <>
-                                  <br />
-                                  <span className="text-yellow-600">
-                                    Note: Some outlier scores were adjusted to maintain balance
-                                  </span>
-                                </>
-                              )}
-                            </p>
-                            
-                            {/* Add confidence explanation */}
-                            <div className="mt-3 space-y-2">
-                              <p className="text-sm font-medium">Confidence Level Factors:</p>
-                              <ul className="text-xs space-y-1.5 text-muted-foreground">
-                                <li className="flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
-                                  Review Count: {score.evidenceCount} pieces of evidence
-                                </li>
-                                <li className="flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
-                                  Score Consistency: How much reviewers agree
-                                </li>
-                                <li className="flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
-                                  Relationship Mix: Feedback from different levels
-                                </li>
-                              </ul>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                High confidence requires 5+ reviews, consistent scores, and feedback from 3+ relationship types (senior, peer, junior)
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Key aspects section */}
-                          {Object.values(CORE_COMPETENCIES).find(comp => comp.name === score.name) && (
-                            <div className="border-t pt-3">
-                              <h4 className="text-sm font-medium mb-2">Key Aspects:</h4>
-                              <ul className="space-y-1">
-                                {Object.values(CORE_COMPETENCIES)
-                                  .find(comp => comp.name === score.name)?.aspects
-                                  .map((aspect, i) => (
-                                    <li key={i} className="text-sm text-muted-foreground">• {aspect}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
+                return <CompetencyScoreCard key={name} score={score} />;
               })}
             </div>
           </div>
