@@ -121,7 +121,6 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
   metrics: ConfidenceMetrics;
 } {
   const competencyName = scores[0]?.name || 'Unknown';
-  console.group(`Confidence Calculation for ${competencyName}`);
 
   // 1. Evidence Quantity Assessment with reviewer-based diminishing returns
   const evidenceByReviewer = new Map<string, number>();
@@ -145,31 +144,11 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
   // Adjust thresholds based on effective evidence count
   const evidenceScore = Math.min(1, totalEffectiveEvidence / 15);
 
-  console.log('Evidence Analysis:', {
-    totalEffectiveEvidence,
-    evidenceScore,
-    rawEvidenceCounts: scores.map(s => ({
-      relationship: s.relationship,
-      reviewerId: s.reviewerId || 'unknown',
-      rawCount: s.evidenceCount,
-      effectiveCount: 1 + (s.evidenceCount > 1 ? 
-        Array.from({length: s.evidenceCount - 1})
-          .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
-    })),
-    evidenceByReviewer: Object.fromEntries(evidenceByReviewer)
-  });
-
   // 2. Score Consistency Analysis
   const values = scores.map(s => s.score);
   const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
   const consistencyScore = Math.max(0, 1 - variance / 2.0);
-  console.log('Consistency Analysis:', {
-    scores: values,
-    mean,
-    variance,
-    consistencyScore
-  });
 
   // 3. Relationship Coverage Analysis
   const relationships = new Set(scores.map(s => s.relationship));
@@ -186,22 +165,10 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
     (relationshipCount >= 3 ? 0.2 : 0) +
     (minReviewsPerRelationship >= 3 ? 0.1 : 0);
 
-  console.log('Relationship Analysis:', {
-    relationshipCount,
-    relationshipGroups: Object.fromEntries(relationshipGroups),
-    minReviewsPerRelationship,
-    relationshipScore
-  });
-
   // 4. Distribution Quality Check
   const idealCount = scores.length / relationshipCount;
   const maxSkew = Math.max(...Array.from(relationshipGroups.values())) / idealCount;
   const distributionQuality = Math.max(0, 1 - (maxSkew - 1) / 1.5);
-  console.log('Distribution Analysis:', {
-    idealCount,
-    maxSkew,
-    distributionQuality
-  });
 
   // 5. Weighted Final Score Calculation
   const weights = {
@@ -217,14 +184,6 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
     relationshipScore * weights.relationship +
     distributionQuality * weights.distribution
   );
-
-  console.log('Final Score Components:', {
-    evidenceComponent: evidenceScore * weights.evidence,
-    consistencyComponent: consistencyScore * weights.consistency,
-    relationshipComponent: relationshipScore * weights.relationship,
-    distributionComponent: distributionQuality * weights.distribution,
-    finalScore
-  });
 
   // Confidence Level Determination
   let level: 'low' | 'medium' | 'high';
@@ -243,16 +202,32 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
     level = 'low';
   }
 
-  console.log('Confidence Level Determination:', {
-    level,
-    checks: {
-      evidence: totalEffectiveEvidence,
-      consistencyScore,
+  // Only log in development environment and when explicitly requested
+  if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_CONFIDENCE === 'true') {
+    console.group(`Confidence Calculation for ${competencyName}`);
+    console.log('Evidence Analysis:', {
+      totalEffectiveEvidence,
+      evidenceScore,
+      evidenceByReviewer: Object.fromEntries(evidenceByReviewer)
+    });
+    console.log('Consistency Analysis:', { mean, variance, consistencyScore });
+    console.log('Relationship Analysis:', {
+      relationshipCount,
+      relationshipGroups: Object.fromEntries(relationshipGroups),
+      minReviewsPerRelationship,
+      relationshipScore
+    });
+    console.log('Distribution Analysis:', { idealCount, maxSkew, distributionQuality });
+    console.log('Final Score Components:', {
+      evidenceComponent: evidenceScore * weights.evidence,
+      consistencyComponent: consistencyScore * weights.consistency,
+      relationshipComponent: relationshipScore * weights.relationship,
+      distributionComponent: distributionQuality * weights.distribution,
       finalScore
-    }
-  });
-
-  console.groupEnd();
+    });
+    console.log('Confidence Level:', { level });
+    console.groupEnd();
+  }
 
   return {
     level,

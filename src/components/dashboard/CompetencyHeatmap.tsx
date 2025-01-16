@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -20,7 +20,38 @@ import { cn } from "@/lib/utils";
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
 
-  // Memoize processed data
+  // Memoize the competency score calculations
+  const competencyScores = useMemo(() => {
+    const scores = new Map<string, ScoreWithOutlier[]>();
+    
+    feedbackRequests.forEach(request => {
+      if (!request.analytics?.insights) return;
+      
+      request.analytics.insights.forEach(insight => {
+        insight.competencies.forEach(comp => {
+          if (!scores.has(comp.name)) {
+            scores.set(comp.name, []);
+          }
+          
+          const compScores = scores.get(comp.name)!;
+          compScores.push({
+            name: comp.name,
+            score: comp.score,
+            confidence: comp.confidence,
+            evidenceCount: comp.evidenceCount,
+            effectiveEvidenceCount: 0,
+            relationship: insight.relationship,
+            description: comp.description,
+            reviewerId: insight.reviewerId || undefined
+          });
+        });
+      });
+    });
+
+    return scores;
+  }, [feedbackRequests]);
+
+  // Memoize the processed data
   const {
     employeesWithAnalytics,
     totalEmployees,
@@ -40,39 +71,12 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     const includedReviewCount = feedbackRequests.reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
     const analyzedReviewCount = feedbackRequests.filter(r => r.analytics).reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
 
-    // Calculate scores for each competency
-    const competencyScores = new Map<string, ScoreWithOutlier[]>();
-    
-    feedbackRequests.forEach(request => {
-      if (!request.analytics?.insights) return;
-      
-      request.analytics.insights.forEach(insight => {
-        insight.competencies.forEach(comp => {
-          if (!competencyScores.has(comp.name)) {
-            competencyScores.set(comp.name, []);
-          }
-          
-          const scores = competencyScores.get(comp.name)!;
-          scores.push({
-            name: comp.name,
-            score: comp.score,
-            confidence: comp.confidence,
-            evidenceCount: comp.evidenceCount,
-            effectiveEvidenceCount: 0,
-            relationship: insight.relationship,
-            description: comp.description,
-            reviewerId: insight.reviewerId || undefined
-          });
-        });
-      });
-    });
-
     // Calculate aggregate scores with outlier detection
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
       const scores = competencyScores.get(competencyName) || [];
       if (scores.length === 0) return null;
 
-      // Detect and adjust outliers
+      // Detect and adjust outliers - only calculate once per competency
       const adjustedScores = detectOutliers(scores);
       const hasOutliers = adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]);
       const adjustmentDetails = adjustedScores
@@ -86,7 +90,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       const weightedScore = Number((adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight).toFixed(3));
 
-      // Calculate confidence based on evidence and consistency
+      // Calculate confidence based on evidence and consistency - only once per competency
       const confidenceResult = calculateConfidence(scores);
 
       return {
@@ -121,7 +125,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       hasLowConfidenceScores,
       averageConfidence
     };
-  }, [feedbackRequests]);
+  }, [competencyScores]);
 
   if (sortedScores.length === 0) {
     return (
