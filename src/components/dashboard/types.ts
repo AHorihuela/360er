@@ -22,6 +22,8 @@ export interface ScoreWithOutlier {
   score: number;
   confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
+  description: string;
+  relationship: string;
   hasOutliers?: boolean;
   adjustedWeight?: number;
   evidenceQuotes?: string[];

@@ -32,10 +32,10 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
 
   // Get performance status
   const getPerformanceStatus = (score: number) => {
-    if (score >= 4.0) return { label: 'Significantly Exceeding', color: 'text-green-600' };
-    if (score >= 3.5) return { label: 'Exceeding Expectations', color: 'text-green-500' };
-    if (score >= 3.0) return { label: 'Meeting Expectations', color: 'text-yellow-600' };
-    return { label: 'Needs Improvement', color: 'text-red-500' };
+    if (score >= 4.0) return { label: 'Significantly Exceeding', color: 'text-green-600', description: 'Strong performance with consistent excellence' };
+    if (score >= 3.5) return { label: 'Exceeding Expectations', color: 'text-green-500', description: 'Performance above expected level' };
+    if (score >= 3.0) return { label: 'Meeting Expectations', color: 'text-yellow-600', description: 'Meeting basic role requirements' };
+    return { label: 'Needs Improvement', color: 'text-red-500', description: 'Performance below expected level' };
   };
 
   const performance = getPerformanceStatus(score.score);
@@ -85,6 +85,9 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
             <div className="text-2xl font-medium">{score.score.toFixed(1)}<span className="text-base text-muted-foreground">/5.0</span></div>
             <div className={cn("text-sm font-medium", performance.color)}>
               {performance.label}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              {performance.description}
             </div>
           </div>
           <Badge variant="secondary" className={cn(confidenceInfo.badge, "ml-2")}>

@@ -23,8 +23,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   // Process feedback data
   const employeesWithAnalytics = new Set(feedbackRequests.filter(r => r.analytics).map(r => r.employee_id));
   const totalEmployees = new Set(feedbackRequests.map(r => r.employee_id)).size;
-  const includedReviewCount = feedbackRequests.filter(r => r.analytics).length;
+  const completedReviewCount = feedbackRequests.filter(r => (r.feedback_responses?.length ?? 0) > 0).length;
   const totalReviewCount = feedbackRequests.length;
+  const includedReviewCount = feedbackRequests.reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
+  const analyzedReviewCount = feedbackRequests.filter(r => r.analytics).reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
 
   // Calculate scores for each competency
   const competencyScores = new Map<string, ScoreWithOutlier[]>();
@@ -113,7 +115,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             </TooltipProvider>
           </div>
           <p className="text-sm text-muted-foreground">
-            Based on {employeesWithAnalytics.size} of {totalEmployees} employees ({includedReviewCount} of {totalReviewCount} reviews)
+            Based on {analyzedReviewCount} of {includedReviewCount} completed reviews
           </p>
         </div>
         <TooltipProvider>
@@ -150,8 +152,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
           <TeamSummaryStats
             employeesWithAnalytics={employeesWithAnalytics.size}
             totalEmployees={totalEmployees}
-            includedReviewCount={includedReviewCount}
-            totalReviewCount={totalReviewCount}
+            includedReviewCount={analyzedReviewCount}
+            totalReviewCount={includedReviewCount}
             averageEvidenceCount={sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length}
           />
 
