@@ -24,6 +24,7 @@ export interface ScoreWithOutlier {
   evidenceCount: number;
   description: string;
   relationship: string;
+  reviewerId?: string;
   hasOutliers?: boolean;
   adjustedWeight?: number;
   evidenceQuotes?: string[];
@@ -33,6 +34,18 @@ export interface ScoreWithOutlier {
     relationship: string;
   }>;
   aspectScores?: AspectScore[];
+  confidenceMetrics?: {
+    evidenceScore: number;
+    consistencyScore: number;
+    relationshipScore: number;
+    finalScore: number;
+    factors: {
+      evidenceCount: number;
+      variance: number;
+      relationshipCount: number;
+      distributionQuality: number;
+    };
+  };
 }
 
 export interface AggregateScore {

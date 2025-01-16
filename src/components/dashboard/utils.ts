@@ -1,4 +1,4 @@
-import { CONFIDENCE_WEIGHTS, OUTLIER_THRESHOLDS, RELATIONSHIP_WEIGHTS } from './constants';
+import { CONFIDENCE_WEIGHTS, OUTLIER_THRESHOLDS, RELATIONSHIP_WEIGHTS, MIN_REVIEWS_REQUIRED } from './constants';
 import { ScoreWithOutlier, AdjustmentDetail } from './types';
 
 // Helper function to calculate quartiles
@@ -103,34 +103,180 @@ export function detectOutliers(scores: ScoreWithOutlier[]): ScoreWithOutlier[] {
   });
 }
 
-export function calculateConfidence(scores: ScoreWithOutlier[]): 'low' | 'medium' | 'high' {
-  const totalEvidence = scores.reduce((sum, s) => sum + s.evidenceCount, 0);
+interface ConfidenceMetrics {
+  evidenceScore: number;
+  consistencyScore: number;
+  relationshipScore: number;
+  finalScore: number;
+  factors: {
+    evidenceCount: number;
+    variance: number;
+    relationshipCount: number;
+    distributionQuality: number;
+  };
+}
+
+export function calculateConfidence(scores: ScoreWithOutlier[]): { 
+  level: 'low' | 'medium' | 'high';
+  metrics: ConfidenceMetrics;
+} {
+  const competencyName = scores[0]?.name || 'Unknown';
+  console.group(`Confidence Calculation for ${competencyName}`);
+
+  // 1. Evidence Quantity Assessment with reviewer-based diminishing returns
+  const evidenceByReviewer = new Map<string, number>();
+  const uniqueEvidence = new Set<string>();
   
-  // Calculate score variance to check consistency
+  scores.forEach(s => {
+    // Track evidence per reviewer
+    const reviewerId = `${s.relationship}_${s.reviewerId || 'unknown'}`;
+    const currentReviewerCount = evidenceByReviewer.get(reviewerId) || 0;
+    
+    // Apply diminishing returns for multiple pieces from same reviewer
+    const effectiveCount = Math.min(
+      s.evidenceCount,
+      // First piece counts fully, then rapid diminishing returns
+      1 + (s.evidenceCount > 1 ? 
+        // Additional mentions count for less and diminish rapidly
+        Array.from({length: s.evidenceCount - 1})
+          .reduce((sum: number, _, idx) => sum + Math.pow(0.5, idx + 1), 0) : 0)
+    );
+    
+    evidenceByReviewer.set(reviewerId, currentReviewerCount + effectiveCount);
+    
+    // Add to unique evidence tracking
+    for (let i = 0; i < effectiveCount; i++) {
+      uniqueEvidence.add(`${reviewerId}_${s.name}_${i}`);
+    }
+  });
+
+  const totalEvidence = uniqueEvidence.size;
+  // Adjust thresholds based on effective evidence count
+  const evidenceScore = Math.min(1, totalEvidence / 15); // Increased threshold since we now count effective evidence
+
+  console.log('Evidence Analysis:', {
+    totalEvidence,
+    evidenceScore,
+    rawEvidenceCounts: scores.map(s => ({
+      relationship: s.relationship,
+      reviewerId: s.reviewerId || 'unknown',
+      rawCount: s.evidenceCount,
+      effectiveCount: Math.min(
+        s.evidenceCount,
+        2 + Math.floor(Math.log2(Math.max(1, s.evidenceCount - 1)) / 2)
+      )
+    })),
+    evidenceByReviewer: Object.fromEntries(evidenceByReviewer)
+  });
+
+  // 2. Score Consistency Analysis
   const values = scores.map(s => s.score);
   const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
-  
-  // Base confidence on evidence count (from documentation)
-  let baseConfidence: 'low' | 'medium' | 'high';
-  if (totalEvidence >= 10) baseConfidence = 'high';
-  else if (totalEvidence >= 5) baseConfidence = 'medium';
-  else baseConfidence = 'low';
-  
-  // Adjust based on variance (from documentation)
-  if (variance > 2.0) {
-    // High variance reduces confidence
-    return baseConfidence === 'high' ? 'medium' : 'low';
-  } else if (variance > 1.0) {
-    // Moderate variance may reduce high confidence
-    return baseConfidence === 'low' ? 'low' : 'medium';
-  }
-  
-  // Check relationship coverage (requires relationship field to be added to ScoreWithOutlier)
+  const consistencyScore = Math.max(0, 1 - variance / 2.0);
+  console.log('Consistency Analysis:', {
+    scores: values,
+    mean,
+    variance,
+    consistencyScore
+  });
+
+  // 3. Relationship Coverage Analysis
   const relationships = new Set(scores.map(s => s.relationship));
-  if (relationships.size < 2 && baseConfidence === 'high') {
-    baseConfidence = 'medium';
-  }
+  const relationshipCount = relationships.size;
   
-  return baseConfidence;
+  const relationshipGroups = new Map<string, number>();
+  scores.forEach(s => {
+    relationshipGroups.set(s.relationship, (relationshipGroups.get(s.relationship) || 0) + 1);
+  });
+
+  const minReviewsPerRelationship = Math.min(...Array.from(relationshipGroups.values()));
+  const relationshipScore = 
+    (relationshipCount >= 2 ? 0.7 : 0.3) +
+    (relationshipCount >= 3 ? 0.2 : 0) +
+    (minReviewsPerRelationship >= 3 ? 0.1 : 0);
+
+  console.log('Relationship Analysis:', {
+    relationshipCount,
+    relationshipGroups: Object.fromEntries(relationshipGroups),
+    minReviewsPerRelationship,
+    relationshipScore
+  });
+
+  // 4. Distribution Quality Check
+  const idealCount = scores.length / relationshipCount;
+  const maxSkew = Math.max(...Array.from(relationshipGroups.values())) / idealCount;
+  const distributionQuality = Math.max(0, 1 - (maxSkew - 1) / 1.5);
+  console.log('Distribution Analysis:', {
+    idealCount,
+    maxSkew,
+    distributionQuality
+  });
+
+  // 5. Weighted Final Score Calculation
+  const weights = {
+    evidence: 0.4,
+    consistency: 0.3,
+    relationship: 0.2,
+    distribution: 0.1
+  };
+
+  const finalScore = (
+    evidenceScore * weights.evidence +
+    consistencyScore * weights.consistency +
+    relationshipScore * weights.relationship +
+    distributionQuality * weights.distribution
+  );
+
+  console.log('Final Score Components:', {
+    evidenceComponent: evidenceScore * weights.evidence,
+    consistencyComponent: consistencyScore * weights.consistency,
+    relationshipComponent: relationshipScore * weights.relationship,
+    distributionComponent: distributionQuality * weights.distribution,
+    finalScore
+  });
+
+  // Confidence Level Determination
+  let level: 'low' | 'medium' | 'high';
+  
+  // High confidence requires good evidence AND consistency
+  if (totalEvidence >= 12 && consistencyScore >= 0.5 && finalScore >= 0.65) {
+    level = 'high';
+  }
+  // Medium confidence needs decent evidence OR good consistency
+  else if ((totalEvidence >= 8 && consistencyScore >= 0.3) || 
+           (consistencyScore >= 0.5 && finalScore >= 0.55)) {
+    level = 'medium';
+  }
+  // Otherwise low confidence
+  else {
+    level = 'low';
+  }
+
+  console.log('Confidence Level Determination:', {
+    level,
+    checks: {
+      evidence: totalEvidence,
+      consistencyScore,
+      finalScore
+    }
+  });
+
+  console.groupEnd();
+
+  return {
+    level,
+    metrics: {
+      evidenceScore,
+      consistencyScore,
+      relationshipScore,
+      finalScore,
+      factors: {
+        evidenceCount: totalEvidence,
+        variance,
+        relationshipCount,
+        distributionQuality
+      }
+    }
+  };
 } 

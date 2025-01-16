@@ -73,17 +73,18 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight;
 
     // Calculate confidence based on evidence and consistency
-    const confidence = calculateConfidence(scores);
+    const confidenceResult = calculateConfidence(scores);
 
     return {
       name: competencyName,
       score: weightedScore,
-      confidence,
+      confidence: confidenceResult.level,
       evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
       relationship: 'aggregate',
       hasOutliers,
       adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
-      description: CORE_COMPETENCIES[competencyName]?.aspects?.join(' • ') || ''
+      description: CORE_COMPETENCIES[competencyName]?.aspects?.join(' • ') || '',
+      confidenceMetrics: confidenceResult.metrics // Store the detailed metrics for potential UI use
     } as ScoreWithOutlier;
   }).filter((score): score is ScoreWithOutlier => score !== null);
 

@@ -224,15 +224,75 @@ For each piece of feedback:
    - Detailed tooltips explaining confidence factors
 
 ### 4. Confidence Calculation
-Team-wide confidence levels are determined by:
-1. Evidence Count: Minimum threshold of 5 reviews
-2. Score Consistency: Variance analysis across reviews
-3. Relationship Mix: Diversity of feedback sources
+Our confidence calculation system uses a comprehensive, multi-factor approach to determine the reliability of competency scores:
 
-Final confidence is calculated as a weighted average:
-- High: ≥ 0.9 weighted confidence score
-- Medium: ≥ 0.7 weighted confidence score
-- Low: < 0.7 weighted confidence score
+#### Confidence Factors
+
+1. **Evidence Quantity (35% weight)**
+   - Measures total pieces of evidence across all reviews
+   - Normalized score (0-1) with maximum at 15 pieces
+   - More evidence increases confidence linearly up to cap
+   - Formula: `min(1, totalEvidence / 15)`
+
+2. **Score Consistency (25% weight)**
+   - Analyzes variance in scores across all feedback
+   - Perfect consistency (0 variance) = 1.0 score
+   - High variance (≥2.0) = 0.0 score
+   - Formula: `max(0, 1 - (variance / 2))`
+
+3. **Relationship Coverage (25% weight)**
+   - Evaluates diversity of feedback sources
+   - Based on number of relationship types represented
+   - Maximum score requires all three types (senior, peer, junior)
+   - Formula: `relationshipCount / 3`
+
+4. **Distribution Quality (15% weight)**
+   - Measures how evenly feedback is distributed across relationships
+   - Compares actual vs. ideal distribution
+   - Perfect distribution = equal representation from each relationship
+   - Formula: `1 - Σ|actualCount - idealCount| / (totalScores * 2)`
+
+#### Confidence Score Calculation
+
+1. **Weighted Aggregation**
+   ```typescript
+   finalScore = (evidenceScore * 0.35) +
+                (consistencyScore * 0.25) +
+                (relationshipScore * 0.25) +
+                (distributionQuality * 0.15)
+   ```
+
+2. **Confidence Level Determination**
+   - High: finalScore ≥ 0.8
+   - Medium: finalScore ≥ 0.6
+   - Low: finalScore < 0.6
+
+#### Transparency and Reporting
+Each confidence assessment includes detailed metrics:
+- Individual factor scores (0-1 scale)
+- Raw measurements (evidence count, variance, etc.)
+- Final weighted score
+- Contributing factors for the confidence level
+
+This granular approach allows:
+- Clear understanding of confidence drivers
+- Identification of areas needing more data
+- Transparent reasoning for confidence levels
+- Actionable feedback for improving confidence
+
+#### Example
+For a competency assessment with:
+- 12 pieces of evidence (evidenceScore = 0.8)
+- Low variance of 0.5 (consistencyScore = 0.75)
+- All relationship types (relationshipScore = 1.0)
+- Slightly uneven distribution (distributionQuality = 0.7)
+
+Final calculation:
+```typescript
+finalScore = (0.8 * 0.35) + (0.75 * 0.25) + (1.0 * 0.25) + (0.7 * 0.15)
+           = 0.28 + 0.1875 + 0.25 + 0.105
+           = 0.8225 // Results in 'high' confidence
+```
 
 ### 5. Data Requirements
 - Minimum 5 reviews per employee for inclusion
