@@ -29,8 +29,6 @@ interface AggregateScore {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
-  reviewerId: string;
-  relationship: string;
 }
 
 const MIN_REVIEWS_REQUIRED = 5;
@@ -46,49 +44,32 @@ const COMPETENCY_ORDER = [
   'Growth & Development'
 ];
 
-interface ConfidenceMetrics {
+// Add relationship weight constants at the top level
+const RELATIONSHIP_WEIGHTS = {
+  senior: 0.4,
+  peer: 0.35,
+  junior: 0.25,
+  aggregate: 1 // Used for already aggregated scores
+};
+
+function calculateConfidence(scores: Array<{
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
   evidenceCount: number;
-  scoreVariance: number;
-  relationshipTypes: number;
-}
-
-function calculateConfidence({
-  evidenceCount,
-  scoreVariance,
-  relationshipTypes,
-  mentionCount
-}: ConfidenceMetrics & { mentionCount: number }): 'low' | 'medium' | 'high' {
-  // Thresholds based on number of reviews that mention this competency
-  const MIN_MENTIONS = 5;        // At least 5 reviews should mention this
-  const MAX_VARIANCE = 1.2;      // Score variance should be low
-  const MIN_RELATIONSHIPS = 3;    // From at least 3 different relationship types
-
-  // High confidence requires all criteria
-  if (
-    mentionCount >= MIN_MENTIONS &&
-    scoreVariance <= MAX_VARIANCE &&
-    relationshipTypes >= MIN_RELATIONSHIPS
-  ) {
-    return 'high';
-  }
-
-  // Low confidence if we don't meet base requirements
-  if (
-    mentionCount < MIN_MENTIONS / 2 ||    // Less than 3 reviews mention this
-    scoreVariance > MAX_VARIANCE * 1.5 ||  // High variance in scores
-    relationshipTypes < 2                  // Only 1 relationship type
-  ) {
-    return 'low';
-  }
-
-  // Medium confidence for everything else
-  return 'medium';
-}
-
-function calculateScoreVariance(scores: number[]): number {
-  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  const squaredDiffs = scores.map(score => Math.pow(score - mean, 2));
-  return Math.sqrt(squaredDiffs.reduce((sum, diff) => sum + diff, 0) / scores.length);
+  relationship: string;
+}>): 'low' | 'medium' | 'high' {
+  // Start with high confidence
+  let result: 'low' | 'medium' | 'high' = 'high';
+  
+  // Update confidence level (take the most conservative)
+  scores.forEach(score => {
+    if (score.confidence === 'low' || 
+       (score.confidence === 'medium' && result === 'high')) {
+      result = score.confidence;
+    }
+  });
+  
+  return result;
 }
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
@@ -116,61 +97,90 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   // Only proceed if we have at least one employee with sufficient data
   if (employeesWithAnalytics.size === 0) return null;
 
-  // Only use analytics from employees with sufficient data
-  const validAnalytics = employeesWithSufficientData
-    .map(fr => fr.analytics!.insights)
-    .flat();
-
-  // Aggregate scores for each competency
-  const competencyScores = validAnalytics.reduce((acc: { [key: string]: Array<{
-    name: string;
+  // First aggregate per employee
+  const employeeCompetencies = new Map<string, Map<string, Array<{
     score: number;
     confidence: 'low' | 'medium' | 'high';
-    description: string;
     evidenceCount: number;
     relationship: string;
-  }> }, insight) => {
-    if (!insight.competencies) return acc;
-    
-    insight.competencies.forEach(comp => {
-      if (!acc[comp.name]) acc[comp.name] = [];
-      acc[comp.name].push({
-        name: comp.name,
+  }>>>();
+
+  feedbackRequests.forEach(request => {
+    if (!request.analytics?.insights) return;
+
+    // Find aggregate insights for this employee
+    const aggregateInsight = request.analytics.insights.find(insight => 
+      insight.relationship === 'aggregate'
+    );
+    if (!aggregateInsight?.competencies) return;
+
+    // Create employee map if it doesn't exist
+    const employeeId = request.employee_id;
+    if (!employeeCompetencies.has(employeeId)) {
+      employeeCompetencies.set(employeeId, new Map());
+    }
+
+    // Add competency scores for this employee
+    aggregateInsight.competencies.forEach(comp => {
+      const employeeMap = employeeCompetencies.get(employeeId)!;
+      if (!employeeMap.has(comp.name)) {
+        employeeMap.set(comp.name, []);
+      }
+      employeeMap.get(comp.name)!.push({
         score: comp.score,
         confidence: comp.confidence,
-        description: comp.description,
         evidenceCount: comp.evidenceCount,
-        relationship: insight.relationship || 'unknown'
+        relationship: aggregateInsight.relationship
       });
     });
-    return acc;
-  }, {});
+  });
 
-  // Calculate average scores and sort by score
-  const sortedScores = Object.entries(competencyScores).map(([name, scores]) => {
-    const scoreValues = scores.map(s => s.score);
-    const uniqueRelationships = new Set(scores.map(s => s.relationship)).size;
-    
-    // Count how many reviews mention this competency
-    const mentionCount = scores.length;
-    
-    const confidenceMetrics: ConfidenceMetrics & { mentionCount: number } = {
-      evidenceCount: scores.length, // Number of times this competency was mentioned
-      scoreVariance: calculateScoreVariance(scoreValues),
-      relationshipTypes: uniqueRelationships,
-      mentionCount
-    };
+  // Now calculate averages and confidence per competency
+  const competencyScores = new Map<string, Array<{
+    score: number;
+    confidence: 'low' | 'medium' | 'high';
+    evidenceCount: number;
+    relationship: string;
+  }>>();
 
-    const confidence = calculateConfidence(confidenceMetrics);
-    const avgScore = scoreValues.reduce((sum, score) => sum + score, 0) / scores.length;
+  // Aggregate scores per competency across employees
+  employeeCompetencies.forEach((employeeMap) => {
+    employeeMap.forEach((scores, competencyName) => {
+      if (!competencyScores.has(competencyName)) {
+        competencyScores.set(competencyName, []);
+      }
+      
+      // Calculate weighted average score for this employee for this competency
+      const weightedScores = scores.map(s => ({
+        ...s,
+        weightedScore: s.score * (RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1)
+      }));
+      
+      const totalWeight = weightedScores.reduce((sum, s) => 
+        sum + (RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1), 0);
+      
+      const avgScore = weightedScores.reduce((sum, s) => sum + s.weightedScore, 0) / totalWeight;
+      
+      competencyScores.get(competencyName)!.push({
+        score: avgScore,
+        confidence: calculateConfidence(scores),
+        evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
+        relationship: scores[0].relationship
+      });
+    });
+  });
+
+  // Calculate final scores and sort
+  const sortedScores = Array.from(competencyScores.entries()).map(([name, scores]) => {
+    const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
+    const confidence = calculateConfidence(scores);
 
     return {
       name,
       score: avgScore,
       confidence,
-      confidenceMetrics,
-      description: scores[0].description,
-      evidenceCount: scores.length // Use number of mentions instead of summing evidence
+      description: CORE_COMPETENCIES[name]?.aspects?.join(' • ') || '',
+      evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0)
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -365,52 +375,35 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                             </span>
                           </div>
 
-                          {/* Confidence metrics section */}
+                          {/* Score and evidence count */}
                           <div className="mb-4">
-                            <h4 className="text-sm font-medium mb-2">Why this confidence level?</h4>
-                            <ul className="space-y-1.5">
-                              <li className="flex items-center gap-2 text-sm">
-                                <span className={cn(
-                                  "w-2 h-2 rounded-full shrink-0",
-                                  score.confidenceMetrics.mentionCount >= 5 ? "bg-green-500" : "bg-red-500"
-                                )}/>
-                                <span className="text-muted-foreground">
-                                  Mentioned in {score.confidenceMetrics.mentionCount} reviews
-                                  {score.confidenceMetrics.mentionCount >= 5 ? " ✓" : ` (needs ${5 - score.confidenceMetrics.mentionCount} more)`}
-                                </span>
-                              </li>
-                              <li className="flex items-center gap-2 text-sm">
-                                <span className={cn(
-                                  "w-2 h-2 rounded-full shrink-0",
-                                  score.confidenceMetrics.scoreVariance <= 1.2 ? "bg-green-500" : "bg-red-500"
-                                )}/>
-                                <span className="text-muted-foreground">
-                                  Score consistency: {score.confidenceMetrics.scoreVariance.toFixed(1)}
-                                  {score.confidenceMetrics.scoreVariance <= 1.2 ? " ✓" : " (too varied)"}
-                                </span>
-                              </li>
-                              <li className="flex items-center gap-2 text-sm">
-                                <span className={cn(
-                                  "w-2 h-2 rounded-full shrink-0",
-                                  score.confidenceMetrics.relationshipTypes >= 3 ? "bg-green-500" : "bg-red-500"
-                                )}/>
-                                <span className="text-muted-foreground">
-                                  {score.confidenceMetrics.relationshipTypes} relationship types
-                                  {score.confidenceMetrics.relationshipTypes >= 3 ? " ✓" : ` (needs ${3 - score.confidenceMetrics.relationshipTypes} more)`}
-                                </span>
-                              </li>
-                            </ul>
-                          </div>
-
-                          {/* Score consistency explanation */}
-                          <div className="border-t pt-3 mb-4">
-                            <p className="text-xs text-muted-foreground">
-                              <span className="font-medium">About Score Consistency:</span><br />
-                              A score of {score.confidenceMetrics.scoreVariance.toFixed(1)} means reviewers 
-                              {score.confidenceMetrics.scoreVariance <= 1.2 
-                                ? " generally agree in their ratings" 
-                                : " have varying opinions"}. Lower is better.
+                            <p className="text-sm text-muted-foreground">
+                              Score: {score.score.toFixed(1)}/5
+                              <br />
+                              Based on {score.evidenceCount} pieces of evidence
                             </p>
+                            
+                            {/* Add confidence explanation */}
+                            <div className="mt-3 space-y-2">
+                              <p className="text-sm font-medium">Confidence Level Factors:</p>
+                              <ul className="text-xs space-y-1.5 text-muted-foreground">
+                                <li className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+                                  Review Count: {score.evidenceCount} pieces of evidence
+                                </li>
+                                <li className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+                                  Score Consistency: How much reviewers agree
+                                </li>
+                                <li className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+                                  Relationship Mix: Feedback from different levels
+                                </li>
+                              </ul>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                High confidence requires 5+ reviews, consistent scores, and feedback from 3+ relationship types (senior, peer, junior)
+                              </p>
+                            </div>
                           </div>
 
                           {/* Key aspects section */}

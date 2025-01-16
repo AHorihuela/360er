@@ -22,6 +22,7 @@ interface CompetencyScore {
   sampleSize: number;
   evidenceCount: number;
   isInsufficientData?: boolean;
+  totalWeight?: number;
 }
 
 interface AggregateAnalytics {
@@ -34,6 +35,56 @@ export interface Competency {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
+}
+
+// Add relationship weight constants at the top level
+const RELATIONSHIP_WEIGHTS = {
+  senior: 0.4,
+  peer: 0.35,
+  junior: 0.25,
+  aggregate: 1 // Used for already aggregated scores
+};
+
+function calculateConfidence(employeeScores: Array<{
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
+  evidenceCount: number;
+  relationship: string;
+}>): 'low' | 'medium' | 'high' {
+  // Calculate variance
+  const scores = employeeScores.map(s => s.score);
+  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  const squaredDiffs = scores.map(score => Math.pow(score - mean, 2));
+  const variance = Math.sqrt(squaredDiffs.reduce((sum, diff) => sum + diff, 0) / scores.length);
+
+  // Count unique relationship types
+  const uniqueRelationships = new Set(employeeScores.map(s => s.relationship)).size;
+
+  // Thresholds
+  const MIN_MENTIONS = 5;        // At least 5 reviews should mention this
+  const MAX_VARIANCE = 1.2;      // Score variance should be low
+  const MIN_RELATIONSHIPS = 3;    // From at least 3 relationship types
+
+  // High confidence requires all criteria
+  if (
+    employeeScores.length >= MIN_MENTIONS &&
+    variance <= MAX_VARIANCE &&
+    uniqueRelationships >= MIN_RELATIONSHIPS
+  ) {
+    return 'high';
+  }
+
+  // Low confidence if we don't meet base requirements
+  if (
+    employeeScores.length < MIN_MENTIONS / 2 ||    // Less than 3 reviews mention this
+    variance > MAX_VARIANCE * 1.5 ||               // High variance in scores
+    uniqueRelationships < 2                        // Only 1 relationship type
+  ) {
+    return 'low';
+  }
+
+  // Medium confidence for everything else
+  return 'medium';
 }
 
 export function CycleAnalytics({ reviewCycle }: Props) {
@@ -52,6 +103,14 @@ export function CycleAnalytics({ reviewCycle }: Props) {
   const aggregateAnalytics: AggregateAnalytics = {};
   let totalEmployeesWithAnalytics = 0;
   let totalEmployeesWithSufficientReviews = 0;
+
+  // Track employee scores for each competency
+  const employeeScores: Record<string, Array<{
+    score: number;
+    confidence: 'low' | 'medium' | 'high';
+    evidenceCount: number;
+    relationship: string;
+  }>> = {};
 
   reviewCycle.feedback_requests.forEach((request: FeedbackRequest) => {
     const reviewCount = request.feedback_responses?.length || 0;
@@ -76,7 +135,19 @@ export function CycleAnalytics({ reviewCycle }: Props) {
         employeeCompetencies.set(comp.name, {
           score: comp.score,
           confidence: comp.confidence,
-          evidenceCount: comp.evidenceCount
+          evidenceCount: comp.evidenceCount,
+          relationship: aggregateInsight.relationship
+        });
+
+        // Track scores for confidence calculation
+        if (!employeeScores[comp.name]) {
+          employeeScores[comp.name] = [];
+        }
+        employeeScores[comp.name].push({
+          score: comp.score,
+          confidence: comp.confidence,
+          evidenceCount: comp.evidenceCount,
+          relationship: aggregateInsight.relationship
         });
       }
     });
@@ -85,17 +156,20 @@ export function CycleAnalytics({ reviewCycle }: Props) {
     employeeCompetencies.forEach((comp, name) => {
       if (!aggregateAnalytics[name]) {
         aggregateAnalytics[name] = {
-          score: comp.score,
+          score: comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1),
           confidence: comp.confidence,
           sampleSize: 1,
           evidenceCount: comp.evidenceCount,
-          isInsufficientData: false
+          isInsufficientData: false,
+          totalWeight: RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1
         };
       } else {
         if (aggregateAnalytics[name].score === null) {
-          aggregateAnalytics[name].score = comp.score;
+          aggregateAnalytics[name].score = comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1);
+          aggregateAnalytics[name].totalWeight = RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
         } else {
-          aggregateAnalytics[name].score! += comp.score;
+          aggregateAnalytics[name].score! += comp.score * (RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1);
+          aggregateAnalytics[name].totalWeight! += RELATIONSHIP_WEIGHTS[comp.relationship as keyof typeof RELATIONSHIP_WEIGHTS] || 1;
         }
         aggregateAnalytics[name].sampleSize++;
         aggregateAnalytics[name].evidenceCount += comp.evidenceCount;
@@ -123,7 +197,12 @@ export function CycleAnalytics({ reviewCycle }: Props) {
   Object.keys(aggregateAnalytics).forEach(key => {
     const analytics = aggregateAnalytics[key];
     if (!analytics.isInsufficientData && analytics.score !== null) {
-      analytics.score = analytics.score / analytics.sampleSize;
+      // Calculate confidence using statistical measures
+      const confidence = calculateConfidence(employeeScores[key] || []);
+      analytics.confidence = confidence;
+      
+      // Calculate weighted average score
+      analytics.score = analytics.score / analytics.totalWeight!;
     }
   });
 
