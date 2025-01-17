@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "./sidebar";
 import { LayoutDashboard, Users, ClipboardList, Settings, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";

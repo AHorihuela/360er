@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, anonymousClient } from '@/lib/supabase';
+import { anonymousClient } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { FeedbackFormData } from '@/types/feedback/form';
 import { SubmissionOptions } from '@/types/feedback/submission';

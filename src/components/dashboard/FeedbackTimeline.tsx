@@ -5,7 +5,6 @@ import { CalendarDays, Users } from "lucide-react";
 
 interface Props {
   feedbackRequests: DashboardFeedbackRequest[];
-  cycleName: string;
   dueDate: string;
   totalReviews: number;
   pendingReviews: number;
@@ -17,7 +16,7 @@ interface DayData {
   total: number;
 }
 
-export function FeedbackTimeline({ feedbackRequests, cycleName, dueDate, totalReviews, pendingReviews }: Props) {
+export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pendingReviews }: Props) {
   // Process the data to get responses per day
   const data: DayData[] = [];
   const responses = feedbackRequests

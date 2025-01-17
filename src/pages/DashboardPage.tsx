@@ -402,7 +402,6 @@ export function DashboardPage(): JSX.Element {
             {/* Response Timeline */}
             <FeedbackTimeline 
               feedbackRequests={activeReviewCycle.feedback_requests}
-              cycleName={activeReviewCycle.title}
               dueDate={activeReviewCycle.review_by_date}
               totalReviews={activeReviewCycle.total_requests}
               pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
