@@ -98,72 +98,38 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
       role="region"
       aria-label={`Detailed analysis for ${score.name}`}
     >
-      {/* Performance Overview Card */}
-      <div className={cn(
-        "p-6 rounded-lg border transition-colors",
-        performance.bgColor
-      )}>
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              {performance.icon}
-              <h3 className={cn("text-lg font-semibold", performance.color)}>
-                {performance.label}
-              </h3>
-            </div>
-            <div className="text-2xl font-medium">
-              {score.score.toFixed(1)}
-              <span className="text-base text-muted-foreground">/5.0</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {performance.description}
-            </p>
-          </div>
-          <Badge 
-            variant="secondary" 
-            className={cn(
-              confidenceInfo.badge,
-              "ml-2 flex items-center gap-1.5"
-            )}
-          >
-            {confidenceInfo.icon}
-            {score.confidence.charAt(0).toUpperCase() + score.confidence.slice(1)} Confidence
-          </Badge>
-        </div>
-
-        <div className="mt-4 space-y-1">
-          <div className="flex justify-between text-sm">
-            <span>Distance from Target (3.5)</span>
-            <span>{Math.abs(score.score - 3.5).toFixed(1)} points {score.score >= 3.5 ? 'above' : 'below'}</span>
-          </div>
-          <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-0.5 h-full bg-slate-300" />
-            </div>
-            {score.score >= 3.5 ? (
-              <div 
-                className="absolute top-0 bottom-0 left-1/2 bg-green-500"
-                style={{ width: `${((score.score - 3.5) / 1.5) * 50}%` }}
-              />
-            ) : (
-              <div 
-                className="absolute top-0 bottom-0 bg-red-500"
-                style={{ 
-                  right: '50%',
-                  width: `${((3.5 - score.score) / 1.5) * 50}%`
-                }}
-              />
-            )}
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>-1.5</span>
-            <span className="text-slate-500">Target (3.5)</span>
-            <span>+1.5</span>
-          </div>
+      {/* Areas of Evaluation - Moved to top */}
+      <div>
+        <h3 className="text-sm font-medium mb-3">Areas of Evaluation</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {competency?.aspects && (
+            <>
+              <div className="p-4 bg-background rounded-lg border">
+                <ul className="space-y-2">
+                  {competency.aspects.slice(0, Math.ceil(competency.aspects.length / 2)).map((aspect, i) => (
+                    <li key={i} className="text-sm flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-foreground"></span>
+                      {aspect}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-4 bg-background rounded-lg border">
+                <ul className="space-y-2">
+                  {competency.aspects.slice(Math.ceil(competency.aspects.length / 2)).map((aspect, i) => (
+                    <li key={i} className="text-sm flex items-center gap-2">
+                      <span className="w-1 h-1 rounded-full bg-foreground"></span>
+                      {aspect}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Analysis Grid */}
+      {/* Analysis Grid - Feedback Data */}
       <div className="grid grid-cols-3 gap-4">
         {/* Evidence Base */}
         <TooltipProvider>
@@ -276,6 +242,93 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
         </TooltipProvider>
       </div>
 
+      {/* Supporting Evidence */}
+      {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium mb-3">Supporting Evidence</h3>
+          <div className="p-4 bg-background rounded-lg border space-y-3">
+            {score.evidenceQuotes.slice(0, 3).map((quote, i) => (
+              <div 
+                key={i} 
+                className="text-sm text-muted-foreground pl-3 border-l-2 border-muted"
+              >
+                "{quote}"
+              </div>
+            ))}
+            {score.evidenceQuotes.length > 3 && (
+              <div className="text-sm text-muted-foreground">
+                +{score.evidenceQuotes.length - 3} more examples
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Performance Overview Card - Moved to bottom */}
+      <div className={cn(
+        "p-6 rounded-lg border transition-colors",
+        performance.bgColor
+      )}>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              {performance.icon}
+              <h3 className={cn("text-lg font-semibold", performance.color)}>
+                {performance.label}
+              </h3>
+            </div>
+            <div className="text-2xl font-medium">
+              {score.score.toFixed(1)}
+              <span className="text-base text-muted-foreground">/5.0</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {performance.description}
+            </p>
+          </div>
+          <Badge 
+            variant="secondary" 
+            className={cn(
+              confidenceInfo.badge,
+              "ml-2 flex items-center gap-1.5"
+            )}
+          >
+            {confidenceInfo.icon}
+            {score.confidence.charAt(0).toUpperCase() + score.confidence.slice(1)} Confidence
+          </Badge>
+        </div>
+
+        <div className="mt-4 space-y-1">
+          <div className="flex justify-between text-sm">
+            <span>Distance from Target (3.5)</span>
+            <span>{Math.abs(score.score - 3.5).toFixed(1)} points {score.score >= 3.5 ? 'above' : 'below'}</span>
+          </div>
+          <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-0.5 h-full bg-slate-300" />
+            </div>
+            {score.score >= 3.5 ? (
+              <div 
+                className="absolute top-0 bottom-0 left-1/2 bg-green-500"
+                style={{ width: `${((score.score - 3.5) / 1.5) * 50}%` }}
+              />
+            ) : (
+              <div 
+                className="absolute top-0 bottom-0 bg-red-500"
+                style={{ 
+                  right: '50%',
+                  width: `${((3.5 - score.score) / 1.5) * 50}%`
+                }}
+              />
+            )}
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>-1.5</span>
+            <span className="text-slate-500">Target (3.5)</span>
+            <span>+1.5</span>
+          </div>
+        </div>
+      </div>
+
       {/* Current Level & Growth */}
       <div className="grid grid-cols-2 gap-4">
         <TooltipProvider>
@@ -353,59 +406,6 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
           </TooltipProvider>
         )}
       </div>
-
-      {/* Areas of Evaluation */}
-      <div>
-        <h3 className="text-sm font-medium mb-3">Areas of Evaluation</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {competency?.aspects && (
-            <>
-              <div className="p-4 bg-background rounded-lg border">
-                <ul className="space-y-2">
-                  {competency.aspects.slice(0, Math.ceil(competency.aspects.length / 2)).map((aspect, i) => (
-                    <li key={i} className="text-sm flex items-center gap-2">
-                      <span className="w-1 h-1 rounded-full bg-foreground"></span>
-                      {aspect}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="p-4 bg-background rounded-lg border">
-                <ul className="space-y-2">
-                  {competency.aspects.slice(Math.ceil(competency.aspects.length / 2)).map((aspect, i) => (
-                    <li key={i} className="text-sm flex items-center gap-2">
-                      <span className="w-1 h-1 rounded-full bg-foreground"></span>
-                      {aspect}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Supporting Evidence */}
-      {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium mb-3">Supporting Evidence</h3>
-          <div className="p-4 bg-background rounded-lg border space-y-3">
-            {score.evidenceQuotes.slice(0, 3).map((quote, i) => (
-              <div 
-                key={i} 
-                className="text-sm text-muted-foreground pl-3 border-l-2 border-muted"
-              >
-                "{quote}"
-              </div>
-            ))}
-            {score.evidenceQuotes.length > 3 && (
-              <div className="text-sm text-muted-foreground">
-                +{score.evidenceQuotes.length - 3} more examples
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
