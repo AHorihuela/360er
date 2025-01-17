@@ -16,7 +16,7 @@ export function SidebarDemo() {
     navigate('/');
   };
 
-  const links = [
+  const mainLinks = [
     {
       label: "Dashboard",
       href: "/dashboard",
@@ -38,22 +38,8 @@ export function SidebarDemo() {
         <ClipboardList className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
-    {
-      label: "Settings",
-      href: "/account",
-      icon: (
-        <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Logout",
-      href: "#",
-      icon: (
-        <LogOut className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-      onClick: handleSignOut,
-    },
   ];
+
   const [open, setOpen] = useState(false);
   return (
     <div
@@ -66,19 +52,29 @@ export function SidebarDemo() {
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {open ? <Logo /> : <LogoIcon />}
             <div className="mt-8 flex flex-col gap-2">
-              {links.map((link, idx) => (
+              {mainLinks.map((link, idx) => (
                 <SidebarLink key={idx} link={link} />
               ))}
             </div>
           </div>
-          <div>
+          <div className="flex flex-col gap-2">
             <SidebarLink
               link={{
-                label: "User Profile",
+                label: "Settings",
                 href: "/account",
                 icon: (
-                  <div className="h-7 w-7 flex-shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+                  <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
                 ),
+              }}
+            />
+            <SidebarLink
+              link={{
+                label: "Logout",
+                href: "#",
+                icon: (
+                  <LogOut className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+                ),
+                onClick: handleSignOut,
               }}
             />
           </div>
