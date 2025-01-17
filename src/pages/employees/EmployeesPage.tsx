@@ -301,133 +301,137 @@ export function EmployeesPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border bg-destructive/10 p-4 text-destructive">
-        {error}
+      <div className="container mx-auto py-8 px-4">
+        <div className="rounded-lg border bg-destructive/10 p-4 text-destructive">
+          {error}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Employees</h1>
-        <Button 
-          onClick={() => {
-            setIsEditing(false);
-            setCurrentEmployee({ id: '', name: '', role: '' });
-            setShowModal(true);
-          }}
-        >
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-lg text-muted-foreground">Loading...</div>
+    <div className="container mx-auto py-8 px-4">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Employees</h1>
+          <Button 
+            onClick={() => {
+              setIsEditing(false);
+              setCurrentEmployee({ id: '', name: '', role: '' });
+              setShowModal(true);
+            }}
+          >
+            <PlusIcon className="mr-2 h-4 w-4" />
+            Add Employee
+          </Button>
         </div>
-      ) : (
-        <div className="grid gap-4">
-          {employees.length === 0 ? (
-            <div className="rounded-lg border bg-card p-8 text-center">
-              <p className="text-muted-foreground">No employees found</p>
-            </div>
-          ) : (
-            <EmployeeTable 
-              employees={employees}
-              onEdit={handleEdit}
-              onDelete={(id) => {
-                setEmployeeToDelete(id);
-                setShowDeleteDialog(true);
-              }}
-              onViewReview={handleViewReview}
-              isDeleteLoading={isDeleteLoading}
-              employeeToDelete={employeeToDelete}
-            />
-          )}
-        </div>
-      )}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="w-full max-w-md space-y-4 rounded-lg border bg-card p-6">
-            <h2 className="text-xl font-semibold">
-              {isEditing ? 'Edit Employee' : 'Add New Employee'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium">Name</label>
-                <input
-                  type="text"
-                  required
-                  className="mt-1 w-full rounded-md border p-2"
-                  value={currentEmployee.name}
-                  onChange={(e) => setCurrentEmployee({ ...currentEmployee, name: e.target.value })}
-                  placeholder="John Doe"
-                  disabled={isEditLoading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Role</label>
-                <input
-                  type="text"
-                  required
-                  className="mt-1 w-full rounded-md border p-2"
-                  value={currentEmployee.role}
-                  onChange={(e) => setCurrentEmployee({ ...currentEmployee, role: e.target.value })}
-                  placeholder="Software Engineer"
-                  disabled={isEditLoading}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowModal(false);
-                    setIsEditing(false);
-                    setCurrentEmployee({ id: '', name: '', role: '' });
-                  }}
-                  disabled={isEditLoading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isEditLoading}>
-                  {isEditLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Employee'}
-                </Button>
-              </div>
-            </form>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="text-lg text-muted-foreground">Loading...</div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="grid gap-4">
+            {employees.length === 0 ? (
+              <div className="rounded-lg border bg-card p-8 text-center">
+                <p className="text-muted-foreground">No employees found</p>
+              </div>
+            ) : (
+              <EmployeeTable 
+                employees={employees}
+                onEdit={handleEdit}
+                onDelete={(id) => {
+                  setEmployeeToDelete(id);
+                  setShowDeleteDialog(true);
+                }}
+                onViewReview={handleViewReview}
+                isDeleteLoading={isDeleteLoading}
+                employeeToDelete={employeeToDelete}
+              />
+            )}
+          </div>
+        )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the employee
-              and all associated feedback requests.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowDeleteDialog(false);
-              setEmployeeToDelete(null);
-            }}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => employeeToDelete && handleDelete(employeeToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleteLoading}
-            >
-              {isDeleteLoading ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="w-full max-w-md space-y-4 rounded-lg border bg-card p-6">
+              <h2 className="text-xl font-semibold">
+                {isEditing ? 'Edit Employee' : 'Add New Employee'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium">Name</label>
+                  <input
+                    type="text"
+                    required
+                    className="mt-1 w-full rounded-md border p-2"
+                    value={currentEmployee.name}
+                    onChange={(e) => setCurrentEmployee({ ...currentEmployee, name: e.target.value })}
+                    placeholder="John Doe"
+                    disabled={isEditLoading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Role</label>
+                  <input
+                    type="text"
+                    required
+                    className="mt-1 w-full rounded-md border p-2"
+                    value={currentEmployee.role}
+                    onChange={(e) => setCurrentEmployee({ ...currentEmployee, role: e.target.value })}
+                    placeholder="Software Engineer"
+                    disabled={isEditLoading}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowModal(false);
+                      setIsEditing(false);
+                      setCurrentEmployee({ id: '', name: '', role: '' });
+                    }}
+                    disabled={isEditLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isEditLoading}>
+                    {isEditLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Employee'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the employee
+                and all associated feedback requests.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setShowDeleteDialog(false);
+                setEmployeeToDelete(null);
+              }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => employeeToDelete && handleDelete(employeeToDelete)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeleteLoading}
+              >
+                {isDeleteLoading ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 } 
