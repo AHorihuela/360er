@@ -7,6 +7,7 @@ import { CORE_COMPETENCIES } from "@/lib/competencies";
 import { cn } from '@/lib/utils';
 import { type RelationshipInsight } from "@/types/feedback/analysis";
 import { Button } from "@/components/ui/button";
+import { formatScore } from "@/utils/format";
 
 interface Props {
   insight: RelationshipInsight | undefined;
@@ -18,7 +19,7 @@ interface CompetencyDetail {
   confidence: 'low' | 'medium' | 'high';
   description: string;
   evidenceCount: number;
-  effectiveEvidenceCount: number;
+  effectiveEvidenceCount?: number;
   roleSpecificNotes: string;
   evidenceQuotes?: string[];
   details?: {
@@ -137,7 +138,7 @@ export function InsightContent({ insight }: Props) {
                                 </div>
                               </div>
                               <div>
-                                <p className="font-medium mb-1">Score Meaning ({competency.score.toFixed(3)}/5.0):</p>
+                                <p className="font-medium mb-1">Score Meaning ({formatScore(competency.score, true)}):</p>
                                 <p className="text-sm">
                                   {details.rubric[Math.round(competency.score) as keyof typeof details.rubric]}
                                 </p>
@@ -178,7 +179,7 @@ export function InsightContent({ insight }: Props) {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <span className="font-medium w-8 text-right">{competency.score.toFixed(3)}/5.0</span>
+                  <span className="font-medium w-8 text-right">{formatScore(competency.score, true)}</span>
                 </div>
               </div>
               <div className="relative">
