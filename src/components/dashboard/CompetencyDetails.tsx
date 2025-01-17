@@ -176,7 +176,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
                   <div className="p-2 rounded-full bg-green-50">
                     <TrendingUp className="h-4 w-4 text-green-500" />
                   </div>
-                  <span className="text-sm font-medium">Evidence Base</span>
+                  <span className="text-sm font-medium">Feedback Mentions</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
@@ -193,7 +193,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
               </div>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p>The total number of feedback pieces received. Each piece is weighted based on its quality and relevance, resulting in an effective evidence count.</p>
+              <p>The total number of specific mentions in feedback responses. Each mention is weighted based on its quality and source, resulting in an effective feedback score.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
