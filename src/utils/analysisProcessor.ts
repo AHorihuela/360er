@@ -1,6 +1,6 @@
 import { OpenAI } from 'openai';
 import { supabase } from '@/lib/supabase';
-import { type RelationshipInsight, type AnalyticsMetadata, type OpenAICompetencyScore } from "@/types/feedback/analysis";
+import { type RelationshipInsight, type OpenAICompetencyScore } from "@/types/feedback/analysis";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
 import { analyzeRelationshipFeedback } from './feedback';

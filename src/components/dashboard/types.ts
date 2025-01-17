@@ -53,4 +53,5 @@ export interface AggregateScore {
   evidenceCount: number;
   hasOutliers?: boolean;
   evidenceQuotes?: string[];
+  adjustmentDetails?: AdjustmentDetail[];
 } 
