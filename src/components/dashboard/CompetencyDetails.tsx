@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { InfoIcon, TrendingUp, Users, BarChart2, ChevronDown } from 'lucide-react';
+import { TrendingUp, Users, BarChart2, ChevronDown } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -60,13 +60,6 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
   };
 
   const performance = getPerformanceStatus(score.score);
-  const progressPercentage = (score.score / 5) * 100;
-
-  // Get next level guidance
-  const getNextLevelGuidance = (currentScore: number) => {
-    const nextLevel = Math.min(5, Math.ceil(currentScore) + 1);
-    return competency?.rubric[nextLevel] || '';
-  };
 
   // Helper function to get confidence display info
   const getConfidenceInfo = (confidence: 'low' | 'medium' | 'high') => {
