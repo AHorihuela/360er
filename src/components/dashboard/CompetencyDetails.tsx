@@ -264,12 +264,12 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
           <div className="mb-4">
             <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Current Level</div>
             <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-semibold text-blue-500">Level {Math.round(score.score)}</h3>
+              <h3 className="text-2xl font-semibold text-blue-500">Level {Math.floor(score.score)}</h3>
               <div className="text-sm text-muted-foreground">of 5</div>
             </div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {competency?.rubric[Math.round(score.score)] || "Score description not available"}
+            {competency?.rubric[Math.floor(score.score)] || "Score description not available"}
           </p>
         </div>
 
@@ -279,21 +279,39 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
             <div className="mb-4">
               <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Next Level Target</div>
               <div className="flex items-baseline gap-2">
-                <h3 className="text-2xl font-semibold text-emerald-500">Level {Math.min(5, Math.ceil(score.score) + 1)}</h3>
+                <h3 className="text-2xl font-semibold text-emerald-500">Level {Math.floor(score.score) + 1}</h3>
                 <div className="text-sm text-muted-foreground">of 5</div>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{getNextLevelGuidance(score.score)}</p>
-            <div className="mt-4 flex items-center gap-2">
-              <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500"
-                  style={{ 
-                    width: `${((score.score % 1) * 100)}%`,
-                  }}
-                />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {competency?.rubric[Math.floor(score.score) + 1] || "Score description not available"}
+            </p>
+            <div className="mt-4">
+              <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium text-blue-500">Current</span>
+                  <span>Level {Math.floor(score.score)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="font-medium text-emerald-500">Target</span>
+                  <span>Level {Math.floor(score.score) + 1}</span>
+                </div>
               </div>
-              <span className="text-xs text-muted-foreground">{Math.round((score.score % 1) * 100)}% progress</span>
+              <div className="space-y-1.5">
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                    style={{ 
+                      width: `${Math.min(((score.score - Math.floor(score.score)) * 100), 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                    {Math.round((score.score - Math.floor(score.score)) * 100)}% progress to Level {Math.floor(score.score) + 1}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
