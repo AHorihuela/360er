@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardFeedbackRequest } from "@/types/feedback/dashboard";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
-import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Users } from "lucide-react";
 
 interface Props {
