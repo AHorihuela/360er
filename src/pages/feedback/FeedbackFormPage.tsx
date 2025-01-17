@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase, setSessionId } from '@/lib/supabase';
+import { supabase, anonymousClient } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
@@ -23,11 +23,7 @@ export function FeedbackFormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNames, setShowNames] = useState(true);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
-  const [sessionId] = useState(() => {
-    const newSessionId = generateSessionId();
-    setSessionId(newSessionId);
-    return newSessionId;
-  });
+  const [sessionId] = useState(generateSessionId);
 
   const { submitFeedback, isSubmitting } = useFeedbackSubmission();
   const {
@@ -75,24 +71,12 @@ export function FeedbackFormPage() {
     }
 
     try {
-      // First, verify the feedback request exists
-      console.log('Fetching feedback request with unique link:', uniqueLink);
-      const { data: requestData, error: requestError } = await supabase
-        .from('feedback_requests')
-        .select('id, unique_link')
-        .eq('unique_link', uniqueLink)
-        .single();
+      // Clean the unique link by removing any trailing dashes
+      const cleanLink = uniqueLink.replace(/[-]+$/, '');
+      console.log('Fetching feedback request with cleaned link:', cleanLink);
 
-      console.log('Initial request result:', { requestData, requestError });
-
-      if (requestError) {
-        console.error('Error verifying feedback request:', requestError);
-        throw requestError;
-      }
-
-      // Then fetch all the data
-      console.log('Fetching full data for request ID:', requestData.id);
-      const { data, error } = await supabase
+      // Use anonymous client for feedback operations
+      const { data: requestData, error: requestError } = await anonymousClient
         .from('feedback_requests')
         .select(`
           id,
@@ -106,38 +90,30 @@ export function FeedbackFormPage() {
             name,
             role,
             user_id
+          ),
+          review_cycle:review_cycles (
+            id,
+            title,
+            review_by_date,
+            status
           )
         `)
-        .eq('id', requestData.id)
+        .ilike('unique_link', cleanLink)
         .single();
 
-      console.log('Initial data result:', { data, error });
+      console.log('Initial request result:', { requestData, requestError });
 
-      if (error) {
-        console.error('Error fetching feedback request:', error);
-        throw error;
+      if (requestError) {
+        console.error('Error verifying feedback request:', requestError);
+        throw requestError;
       }
 
-      if (!data) {
+      if (!requestData) {
         throw new Error('No feedback request found');
       }
 
-      // Fetch review cycle data separately
-      const { data: reviewCycle, error: reviewCycleError } = await supabase
-        .from('review_cycles')
-        .select('id, title, review_by_date, status')
-        .eq('id', data.review_cycle_id)
-        .single();
-
-      console.log('Review cycle result:', { reviewCycle, reviewCycleError });
-
-      if (reviewCycleError) {
-        console.error('Error fetching review cycle:', reviewCycleError);
-        throw reviewCycleError;
-      }
-
       // Fetch feedback data
-      const { data: feedback, error: feedbackError } = await supabase
+      const { data: feedback, error: feedbackError } = await anonymousClient
         .from('feedback_responses')
         .select(`
           id,
@@ -150,7 +126,7 @@ export function FeedbackFormPage() {
           relationship,
           created_at
         `)
-        .eq('feedback_request_id', data.id);
+        .eq('feedback_request_id', requestData.id);
 
       console.log('Feedback result:', { feedback, feedbackError });
 
@@ -194,9 +170,9 @@ export function FeedbackFormPage() {
 
       // Combine the data
       const combinedData: FeedbackRequest = {
-        ...data,
-        employee: (Array.isArray(data.employee) ? data.employee[0] : data.employee) as Employee,
-        review_cycle: reviewCycle as ReviewCycle,
+        ...requestData,
+        employee: Array.isArray(requestData.employee) ? requestData.employee[0] : requestData.employee,
+        review_cycle: Array.isArray(requestData.review_cycle) ? requestData.review_cycle[0] : requestData.review_cycle,
         feedback: feedback as CoreFeedbackResponse[]
       };
 
@@ -232,12 +208,15 @@ export function FeedbackFormPage() {
       console.log('Unique Link:', uniqueLink);
       console.log('Current form state:', formState);
 
-      // Verify the feedback request exists and has a unique link
-      const { data: verifiedRequest, error: verifyError } = await supabase
+      // Clean the unique link by removing any trailing dashes
+      const cleanLink = uniqueLink.replace(/[-]+$/, '');
+
+      // Use anonymous client for feedback operations
+      const { data: verifiedRequest, error: verifyError } = await anonymousClient
         .from('feedback_requests')
         .select('id, unique_link')
         .eq('id', feedbackRequest.id)
-        .eq('unique_link', uniqueLink)
+        .ilike('unique_link', cleanLink)
         .single();
 
       if (verifyError || !verifiedRequest) {
@@ -268,7 +247,7 @@ export function FeedbackFormPage() {
       });
 
       // First try to find any existing draft
-      const { data: existingResponses, error: searchError } = await supabase
+      const { data: existingResponses, error: searchError } = await anonymousClient
         .from('feedback_responses')
         .select('id, status, created_at')
         .eq('feedback_request_id', feedbackRequest.id)
@@ -287,7 +266,7 @@ export function FeedbackFormPage() {
         const existingDraftId = existingResponses[0].id;
         console.log('Found existing draft:', existingDraftId);
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await anonymousClient
           .from('feedback_responses')
           .update(feedbackData)
           .eq('id', existingDraftId)
@@ -305,7 +284,7 @@ export function FeedbackFormPage() {
 
       // If no existing draft was found, create a new one
       console.log('No existing draft found, creating new response');
-      const { data: newResponse, error: insertError } = await supabase
+      const { data: newResponse, error: insertError } = await anonymousClient
         .from('feedback_responses')
         .insert([feedbackData])
         .select()

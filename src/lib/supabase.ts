@@ -39,12 +39,23 @@ const customStorage = {
   }
 };
 
+// Regular client for authenticated operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
+    storage: customStorage
+  }
+});
+
+// Anonymous client for feedback submissions
+export const anonymousClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false, // Don't persist the anonymous session
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
     storage: customStorage
   }
 });
