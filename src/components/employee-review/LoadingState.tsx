@@ -1,19 +1,55 @@
 import { Loader2, Brain, CheckCircle2 } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ANALYSIS_STAGES, DETAILED_ANALYSIS_STAGES } from "@/constants/feedback";
 import { cn } from "@/lib/utils";
 
 interface Props {
   stage: number;
-  substep?: keyof typeof DETAILED_ANALYSIS_STAGES.PROCESSING.substeps;
+  substep?: 'SENIOR' | 'PEER' | 'JUNIOR' | 'AGGREGATE';
 }
 
+interface StageInfo {
+  step: number;
+  message: string;
+  description: string;
+}
+
+interface ProcessingStageInfo extends StageInfo {
+  substeps: Record<string, string>;
+}
+
+const ANALYSIS_STAGES: Record<string, StageInfo | ProcessingStageInfo> = {
+  PREPARE: {
+    step: 0,
+    message: 'Preparing analysis',
+    description: 'Setting up AI models and preparing data'
+  },
+  PROCESSING: {
+    step: 1,
+    message: 'Processing feedback',
+    description: 'Analyzing feedback content and identifying patterns',
+    substeps: {
+      'SENIOR': 'Analyzing senior feedback',
+      'PEER': 'Analyzing peer feedback',
+      'JUNIOR': 'Analyzing junior feedback',
+      'AGGREGATE': 'Calculating aggregate insights'
+    }
+  },
+  SAVING: {
+    step: 2,
+    message: 'Saving results',
+    description: 'Storing analysis results in the database'
+  },
+  COMPLETE: {
+    step: 3,
+    message: 'Completing analysis',
+    description: 'Finalizing and preparing report'
+  }
+};
+
 export function LoadingState({ stage, substep }: Props) {
-  // Map the old stage number to the new detailed stages
-  const stageKey = Object.keys(DETAILED_ANALYSIS_STAGES)[Math.min(stage, Object.keys(DETAILED_ANALYSIS_STAGES).length - 1)] as keyof typeof DETAILED_ANALYSIS_STAGES;
-  const currentStage = DETAILED_ANALYSIS_STAGES[stageKey];
-  const progress = ((stage + 1) / ANALYSIS_STAGES.length) * 100;
+  const progress = Math.min((stage / 3) * 100, 100);
+  const currentStage = Object.values(ANALYSIS_STAGES).find(s => s.step === stage) || ANALYSIS_STAGES.PREPARE;
 
   return (
     <Card className="w-full">
@@ -30,13 +66,13 @@ export function LoadingState({ stage, substep }: Props) {
         <div className="space-y-2">
           <Progress value={progress} className="h-2" />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Stage {stage + 1} of {ANALYSIS_STAGES.length}</span>
+            <span>Stage {stage} of 3</span>
             <span>{Math.round(progress)}%</span>
           </div>
         </div>
-
+        
         <div className="space-y-3">
-          {(Object.entries(DETAILED_ANALYSIS_STAGES) as Array<[keyof typeof DETAILED_ANALYSIS_STAGES, typeof DETAILED_ANALYSIS_STAGES[keyof typeof DETAILED_ANALYSIS_STAGES]]>).map(([key, info]) => {
+          {Object.entries(ANALYSIS_STAGES).map(([key, info]) => {
             const isActive = stage === info.step;
             const isComplete = stage > info.step;
             const isProcessing = key === 'PROCESSING' && isActive;
