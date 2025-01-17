@@ -131,13 +131,13 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Badge variant="default" className="text-xs font-normal bg-black text-white">
+                  <Badge variant="default" className="text-xs font-normal bg-black text-white hover:bg-black">
                     Beta
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-[300px]">
                   <p className="text-sm">
-                    This feature is in beta. We're actively improving our analysis methodology and visualization. Your feedback helps us enhance the accuracy and usefulness of these insights.
+                    AI-powered analysis of your team's competencies based on feedback responses. This feature is in beta as we continue to refine our analysis methods.
                   </p>
                 </TooltipContent>
               </Tooltip>
