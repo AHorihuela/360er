@@ -174,72 +174,127 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
       {/* Analysis Grid */}
       <div className="grid grid-cols-3 gap-4">
         {/* Evidence Base */}
-        <div className="p-4 bg-background rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
+        <div className="p-6 bg-background rounded-lg border relative group hover:border-green-200 transition-colors">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-green-100 transform origin-left transition-transform duration-500 group-hover:scale-x-100" 
+               style={{ width: `${Math.min((score.evidenceCount / 50) * 100, 100)}%` }} />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-full bg-green-50">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </div>
             <span className="text-sm font-medium">Evidence Base</span>
           </div>
           <div className="space-y-2">
-            <div className="text-2xl font-semibold">
-              {score.evidenceCount}
-              <span className="text-base text-muted-foreground ml-1">pieces</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold">{score.evidenceCount}</span>
+              <span className="text-sm text-muted-foreground">pieces</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {score.effectiveEvidenceCount.toFixed(1)} effective evidence after weighting
-            </p>
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <span className="inline-block px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs font-medium">
+                {score.effectiveEvidenceCount.toFixed(1)}
+              </span>
+              effective evidence after weighting
+            </div>
           </div>
         </div>
 
         {/* Score Distribution */}
-        <div className="p-4 bg-background rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart2 className="h-5 w-5 text-yellow-500" />
+        <div className="p-6 bg-background rounded-lg border relative group hover:border-yellow-200 transition-colors">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-yellow-100 transform origin-left transition-transform duration-500 group-hover:scale-x-100" 
+               style={{ width: `${Math.min((1 - (score.confidenceMetrics?.factors.variance || 0) / 5) * 100, 100)}%` }} />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-full bg-yellow-50">
+              <BarChart2 className="h-4 w-4 text-yellow-500" />
+            </div>
             <span className="text-sm font-medium">Score Distribution</span>
           </div>
           <div className="space-y-2">
-            <div className="text-2xl font-semibold">
-              {score.confidenceMetrics?.factors.variance.toFixed(2)}
-              <span className="text-base text-muted-foreground ml-1">variance</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold">{score.confidenceMetrics?.factors.variance.toFixed(2)}</span>
+              <span className="text-sm text-muted-foreground">variance</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {score.hasOutliers 
-                ? "Some scores adjusted for outliers" 
-                : "Consistent scoring across reviewers"}
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              {score.hasOutliers ? (
+                <>
+                  <span className="inline-block px-1.5 py-0.5 bg-yellow-50 text-yellow-600 rounded text-xs font-medium">
+                    Adjusted
+                  </span>
+                  Some scores adjusted for outliers
+                </>
+              ) : (
+                <>
+                  <span className="inline-block px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs font-medium">
+                    Consistent
+                  </span>
+                  Consistent scoring across reviewers
+                </>
+              )}
             </p>
           </div>
         </div>
 
         {/* Relationship Coverage */}
-        <div className="p-4 bg-background rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="h-5 w-5 text-blue-500" />
+        <div className="p-6 bg-background rounded-lg border relative group hover:border-blue-200 transition-colors">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-blue-100 transform origin-left transition-transform duration-500 group-hover:scale-x-100" 
+               style={{ width: `${((score.confidenceMetrics?.factors.relationshipCount || 0) / 3) * 100}%` }} />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-full bg-blue-50">
+              <Users className="h-4 w-4 text-blue-500" />
+            </div>
             <span className="text-sm font-medium">Relationship Coverage</span>
           </div>
           <div className="space-y-2">
-            <div className="text-2xl font-semibold">
-              {(score.confidenceMetrics?.factors.relationshipCount || 0)}
-              <span className="text-base text-muted-foreground ml-1">types</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold">{(score.confidenceMetrics?.factors.relationshipCount || 0)}</span>
+              <span className="text-sm text-muted-foreground">of 3 types</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Feedback from {score.confidenceMetrics?.factors.relationshipCount} different relationships
-            </p>
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <span className="inline-block px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
+                {Math.round(((score.confidenceMetrics?.factors.relationshipCount || 0) / 3) * 100)}% coverage
+              </span>
+              across different relationships
+            </div>
           </div>
         </div>
       </div>
 
       {/* Current Level & Growth */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 bg-background rounded-lg border">
-          <h3 className="text-sm font-medium mb-3">Current Performance Level</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="p-6 bg-background rounded-lg border relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+          <div className="mb-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Current Level</div>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-2xl font-semibold text-blue-500">Level {Math.round(score.score)}</h3>
+              <div className="text-sm text-muted-foreground">of 5</div>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {competency?.rubric[Math.round(score.score)] || "Score description not available"}
           </p>
         </div>
 
         {score.score < 5.0 && (
-          <div className="p-4 bg-background rounded-lg border">
-            <h3 className="text-sm font-medium mb-3">Next Level Growth Areas</h3>
-            <p className="text-sm text-muted-foreground">{getNextLevelGuidance(score.score)}</p>
+          <div className="p-6 bg-background rounded-lg border relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+            <div className="mb-4">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Next Level Target</div>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-semibold text-emerald-500">Level {Math.min(5, Math.ceil(score.score) + 1)}</h3>
+                <div className="text-sm text-muted-foreground">of 5</div>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{getNextLevelGuidance(score.score)}</p>
+            <div className="mt-4 flex items-center gap-2">
+              <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 transition-all duration-500"
+                  style={{ 
+                    width: `${((score.score % 1) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">{Math.round((score.score % 1) * 100)}% progress</span>
+            </div>
           </div>
         )}
       </div>
