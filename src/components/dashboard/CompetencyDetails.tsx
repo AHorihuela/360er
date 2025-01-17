@@ -1,6 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { InfoIcon, TrendingUp, Users, BarChart2, ChevronDown } from 'lucide-react';
 import {
   Tooltip,
