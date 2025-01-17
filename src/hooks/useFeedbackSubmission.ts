@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { supabase, anonymousClient } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { FeedbackFormData } from '@/types/feedback/form';
 import { SubmissionOptions } from '@/types/feedback/submission';
@@ -35,24 +35,25 @@ export function useFeedbackSubmission() {
     try {
       const currentTime = new Date().toISOString();
 
-      // First, check for existing draft
-      const { data: existingDraft, error: fetchError } = await supabase
-        .from('feedback_responses')
-        .select()
-        .eq('id', draftId)
-        .eq('status', 'in_progress')
-        .maybeSingle();
+      let existingDraft = null;
+      
+      // Only check for existing draft if draftId is provided
+      if (draftId) {
+        const { data: draft, error: fetchError } = await anonymousClient
+          .from('feedback_responses')
+          .select()
+          .eq('id', draftId)
+          .eq('status', 'in_progress')
+          .maybeSingle();
 
-      console.log('Existing draft check:', { existingDraft, fetchError });
+        console.log('Existing draft check:', { draft, fetchError });
 
-      if (fetchError) {
-        console.error('Error checking existing draft:', fetchError);
-        throw new Error('Could not verify existing draft. Please try again.');
-      }
-
-      if (!existingDraft && draftId) {
-        console.error('Draft not found:', draftId);
-        throw new Error('Could not find the draft to update. Please try again.');
+        if (fetchError) {
+          console.error('Error checking existing draft:', fetchError);
+          // Don't throw here, just log the error and continue
+        } else {
+          existingDraft = draft;
+        }
       }
 
       let result: CoreFeedbackResponse;
@@ -62,7 +63,7 @@ export function useFeedbackSubmission() {
         console.log('Converting in-progress feedback to submission:', existingDraft.id);
         
         // Step 1: Update the content while keeping status as in_progress
-        const { error: contentUpdateError } = await supabase
+        const { error: contentUpdateError } = await anonymousClient
           .from('feedback_responses')
           .update({
             strengths: formData.strengths.trim(),
@@ -79,7 +80,7 @@ export function useFeedbackSubmission() {
         }
 
         // Step 2: Update the status to submitted
-        const { data: updated, error: statusUpdateError } = await supabase
+        const { data: updated, error: statusUpdateError } = await anonymousClient
           .from('feedback_responses')
           .update({
             status: 'submitted',
@@ -99,8 +100,8 @@ export function useFeedbackSubmission() {
         console.log('=== Feedback Submitted ===');
       } else {
         // Create new feedback
-        console.log('Creating new feedback');
-        const { data: newSubmission, error: insertError } = await supabase
+        console.log('Creating new feedback submission');
+        const { data: newSubmission, error: insertError } = await anonymousClient
           .from('feedback_responses')
           .insert([{
             feedback_request_id: feedbackRequestId,
