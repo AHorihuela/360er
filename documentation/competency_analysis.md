@@ -254,8 +254,8 @@ Our confidence calculation system uses a comprehensive, multi-factor approach to
 
 3. **Relationship Coverage (25% weight)**
    - Evaluates diversity of feedback sources
-   - Based on number of relationship types represented
-   - Maximum score requires all three types (senior, peer, junior)
+   - Based on number of relationship types represented (senior, peer, junior)
+   - Maximum score requires all three types
    - Formula: `relationshipCount / 3`
 
 4. **Distribution Quality (15% weight)**
