@@ -1,4 +1,4 @@
-import { CONFIDENCE_WEIGHTS, OUTLIER_THRESHOLDS, RELATIONSHIP_WEIGHTS } from './constants';
+import { OUTLIER_THRESHOLDS, RELATIONSHIP_WEIGHTS } from './constants';
 import { ScoreWithOutlier, AdjustmentDetail } from './types';
 
 // Helper function to calculate quartiles
