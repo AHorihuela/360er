@@ -1,11 +1,9 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardFeedbackRequest } from "@/types/feedback/dashboard";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 interface Props {
   feedbackRequests: DashboardFeedbackRequest[];
-  startDate: string;
 }
 
 interface DayData {
@@ -14,7 +12,7 @@ interface DayData {
   total: number;
 }
 
-export function FeedbackTimeline({ feedbackRequests, startDate }: Props) {
+export function FeedbackTimeline({ feedbackRequests }: Props) {
   // Process the data to get responses per day
   const data: DayData[] = [];
   const responses = feedbackRequests

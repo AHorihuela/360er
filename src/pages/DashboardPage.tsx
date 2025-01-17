@@ -402,7 +402,6 @@ export function DashboardPage(): JSX.Element {
             {/* Response Timeline */}
             <FeedbackTimeline 
               feedbackRequests={activeReviewCycle.feedback_requests}
-              startDate={activeReviewCycle.review_by_date}
             />
 
             {/* Team Competency Heatmap */}
