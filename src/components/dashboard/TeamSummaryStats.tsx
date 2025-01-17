@@ -65,7 +65,7 @@ export function TeamSummaryStats({
         <Progress value={reviewPercentage} className="h-1 mt-2" />
       </div>
       <div className="p-4 border rounded-lg bg-slate-50">
-        <div className="text-sm font-medium text-muted-foreground mb-1">Average Evidence</div>
+        <div className="text-sm font-medium text-muted-foreground mb-1">Feedback Mentions</div>
         <div className="text-2xl font-semibold">{averageEvidenceCount.toFixed(1)}</div>
         <div className="text-sm text-muted-foreground">pieces per competency</div>
       </div>
