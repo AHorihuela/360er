@@ -398,20 +398,22 @@ export function DashboardPage(): JSX.Element {
           </Card>
 
           {/* Analytics Grid */}
-          <div className="space-y-6">
-            {/* Response Timeline */}
-            <FeedbackTimeline 
-              feedbackRequests={activeReviewCycle.feedback_requests}
-              dueDate={activeReviewCycle.review_by_date}
-              totalReviews={activeReviewCycle.total_requests}
-              pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
-            />
+          {activeReviewCycle.feedback_requests.some(fr => fr.feedback_responses && fr.feedback_responses.length > 0) && (
+            <div className="space-y-6">
+              {/* Response Timeline */}
+              <FeedbackTimeline 
+                feedbackRequests={activeReviewCycle.feedback_requests}
+                dueDate={activeReviewCycle.review_by_date}
+                totalReviews={activeReviewCycle.total_requests}
+                pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
+              />
 
-            {/* Team Competency Heatmap */}
-            <CompetencyHeatmap 
-              feedbackRequests={activeReviewCycle.feedback_requests}
-            />
-          </div>
+              {/* Team Competency Heatmap */}
+              <CompetencyHeatmap 
+                feedbackRequests={activeReviewCycle.feedback_requests}
+              />
+            </div>
+          )}
         </>
       )}
 

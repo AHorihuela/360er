@@ -119,18 +119,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   }, [competencyScores]);
 
   if (sortedScores.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center space-y-2">
-            <div className="text-lg font-medium text-muted-foreground">No Analysis Available</div>
-            <p className="text-sm text-muted-foreground">
-              Waiting for more feedback responses to generate analysis.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
