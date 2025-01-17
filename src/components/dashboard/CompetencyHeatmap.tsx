@@ -95,6 +95,19 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         junior: scores.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
       };
 
+      // Calculate score distribution
+      const scoreDistribution = scores.reduce((dist, s) => {
+        const roundedScore = Math.round(s.score);
+        dist[roundedScore] = (dist[roundedScore] || 0) + 1;
+        return dist;
+      }, {} as Record<number, number>);
+
+      // Calculate average score and standard deviation
+      const allScores = scores.map(s => s.score);
+      const averageScore = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
+      const variance = allScores.reduce((sum, score) => sum + Math.pow(score - averageScore, 2), 0) / allScores.length;
+      const standardDeviation = Math.sqrt(variance);
+
       return {
         name: competencyName,
         score: weightedScore,
@@ -106,7 +119,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
         description: CORE_COMPETENCIES[COMPETENCY_NAME_TO_KEY[competencyName]]?.aspects?.join(' • ') || '',
         confidenceMetrics: confidenceResult.metrics,
-        relationshipBreakdown
+        relationshipBreakdown,
+        scoreDistribution,
+        averageScore,
+        scoreSpread: standardDeviation
       } as ScoreWithOutlier;
     }).filter((score): score is ScoreWithOutlier => score !== null);
 

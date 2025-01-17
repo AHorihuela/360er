@@ -37,18 +37,38 @@ export interface ScoreWithOutlier {
   evidenceCount: number;
   effectiveEvidenceCount: number;
   relationship: string;
+  hasOutliers: boolean;
+  adjustmentDetails?: Array<{
+    originalScore: number;
+    adjustmentType: 'moderate' | 'extreme';
+    relationship: string;
+  }>;
   description: string;
-  hasOutliers?: boolean;
-  adjustmentDetails?: AdjustmentDetail[];
-  adjustedWeight?: number;
-  evidenceQuotes?: string[];
-  confidenceMetrics?: ConfidenceMetrics;
-  reviewerId?: string;
+  confidenceMetrics?: {
+    evidenceScore: number;
+    consistencyScore: number;
+    relationshipScore: number;
+    finalScore: number;
+    factors: {
+      evidenceCount: number;
+      variance: number;
+      relationshipCount: number;
+      distributionQuality: number;
+    };
+  };
   relationshipBreakdown?: {
     senior: number;
     peer: number;
     junior: number;
   };
+  // Properties for score distribution
+  scoreDistribution?: Record<number, number>;
+  averageScore?: number;
+  scoreSpread?: number;
+  // Additional properties needed by the system
+  adjustedWeight?: number;
+  reviewerId?: string;
+  evidenceQuotes?: string[];
 }
 
 export interface AggregateScore {
