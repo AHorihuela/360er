@@ -88,6 +88,13 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       // Calculate confidence based on evidence and consistency - only once per competency
       const confidenceResult = calculateConfidence(scores);
 
+      // Calculate relationship breakdown
+      const relationshipBreakdown = {
+        senior: scores.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
+        peer: scores.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
+        junior: scores.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
+      };
+
       return {
         name: competencyName,
         score: weightedScore,
@@ -98,7 +105,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         hasOutliers,
         adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
         description: CORE_COMPETENCIES[competencyName]?.aspects?.join(' • ') || '',
-        confidenceMetrics: confidenceResult.metrics
+        confidenceMetrics: confidenceResult.metrics,
+        relationshipBreakdown
       } as ScoreWithOutlier;
     }).filter((score): score is ScoreWithOutlier => score !== null);
 

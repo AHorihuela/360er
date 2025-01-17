@@ -44,6 +44,11 @@ export interface ScoreWithOutlier {
   evidenceQuotes?: string[];
   confidenceMetrics?: ConfidenceMetrics;
   reviewerId?: string;
+  relationshipBreakdown?: {
+    senior: number;
+    peer: number;
+    junior: number;
+  };
 }
 
 export interface AggregateScore {
