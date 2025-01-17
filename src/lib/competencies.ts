@@ -5,6 +5,7 @@ interface CompetencyRubric {
 export interface Competency {
   name: string;
   aspects: string[];
+  aspectDescriptions?: string[];  // Optional descriptions for each aspect
   rubric: CompetencyRubric;
 }
 
