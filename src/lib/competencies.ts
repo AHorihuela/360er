@@ -24,11 +24,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   TECHNICAL: {
     name: 'Technical/Functional Expertise',
     aspects: [
-      'Technical knowledge depth',
-      'Problem-solving skills',
-      'Quality of technical solutions',
-      'Learning and adaptation',
-      'Technical documentation'
+      'Role-specific skills and knowledge',
+      'Industry and domain expertise',
+      'Technical proficiency and best practices',
+      'Knowledge sharing and documentation',
+      'Problem-solving capabilities'
     ],
     rubric: {
       1: 'Limited technical knowledge, requires significant guidance',
@@ -41,11 +41,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   LEADERSHIP: {
     name: 'Leadership & Influence',
     aspects: [
-      'Taking initiative',
+      'Taking initiative and ownership',
       'Guiding and inspiring others',
       'Influencing outcomes positively',
       'Mentoring and role modeling',
-      'Unifying vision'
+      'Creating and communicating vision'
     ],
     rubric: {
       1: 'Rarely takes initiative or influences outcomes positively',
@@ -58,11 +58,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   COLLABORATION: {
     name: 'Collaboration & Communication',
     aspects: [
-      'Information sharing',
-      'Cross-team effectiveness',
-      'Active listening',
-      'Clear communication',
-      'Team support'
+      'Information sharing effectiveness',
+      'Cross-team collaboration',
+      'Clarity of communication',
+      'Stakeholder management',
+      'Conflict resolution skills'
     ],
     rubric: {
       1: 'Struggles with team collaboration and communication',
@@ -75,11 +75,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   INNOVATION: {
     name: 'Innovation & Problem-Solving',
     aspects: [
-      'Creative thinking',
-      'Solution design',
-      'Process improvement',
-      'Adaptability',
-      'Strategic thinking'
+      'Creative solution generation',
+      'Adaptability to change',
+      'Initiative in improvements',
+      'Collaborative ideation',
+      'Impact of implemented solutions'
     ],
     rubric: {
       1: 'Rarely contributes new ideas or solutions',
@@ -94,9 +94,9 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
     aspects: [
       'Meeting deadlines and commitments',
       'Quality of deliverables',
-      'Taking ownership of outcomes',
+      'Ownership of outcomes',
       'Problem resolution',
-      'Project completion'
+      'Project completion track record'
     ],
     rubric: {
       1: 'Frequently misses deadlines, lacks follow-through',
@@ -109,11 +109,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   EMOTIONAL_INTELLIGENCE: {
     name: 'Emotional Intelligence & Culture Fit',
     aspects: [
-      'Self-awareness',
-      'Empathy and understanding',
-      'Cultural sensitivity',
-      'Conflict resolution',
-      'Team morale impact'
+      'Self-awareness and emotional control',
+      'Empathy and understanding of others',
+      'Cultural sensitivity and alignment',
+      'Interpersonal effectiveness',
+      'Team morale impact and relationship building'
     ],
     rubric: {
       1: 'Shows limited awareness of others\' feelings or team dynamics',
@@ -126,11 +126,11 @@ export const CORE_COMPETENCIES: Record<string, Competency> = {
   GROWTH: {
     name: 'Growth & Development',
     aspects: [
-      'Learning agility',
-      'Skill development',
-      'Feedback receptivity',
-      'Career progression',
-      'Knowledge sharing'
+      'Continuous learning mindset',
+      'Professional skill development',
+      'Feedback receptiveness and application',
+      'Career growth initiatives',
+      'Knowledge sharing and mentoring'
     ],
     rubric: {
       1: 'Shows little interest in personal or professional growth',

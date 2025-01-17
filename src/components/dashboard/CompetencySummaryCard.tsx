@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ScoreWithOutlier } from './types';
+import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 
 interface CompetencySummaryCardProps {
   score: ScoreWithOutlier;
@@ -42,55 +43,13 @@ function getConfidenceOpacity(confidence: 'low' | 'medium' | 'high') {
 
 // Define the areas of evaluation for each competency
 const COMPETENCY_AREAS = {
-  'Technical/Functional Expertise': [
-    'Role-specific skills and knowledge',
-    'Industry and domain expertise',
-    'Technical proficiency and best practices',
-    'Knowledge sharing and documentation',
-    'Problem-solving capabilities'
-  ],
-  'Leadership & Influence': [
-    'Taking initiative and ownership',
-    'Guiding and inspiring others',
-    'Influencing outcomes positively',
-    'Mentoring and role modeling',
-    'Creating and communicating vision'
-  ],
-  'Collaboration & Communication': [
-    'Information sharing effectiveness',
-    'Cross-team collaboration',
-    'Clarity of communication',
-    'Stakeholder management',
-    'Conflict resolution skills'
-  ],
-  'Innovation & Problem-Solving': [
-    'Creative solution generation',
-    'Adaptability to change',
-    'Initiative in improvements',
-    'Collaborative ideation',
-    'Impact of implemented solutions'
-  ],
-  'Execution & Accountability': [
-    'Meeting deadlines and commitments',
-    'Quality of deliverables',
-    'Ownership of outcomes',
-    'Problem resolution',
-    'Project completion track record'
-  ],
-  'Emotional Intelligence & Culture Fit': [
-    'Self-awareness',
-    'Empathy and respect',
-    'Cultural alignment',
-    'Interpersonal effectiveness',
-    'Conflict management'
-  ],
-  'Growth & Development': [
-    'Continuous learning mindset',
-    'Skill development progress',
-    'Feedback receptiveness',
-    'Knowledge sharing',
-    'Goal setting and achievement'
-  ]
+  'Technical/Functional Expertise': CORE_COMPETENCIES['TECHNICAL'].aspects,
+  'Leadership & Influence': CORE_COMPETENCIES['LEADERSHIP'].aspects,
+  'Collaboration & Communication': CORE_COMPETENCIES['COLLABORATION'].aspects,
+  'Innovation & Problem-Solving': CORE_COMPETENCIES['INNOVATION'].aspects,
+  'Execution & Accountability': CORE_COMPETENCIES['EXECUTION'].aspects,
+  'Emotional Intelligence & Culture Fit': CORE_COMPETENCIES['EMOTIONAL_INTELLIGENCE'].aspects,
+  'Growth & Development': CORE_COMPETENCIES['GROWTH'].aspects
 } as const;
 
 export function CompetencySummaryCard({ score, isExpanded, onToggle }: CompetencySummaryCardProps) {

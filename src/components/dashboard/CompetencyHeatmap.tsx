@@ -14,7 +14,7 @@ import { detectOutliers, calculateConfidence } from './utils';
 import { CompetencySummaryCard } from './CompetencySummaryCard';
 import { CompetencyDetails } from './CompetencyDetails';
 import { TeamSummaryStats } from './TeamSummaryStats';
-import { CORE_COMPETENCIES } from '@/lib/competencies';
+import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { cn } from "@/lib/utils";
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
@@ -104,7 +104,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         relationship: 'aggregate',
         hasOutliers,
         adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
-        description: CORE_COMPETENCIES[competencyName]?.aspects?.join(' • ') || '',
+        description: CORE_COMPETENCIES[COMPETENCY_NAME_TO_KEY[competencyName]]?.aspects?.join(' • ') || '',
         confidenceMetrics: confidenceResult.metrics,
         relationshipBreakdown
       } as ScoreWithOutlier;
