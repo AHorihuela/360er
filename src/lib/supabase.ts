@@ -7,20 +7,61 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Create a custom storage object that checks for window availability
+const customStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined') {
+        return window.localStorage.getItem(key);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, value);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  }
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+    storage: customStorage
   }
 });
 
 // Listen for auth state changes without logging sensitive data
 supabase.auth.onAuthStateChange((event, _session) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Auth state changed:', event);
+  try {
+    // Only log in development and not in content script context
+    const isContentScript = typeof window !== 'undefined' && 
+      'chrome' in window && 
+      'runtime' in (window as any).chrome;
+      
+    if (process.env.NODE_ENV === 'development' && !isContentScript) {
+      console.log('Auth state changed:', event);
+    }
+  } catch {
+    // Silently ignore logging in content script context
   }
 });
 
@@ -39,7 +80,11 @@ export async function checkAuthStatus() {
 
 // Set session ID in storage
 export function setSessionId(sessionId: string) {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem('feedback_session_id', sessionId);
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('feedback_session_id', sessionId);
+    }
+  } catch {
+    // Silently fail if storage is not available
   }
 } 

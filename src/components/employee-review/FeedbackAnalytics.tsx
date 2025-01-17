@@ -174,12 +174,19 @@ export function FeedbackAnalytics({
           .from('feedback_analytics')
           .select('insights, feedback_hash, last_analyzed_at')
           .eq('feedback_request_id', feedbackRequestId)
-          .single();
+          .order('last_analyzed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (!isMounted) return;
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
+        if (fetchError) {
           console.error('Fetch error:', fetchError);
+          setState(prev => ({
+            ...prev,
+            error: 'Failed to fetch analytics data',
+            isLoading: false
+          }));
           return;
         }
 
