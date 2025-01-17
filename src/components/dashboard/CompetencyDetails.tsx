@@ -12,6 +12,7 @@ import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { ScoreWithOutlier } from './types';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, TooltipProps } from "recharts";
 import { ScoreDistributionCard } from './cards/ScoreDistributionCard';
+import { EvidenceBaseCard } from './cards/EvidenceBaseCard';
 
 interface CompetencyDetailsProps {
   score: ScoreWithOutlier;
@@ -169,37 +170,7 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
       {/* Analysis Grid - Feedback Data */}
       <div className="grid grid-cols-3 gap-4">
         {/* Evidence Base */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="p-6 bg-background rounded-lg border relative group hover:border-green-200 transition-colors cursor-help">
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-green-100 transform origin-left transition-transform duration-500 group-hover:scale-x-100" 
-                     style={{ width: `${Math.min((score.evidenceCount / 50) * 100, 100)}%` }} />
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 rounded-full bg-green-50">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  </div>
-                  <span className="text-sm font-medium">Feedback Mentions</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-semibold">{score.evidenceCount}</span>
-                    <span className="text-sm text-muted-foreground">pieces</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-2">
-                    <span className="inline-block px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs font-medium">
-                      {score.effectiveEvidenceCount.toFixed(1)}
-                    </span>
-                    effective evidence after weighting
-                  </div>
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>The total number of specific mentions in feedback responses. Each mention is weighted based on its quality and source, resulting in an effective feedback score.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <EvidenceBaseCard score={score} />
 
         {/* Score Distribution */}
         <ScoreDistributionCard score={score} />
