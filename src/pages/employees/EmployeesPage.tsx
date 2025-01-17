@@ -14,6 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface FeedbackRequest {
   id: string;
@@ -352,58 +360,56 @@ export function EmployeesPage() {
           </div>
         )}
 
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="w-full max-w-md space-y-4 rounded-lg border bg-card p-6">
-              <h2 className="text-xl font-semibold">
-                {isEditing ? 'Edit Employee' : 'Add New Employee'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium">Name</label>
-                  <input
-                    type="text"
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isEditing ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
                     required
-                    className="mt-1 w-full rounded-md border p-2"
                     value={currentEmployee.name}
                     onChange={(e) => setCurrentEmployee({ ...currentEmployee, name: e.target.value })}
                     placeholder="John Doe"
                     disabled={isEditLoading}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium">Role</label>
-                  <input
-                    type="text"
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Input
+                    id="role"
                     required
-                    className="mt-1 w-full rounded-md border p-2"
                     value={currentEmployee.role}
                     onChange={(e) => setCurrentEmployee({ ...currentEmployee, role: e.target.value })}
                     placeholder="Software Engineer"
                     disabled={isEditLoading}
                   />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => {
-                      setShowModal(false);
-                      setIsEditing(false);
-                      setCurrentEmployee({ id: '', name: '', role: '' });
-                    }}
-                    disabled={isEditLoading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isEditLoading}>
-                    {isEditLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Employee'}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowModal(false);
+                    setIsEditing(false);
+                    setCurrentEmployee({ id: '', name: '', role: '' });
+                  }}
+                  disabled={isEditLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isEditLoading}>
+                  {isEditLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Employee'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
