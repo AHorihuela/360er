@@ -151,12 +151,16 @@ export function calculateConfidence(scores: ScoreWithOutlier[]): {
   const consistencyScore = Math.max(0, 1 - variance / 2.0);
 
   // 3. Relationship Coverage Analysis
-  const relationships = new Set(scores.map(s => s.relationship));
+  const relationships = new Set(scores
+    .map(s => s.relationship)
+    .filter(r => r !== 'aggregate')); // Exclude 'aggregate' from relationship count
   const relationshipCount = relationships.size;
   
   const relationshipGroups = new Map<string, number>();
   scores.forEach(s => {
-    relationshipGroups.set(s.relationship, (relationshipGroups.get(s.relationship) || 0) + 1);
+    if (s.relationship !== 'aggregate') { // Only count non-aggregate relationships
+      relationshipGroups.set(s.relationship, (relationshipGroups.get(s.relationship) || 0) + 1);
+    }
   });
 
   const minReviewsPerRelationship = Math.min(...Array.from(relationshipGroups.values()));
