@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { InfoIcon, AlertTriangle } from 'lucide-react';
+import { InfoIcon } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { CompetencyHeatmapProps, ScoreWithOutlier } from './types';
 import { MIN_REVIEWS_REQUIRED, RELATIONSHIP_WEIGHTS, CONFIDENCE_WEIGHTS, COMPETENCY_ORDER } from './constants';
@@ -55,19 +55,14 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   const {
     employeesWithAnalytics,
     totalEmployees,
-    completedReviewCount,
-    totalReviewCount,
     includedReviewCount,
     analyzedReviewCount,
     sortedScores,
-    hasLowConfidenceScores,
     averageConfidence
   } = useMemo(() => {
     // Process feedback data
     const employeesWithAnalytics = new Set(feedbackRequests.filter(r => r.analytics).map(r => r.employee_id));
     const totalEmployees = new Set(feedbackRequests.map(r => r.employee_id)).size;
-    const completedReviewCount = feedbackRequests.filter(r => (r.feedback_responses?.length ?? 0) > 0).length;
-    const totalReviewCount = feedbackRequests.length;
     const includedReviewCount = feedbackRequests.reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
     const analyzedReviewCount = feedbackRequests.filter(r => r.analytics).reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
 
@@ -108,7 +103,6 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     }).filter((score): score is ScoreWithOutlier => score !== null);
 
     // Calculate confidence metrics
-    const hasLowConfidenceScores = sortedScores.some(s => s.confidence === 'low');
     const averageConfidence = sortedScores.reduce((sum, s) => {
       const weight = CONFIDENCE_WEIGHTS[s.confidence];
       return sum + weight;
@@ -117,12 +111,9 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
     return {
       employeesWithAnalytics: employeesWithAnalytics.size,
       totalEmployees,
-      completedReviewCount,
-      totalReviewCount,
       includedReviewCount,
       analyzedReviewCount,
       sortedScores,
-      hasLowConfidenceScores,
       averageConfidence
     };
   }, [competencyScores]);
