@@ -1,5 +1,5 @@
 import { OUTLIER_THRESHOLDS, RELATIONSHIP_WEIGHTS } from './constants';
-import { ScoreWithOutlier, AdjustmentDetail } from './types';
+import { ScoreWithOutlier } from './types';
 
 // Helper function to calculate quartiles
 function calculateQuartiles(values: number[]) {

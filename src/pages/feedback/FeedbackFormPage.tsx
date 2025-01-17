@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase, anonymousClient } from '@/lib/supabase';
+import { anonymousClient } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import { FeedbackForm } from '@/components/feedback/FeedbackForm';
@@ -10,7 +10,6 @@ import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 import { FeedbackRequest } from '@/types/feedback/submission';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { type RelationshipType } from '@/types/feedback/base';
-import { Employee, ReviewCycle } from '@/types/review';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -23,7 +22,7 @@ export function FeedbackFormPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNames, setShowNames] = useState(true);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
-  const [sessionId] = useState(generateSessionId);
+  const [sessionId] = useState(() => generateSessionId());
 
   const { submitFeedback, isSubmitting } = useFeedbackSubmission();
   const {
