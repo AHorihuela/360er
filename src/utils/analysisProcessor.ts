@@ -213,9 +213,9 @@ function calculateWeightedScore(
   weights: { senior: number; peer: number; junior: number }
 ) {
   return (
-    (seniorScore?.score || 0) * weights.senior +
-    (peerScore?.score || 0) * weights.peer +
-    (juniorScore?.score || 0) * weights.junior
+    (seniorScore?.score ?? 0) * weights.senior +
+    (peerScore?.score ?? 0) * weights.peer +
+    (juniorScore?.score ?? 0) * weights.junior
   );
 }
 
@@ -225,9 +225,9 @@ function combineEvidenceQuotes(
   juniorScore?: OpenAICompetencyScore
 ) {
   return [
-    ...(seniorScore?.evidenceQuotes || []),
-    ...(peerScore?.evidenceQuotes || []),
-    ...(juniorScore?.evidenceQuotes || [])
+    ...(seniorScore?.evidenceQuotes ?? []),
+    ...(peerScore?.evidenceQuotes ?? []),
+    ...(juniorScore?.evidenceQuotes ?? [])
   ];
 }
 
@@ -237,9 +237,9 @@ function calculateTotalEvidence(
   juniorScore?: OpenAICompetencyScore
 ) {
   return (
-    (seniorScore?.evidenceCount || 0) +
-    (peerScore?.evidenceCount || 0) +
-    (juniorScore?.evidenceCount || 0)
+    (seniorScore?.evidenceCount ?? 0) +
+    (peerScore?.evidenceCount ?? 0) +
+    (juniorScore?.evidenceCount ?? 0)
   );
 }
 

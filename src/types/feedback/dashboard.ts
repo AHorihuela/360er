@@ -1,4 +1,6 @@
-import { RelationshipType, FeedbackStatus } from './base';
+import { type Employee, type FeedbackRequest } from './submission';
+import { type RelationshipType, type FeedbackStatus } from './base';
+import { type FeedbackResponse } from '@/types/feedback';
 
 export interface DashboardEmployee {
   id: string;
@@ -29,11 +31,13 @@ export interface DashboardFeedbackResponse {
 export interface DashboardFeedbackRequest {
   id: string;
   employee_id: string;
+  review_cycle_id: string;
   status: string;
   target_responses: number;
   unique_link: string;
-  feedback_responses?: DashboardFeedbackResponse[];
-  employee?: DashboardEmployeeReference;
+  created_at?: string;
+  employee?: Employee;
+  feedback_responses?: FeedbackResponse[];
   analytics?: {
     id: string;
     insights: Array<{
@@ -43,10 +47,13 @@ export interface DashboardFeedbackRequest {
         confidence: 'low' | 'medium' | 'high';
         description: string;
         evidenceCount: number;
+        evidenceQuotes?: string[];
       }>;
       relationship: string;
-      reviewerId?: string;
     }>;
+  };
+  _count?: {
+    responses: number;
   };
 }
 

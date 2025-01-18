@@ -13,6 +13,10 @@ interface LevelAndGrowthProps {
 }
 
 export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
+  console.log('LevelAndGrowth - score:', score);
+  console.log('LevelAndGrowth - evidenceQuotes:', score.evidenceQuotes);
+  console.log('LevelAndGrowth - competency:', competency);
+  
   return (
     <div className="grid grid-cols-2 gap-4">
       <TooltipProvider>
@@ -30,6 +34,25 @@ export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {competency?.rubric[Math.floor(score.score)] || "Score description not available"}
               </p>
+
+              {/* Evidence Quotes */}
+              {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Supporting Evidence</div>
+                  <div className="space-y-2">
+                    {score.evidenceQuotes.slice(0, 2).map((quote, i) => (
+                      <div key={i} className="text-sm text-muted-foreground pl-3 border-l-2 border-muted">
+                        "{quote}"
+                      </div>
+                    ))}
+                    {score.evidenceQuotes.length > 2 && (
+                      <div className="text-xs text-muted-foreground">
+                        +{score.evidenceQuotes.length - 2} more examples
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">

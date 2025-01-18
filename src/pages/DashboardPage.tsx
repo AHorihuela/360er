@@ -106,19 +106,35 @@ export function DashboardPage(): JSX.Element {
             acc + (fr.feedback_responses?.length ?? 0), 0);
 
           // Map feedback requests to match DashboardFeedbackRequest type
-          const mappedFeedbackRequests = cycleToShow.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
-            ...fr,
-            feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
-              ...response,
-              feedback_request_id: fr.id,
-              status: response.status as FeedbackStatus,
-              relationship: response.relationship as RelationshipType
-            })),
-            analytics: fr.analytics ? {
-              id: fr.analytics.id,
-              insights: fr.analytics.insights
-            } : undefined
-          }));
+          const mappedFeedbackRequests = cycleToShow.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => {
+            console.log('DashboardPage - fr.analytics:', fr.analytics);
+            
+            return {
+              ...fr,
+              feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
+                ...response,
+                feedback_request_id: fr.id,
+                status: response.status as FeedbackStatus,
+                relationship: response.relationship as RelationshipType
+              })),
+              analytics: fr.analytics ? {
+                id: fr.analytics.id,
+                insights: fr.analytics.insights.map(insight => {
+                  console.log('DashboardPage - insight:', insight);
+                  return {
+                    ...insight,
+                    competencies: insight.competencies.map(comp => {
+                      console.log('DashboardPage - comp:', comp);
+                      return {
+                        ...comp,
+                        evidenceQuotes: comp.evidenceQuotes || []
+                      };
+                    })
+                  };
+                })
+              } : undefined
+            };
+          });
 
           setActiveReviewCycle({
             id: cycleToShow.id,
@@ -176,7 +192,13 @@ export function DashboardPage(): JSX.Element {
         })),
         analytics: fr.analytics ? {
           id: fr.analytics.id,
-          insights: fr.analytics.insights
+          insights: fr.analytics.insights.map(insight => ({
+            ...insight,
+            competencies: insight.competencies.map(comp => ({
+              ...comp,
+              evidenceQuotes: comp.evidenceQuotes || []
+            }))
+          }))
         } : undefined
       }));
 

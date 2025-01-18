@@ -1,12 +1,12 @@
 import { CoreFeedbackResponse } from './base';
 
-interface Employee {
+export interface Employee {
   id: string;
   name: string;
   role: string;
 }
 
-interface ReviewCycle {
+export interface ReviewCycle {
   id: string;
   title: string;
   review_by_date: string;

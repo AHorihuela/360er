@@ -39,7 +39,7 @@ export function InsightContent({ insight }: Props) {
   }
   
   // For aggregate view
-  const themes = insight?.themes || [];
+  const themes = insight?.themes ?? [];
   
   // Memoize competency lookups
   const competencyDetails = useMemo(() => 
@@ -48,7 +48,7 @@ export function InsightContent({ insight }: Props) {
       details: Object.entries(CORE_COMPETENCIES).find(([_, comp]) => 
         comp.name === score.name
       )?.[1],
-    })) || [],
+    })) ?? [],
     [insight.competencies]
   );
 

@@ -6,7 +6,7 @@ export interface CompetencyHeatmapProps {
 
 export interface AdjustmentDetail {
   originalScore: number;
-  adjustmentType: 'extreme' | 'moderate';
+  adjustmentType: 'moderate' | 'extreme';
   relationship: string;
 }
 
@@ -34,41 +34,18 @@ export interface ScoreWithOutlier {
   name: string;
   score: number;
   confidence: 'low' | 'medium' | 'high';
+  description: string;
   evidenceCount: number;
   effectiveEvidenceCount: number;
   relationship: string;
+  reviewerId?: string;
+  evidenceQuotes?: string[];
   hasOutliers: boolean;
-  adjustmentDetails?: Array<{
-    originalScore: number;
-    adjustmentType: 'moderate' | 'extreme';
-    relationship: string;
-  }>;
-  description: string;
-  confidenceMetrics?: {
-    evidenceScore: number;
-    consistencyScore: number;
-    relationshipScore: number;
-    finalScore: number;
-    factors: {
-      evidenceCount: number;
-      variance: number;
-      relationshipCount: number;
-      distributionQuality: number;
-    };
-  };
-  relationshipBreakdown?: {
-    senior: number;
-    peer: number;
-    junior: number;
-  };
-  // Properties for score distribution
+  adjustmentDetails?: AdjustmentDetail[];
   scoreDistribution?: Record<number, number>;
   averageScore?: number;
   scoreSpread?: number;
-  // Additional properties needed by the system
   adjustedWeight?: number;
-  reviewerId?: string;
-  evidenceQuotes?: string[];
 }
 
 export interface AggregateScore {

@@ -19,6 +19,9 @@ interface CompetencyDetailsProps {
 }
 
 export function CompetencyDetails({ score }: CompetencyDetailsProps) {
+  console.log('CompetencyDetails - score:', score);
+  console.log('CompetencyDetails - evidenceQuotes:', score.evidenceQuotes);
+  
   const detailsRef = useRef<HTMLDivElement>(null);
   const competencyKey = COMPETENCY_NAME_TO_KEY[score.name];
   const competency = competencyKey ? CORE_COMPETENCIES[competencyKey] : null;

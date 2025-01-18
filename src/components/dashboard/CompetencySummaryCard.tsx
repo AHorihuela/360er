@@ -72,6 +72,25 @@ export function CompetencySummaryCard({ score, isExpanded, onToggle }: Competenc
           </div>
         </div>
 
+        {/* Evidence Quotes Section */}
+        {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
+          <div className="pb-3 border-b border-border">
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Evidence Quotes</div>
+            <div className="space-y-2">
+              {score.evidenceQuotes.slice(0, 2).map((quote, i) => (
+                <div key={i} className="text-sm text-muted-foreground pl-3 border-l-2 border-muted">
+                  "{quote}"
+                </div>
+              ))}
+              {score.evidenceQuotes.length > 2 && (
+                <div className="text-xs text-muted-foreground">
+                  +{score.evidenceQuotes.length - 2} more examples
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Confidence Factors Section */}
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

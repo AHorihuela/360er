@@ -16,6 +16,8 @@ import { CompetencyDetails } from './CompetencyDetails';
 import { TeamSummaryStats } from './TeamSummaryStats';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { cn } from "@/lib/utils";
+import { type CompetencyScore } from '@/types/feedback/analysis';
+import { type DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
@@ -23,27 +25,34 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
   // Memoize the competency score calculations
   const competencyScores = useMemo(() => {
     const scores = new Map<string, ScoreWithOutlier[]>();
-    
+
     feedbackRequests.forEach(request => {
       if (!request.analytics?.insights) return;
-      
+      console.log('CompetencyHeatmap - request.analytics:', request.analytics);
+
       request.analytics.insights.forEach(insight => {
+        console.log('CompetencyHeatmap - insight:', insight);
         insight.competencies.forEach(comp => {
+          console.log('CompetencyHeatmap - comp:', comp);
           if (!scores.has(comp.name)) {
             scores.set(comp.name, []);
           }
           
           const compScores = scores.get(comp.name)!;
-          compScores.push({
+          const score: ScoreWithOutlier = {
             name: comp.name,
             score: comp.score,
             confidence: comp.confidence,
-            evidenceCount: comp.evidenceCount,
-            effectiveEvidenceCount: 0,
-            relationship: insight.relationship,
             description: comp.description,
-            reviewerId: insight.reviewerId || undefined
-          });
+            evidenceCount: comp.evidenceCount,
+            effectiveEvidenceCount: comp.evidenceCount,
+            relationship: insight.relationship,
+            evidenceQuotes: comp.evidenceQuotes ?? [],
+            hasOutliers: false,
+            adjustedWeight: RELATIONSHIP_WEIGHTS[insight.relationship as keyof typeof RELATIONSHIP_WEIGHTS]
+          };
+          console.log('CompetencyHeatmap - created score:', score);
+          compScores.push(score);
         });
       });
     });
@@ -68,7 +77,11 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
 
     // Calculate aggregate scores with outlier detection
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
+      console.log('CompetencyHeatmap - competencyName:', competencyName);
+      
       const scores = competencyScores.get(competencyName) || [];
+      console.log('CompetencyHeatmap - scores:', scores);
+      
       if (scores.length === 0) return null;
 
       // Detect and adjust outliers - only calculate once per competency
@@ -108,6 +121,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
       const variance = allScores.reduce((sum, score) => sum + Math.pow(score - averageScore, 2), 0) / allScores.length;
       const standardDeviation = Math.sqrt(variance);
 
+      // Combine evidence quotes from all scores
+      const evidenceQuotes = Array.from(new Set(scores.flatMap(s => s.evidenceQuotes ?? [])));
+      console.log('CompetencyHeatmap - evidenceQuotes:', evidenceQuotes);
+
       return {
         name: competencyName,
         score: weightedScore,
@@ -122,7 +139,8 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
         relationshipBreakdown,
         scoreDistribution,
         averageScore,
-        scoreSpread: standardDeviation
+        scoreSpread: standardDeviation,
+        evidenceQuotes
       } as ScoreWithOutlier;
     }).filter((score): score is ScoreWithOutlier => score !== null);
 
