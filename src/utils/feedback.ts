@@ -94,7 +94,7 @@ Return a JSON object with:
   - confidence: "low" | "medium" | "high"
   - description: String explaining the score and evidence
   - evidenceCount: Number of specific evidence pieces
-  - evidenceQuotes: Array of supporting quotes`
+  - evidenceQuotes: Array of supporting quotes (REQUIRED for non-zero scores)`
       },
       {
         role: "user",
@@ -154,7 +154,7 @@ Return a JSON object with:
   - confidence: "low" | "medium" | "high"
   - description: String explaining the score and evidence
   - evidenceCount: Number of specific evidence pieces
-  - evidenceQuotes: Array of supporting quotes`
+  - evidenceQuotes: Array of supporting quotes (REQUIRED for non-zero scores)`
       },
       {
         role: "user",
