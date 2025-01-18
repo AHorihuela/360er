@@ -28,6 +28,15 @@ export interface DashboardFeedbackResponse {
   employee?: DashboardEmployeeReference;
 }
 
+export interface DashboardCompetency {
+  name: string;
+  score: number;
+  confidence: 'low' | 'medium' | 'high';
+  description: string;
+  evidenceCount: number;
+  evidenceQuotes?: string[];
+}
+
 export interface DashboardFeedbackRequest {
   id: string;
   employee_id: string;
@@ -41,14 +50,7 @@ export interface DashboardFeedbackRequest {
   analytics?: {
     id: string;
     insights: Array<{
-      competencies: Array<{
-        name: string;
-        score: number;
-        confidence: 'low' | 'medium' | 'high';
-        description: string;
-        evidenceCount: number;
-        evidenceQuotes?: string[];
-      }>;
+      competencies: Array<DashboardCompetency>;
       relationship: string;
     }>;
   };

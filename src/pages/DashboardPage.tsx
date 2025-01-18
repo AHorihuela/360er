@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { generateShortId } from '../utils/uniqueId';
 import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
-import { CompetencyHeatmap } from '@/components/dashboard/CompetencyHeatmap';
+import { CompetencyAnalysis } from '@/components/competency/CompetencyAnalysis';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -431,9 +431,12 @@ export function DashboardPage(): JSX.Element {
               />
 
               {/* Team Competency Heatmap */}
-              <CompetencyHeatmap 
-                feedbackRequests={activeReviewCycle.feedback_requests}
-              />
+              {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
+                <CompetencyAnalysis 
+                  feedbackRequests={activeReviewCycle.feedback_requests as DashboardFeedbackRequest[]}
+                  showTeamStats={true}
+                />
+              )}
             </div>
           )}
         </>
