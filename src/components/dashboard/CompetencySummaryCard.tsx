@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ScoreWithOutlier } from './types';
-import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
+import { CORE_COMPETENCIES } from '@/lib/competencies';
 
 interface CompetencySummaryCardProps {
   score: ScoreWithOutlier;

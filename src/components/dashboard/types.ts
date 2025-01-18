@@ -46,6 +46,12 @@ export interface ScoreWithOutlier {
   averageScore?: number;
   scoreSpread?: number;
   adjustedWeight?: number;
+  confidenceMetrics?: ConfidenceMetrics;
+  relationshipBreakdown?: {
+    senior: number;
+    peer: number;
+    junior: number;
+  };
 }
 
 export interface AggregateScore {

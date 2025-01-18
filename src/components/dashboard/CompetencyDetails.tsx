@@ -1,10 +1,4 @@
 import { useRef, useEffect } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { ScoreWithOutlier } from './types';
 import { ScoreDistributionCard } from './cards/ScoreDistributionCard';

@@ -1,4 +1,4 @@
-import { type Employee, type FeedbackRequest } from './submission';
+import { type Employee } from './submission';
 import { type RelationshipType, type FeedbackStatus } from './base';
 import { type FeedbackResponse } from '@/types/feedback';
 

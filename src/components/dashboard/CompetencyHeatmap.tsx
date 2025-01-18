@@ -16,8 +16,6 @@ import { CompetencyDetails } from './CompetencyDetails';
 import { TeamSummaryStats } from './TeamSummaryStats';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { cn } from "@/lib/utils";
-import { type CompetencyScore } from '@/types/feedback/analysis';
-import { type DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 
 export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
