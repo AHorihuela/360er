@@ -23,6 +23,7 @@ import { generateShortId } from '../utils/uniqueId';
 import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
 import { CompetencyAnalysis } from '@/components/competency/CompetencyAnalysis';
+import { type DashboardCompetency } from '@/types/feedback/dashboard';
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
@@ -119,19 +120,13 @@ export function DashboardPage(): JSX.Element {
               })),
               analytics: fr.analytics ? {
                 id: fr.analytics.id,
-                insights: fr.analytics.insights.map(insight => {
-                  console.log('DashboardPage - insight:', insight);
-                  return {
-                    ...insight,
-                    competencies: insight.competencies.map(comp => {
-                      console.log('DashboardPage - comp:', comp);
-                      return {
-                        ...comp,
-                        evidenceQuotes: comp.evidenceQuotes || []
-                      };
-                    })
-                  };
-                })
+                insights: fr.analytics.insights.map(insight => ({
+                  ...insight,
+                  competencies: insight.competencies.map((comp: DashboardCompetency) => ({
+                    ...comp,
+                    evidenceQuotes: comp.evidenceQuotes || []
+                  }))
+                }))
               } : undefined
             };
           });
@@ -194,7 +189,7 @@ export function DashboardPage(): JSX.Element {
           id: fr.analytics.id,
           insights: fr.analytics.insights.map(insight => ({
             ...insight,
-            competencies: insight.competencies.map(comp => ({
+            competencies: insight.competencies.map((comp: DashboardCompetency) => ({
               ...comp,
               evidenceQuotes: comp.evidenceQuotes || []
             }))
