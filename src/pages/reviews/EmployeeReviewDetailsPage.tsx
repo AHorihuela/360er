@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -22,86 +22,14 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { generateAIReport } from '@/lib/openai';
-import { debounce } from 'lodash';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
-import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { cn } from '@/lib/utils';
-
-interface ReviewCycle {
-  id: string;
-  title: string;
-  review_by_date: string;
-  status: string;
-}
-
-interface FeedbackRequest {
-  id: string;
-  unique_link: string;
-  status: string;
-  target_responses: number;
-  employee?: {
-    name: string;
-    role: string;
-  };
-  feedback?: CoreFeedbackResponse[];
-  ai_reports?: Array<{
-    content: string;
-    updated_at: string;
-  }>;
-  _count?: {
-    responses: number;
-    page_views: number;
-    unique_viewers: number;
-  };
-}
-
-interface AIReportResponse {
-  content: string;
-  updated_at: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-}
-
-// Types for report generation steps and progress
-export type GenerationStep = 0 | 1 | 2 | 3;
-export type GenerationSteps = readonly [string, string, string, string];
-
-// Generation steps for the UI progress display
-export const GENERATION_STEPS = [
-  "Analyzing feedback responses...",
-  "Identifying key themes and patterns...",
-  "Generating comprehensive insights...",
-  "Preparing final report..."
-] as const;
-
-// Utility functions for report generation
-export function getElapsedTime(startTime: number | null): string {
-  if (!startTime) return '0s';
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  return `${elapsed}s`;
-}
-
-export function formatLastAnalyzed(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
-  });
-}
-
-// Interface for AI Report
-interface AIReportType {
-  content: string;
-  created_at: string;
-}
-
-function getFeedbackDate(feedback: CoreFeedbackResponse): number {
-  return new Date(feedback.submitted_at ?? feedback.created_at ?? 0).getTime();
-}
+import { ReviewCycle, FeedbackRequest } from '@/types/reviews/employee-review';
+import { getFeedbackDate } from '@/utils/report';
+import { exportToPDF } from '@/utils/pdf';
+import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
+import { useAIReportManagement } from '@/hooks/useAIReportManagement';
 
 export function EmployeeReviewDetailsPage() {
   const params = useParams<{ cycleId: string; employeeId: string }>();
@@ -113,16 +41,31 @@ export function EmployeeReviewDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
-  const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [aiReport, setAiReport] = useState<AIReportType | null>(null);
-  
-  // Report generation progress tracking
-  const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
 
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [feedbackToDelete, setFeedbackToDelete] = useState<string | null>(null);
+  const {
+    deletingFeedbackId,
+    isDeleteDialogOpen,
+    feedbackToDelete,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    handleDeleteCancel,
+    setIsDeleteDialogOpen
+  } = useFeedbackManagement({
+    feedbackRequest,
+    onFeedbackUpdate: setFeedbackRequest
+  });
+
+  const {
+    isGeneratingReport,
+    aiReport,
+    generationStep,
+    startTime,
+    handleReportChange,
+    handleGenerateReport,
+    setAiReport
+  } = useAIReportManagement({
+    feedbackRequest
+  });
 
   const sortedFeedback = useMemo(() => 
     feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
@@ -158,9 +101,8 @@ export function EmployeeReviewDetailsPage() {
 
     try {
       setIsLoading(true);
-      setError(null); // Reset error state before fetching
+      setError(null);
 
-      // Fetch review cycle and feedback request data
       const { data: cycleData, error: cycleError } = await supabase
         .from('review_cycles')
         .select(`
@@ -209,11 +151,14 @@ export function EmployeeReviewDetailsPage() {
       });
 
       if (request.ai_reports?.[0]?.content) {
-        setAiReport(request.ai_reports[0]);
+        setAiReport({
+          content: request.ai_reports[0].content,
+          created_at: request.ai_reports[0].updated_at
+        });
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Failed to load employee review details'); // Set error message
+      setError('Failed to load employee review details');
       toast({
         title: "Error",
         description: "Failed to load employee review details",
@@ -225,381 +170,12 @@ export function EmployeeReviewDetailsPage() {
     }
   }
 
-  async function handleDeleteFeedback(feedbackId: string) {
-    if (!feedbackRequest) return;
-    
-    setDeletingFeedbackId(feedbackId);
-    
-    try {
-      // First, update any feedback responses that reference this one
-      const { error: updateError } = await supabase
-        .from('feedback_responses')
-        .update({ previous_version_id: null })
-        .eq('previous_version_id', feedbackId);
-
-      if (updateError) {
-        console.error('Error updating references:', updateError);
-      }
-
-      // Then delete the feedback
-      const { error } = await supabase
-        .from('feedback_responses')
-        .delete()
-        .eq('id', feedbackId);
-
-      if (error) throw error;
-
-      // Update local state
-      if (feedbackRequest) {
-        const updatedFeedback = feedbackRequest.feedback?.filter((f: { id: string }) => f.id !== feedbackId) || [];
-        setFeedbackRequest({
-          ...feedbackRequest,
-          feedback: updatedFeedback,
-          _count: {
-            responses: updatedFeedback.length,
-            page_views: 0,
-            unique_viewers: 0
-          }
-        });
-      }
-
-      toast({
-        title: "Success",
-        description: "Feedback deleted successfully",
-      });
-    } catch (error) {
-      console.error('Error deleting feedback:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete feedback",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingFeedbackId(null);
-    }
-  }
-
-  async function handleGenerateReport() {
-    if (!feedbackRequest?.id || !feedbackRequest.feedback?.length) return;
-
-    try {
-      setIsGeneratingReport(true);
-      setGenerationStep(0);
-      setStartTime(Date.now());
-
-      // First check if we have a recent analysis
-      const { data: existingReport } = await supabase
-        .from('ai_reports')
-        .select('content, updated_at, status')
-        .eq('feedback_request_id', feedbackRequest.id)
-        .eq('is_final', true)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      const typedReport = existingReport as AIReportResponse | null;
-
-      // If we have a recent report (less than 1 hour old) and it's completed, use it
-      if (typedReport?.status === 'completed' && 
-          typedReport?.content &&
-          new Date(typedReport.updated_at).getTime() > Date.now() - 3600000) {
-        console.log('Using existing recent report');
-        setAiReport({
-          content: typedReport.content,
-          created_at: typedReport.updated_at
-        });
-        setIsGeneratingReport(false);
-        setStartTime(null);
-        return;
-      }
-
-      // Create or update the report entry
-      const { error: initError } = await supabase
-        .from('ai_reports')
-        .upsert({
-          feedback_request_id: feedbackRequest.id,
-          status: 'processing',
-          is_final: false,
-          updated_at: new Date().toISOString()
-        });
-
-      if (initError) throw initError;
-
-      // Generate new report
-      console.log('Calling OpenAI to generate report...');
-      const reportContent = await generateAIReport(
-        feedbackRequest.employee?.name || 'Unknown Employee',
-        feedbackRequest.employee?.role || 'Unknown Role',
-        feedbackRequest.feedback
-      );
-
-      if (!reportContent) {
-        throw new Error('Failed to generate report content');
-      }
-
-      const currentTime = new Date().toISOString();
-      const formattedReport = reportContent.trim();
-
-      // Update state
-      setAiReport({
-        content: formattedReport,
-        created_at: currentTime
-      });
-
-      // Update database
-      const { error: finalizeError } = await supabase
-        .from('ai_reports')
-        .update({
-          content: formattedReport,
-          status: 'completed',
-          is_final: true,
-          updated_at: currentTime
-        })
-        .eq('feedback_request_id', feedbackRequest.id);
-
-      if (finalizeError) throw finalizeError;
-
-      toast({
-        title: "Success",
-        description: "AI report generated successfully",
-      });
-
-    } catch (error) {
-      console.error('Error generating report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate AI report",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingReport(false);
-      setStartTime(null);
-    }
-  }
-
-  // Add debounced save function
-  const debouncedSave = useCallback(
-    debounce(async (content: string) => {
-      if (!feedbackRequest) return;
-      
-      try {
-        // Only clean up extra hashes while preserving heading structure
-        const cleanContent = content
-          .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2') // Clean up only extra hashes while preserving heading level
-          .trim();
-
-        const { error: saveError } = await supabase
-          .from('ai_reports')
-          .update({
-            content: cleanContent,
-            updated_at: new Date().toISOString()
-          })
-          .eq('feedback_request_id', feedbackRequest.id);
-
-        if (saveError) {
-          setError('Failed to save report changes');
-          throw saveError;
-        }
-      } catch (err) {
-        console.error('Error saving report:', err);
-        toast({
-          title: "Error",
-          description: "Failed to save report changes",
-          variant: "destructive",
-        });
-      }
-    }, 1000),
-    [feedbackRequest, toast, setError]
-  );
-
-  /** 
-   * Handles changes to the AI report content and saves them to the database.
-   * Used by the MarkdownEditor component in AIReport.tsx.
-   */
-  const handleReportChange = useCallback((value: string) => {
-    // Clean up markdown formatting while preserving line breaks between sections
-    const cleanValue = value
-      .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2\n') // Add newline after headings
-      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
-      .trim();
-    
-    setAiReport(prev => ({
-      content: cleanValue,
-      created_at: prev?.created_at || new Date().toISOString()
-    }));
-    debouncedSave(cleanValue);
-  }, [debouncedSave]);
-
-  // Add interval for real-time elapsed time updates
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (startTime && isGeneratingReport) {
-      interval = setInterval(() => {
-        // Force re-render to update elapsed time
-        setStartTime(prev => prev);
-      }, 1000);
-    }
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [startTime, isGeneratingReport]);
-
-  async function handleExportPDF() {
-    if (!aiReport?.content) return;
-
-    // Import required modules
-    const [html2pdf, { marked }] = await Promise.all([
-      import('html2pdf.js'),
-      import('marked')
-    ]);
-    
-    // Create a temporary div to render the markdown
-    const tempDiv = document.createElement('div');
-    tempDiv.className = 'prose prose-gray dark:prose-invert max-w-none p-8';
-    
-    // Convert markdown to HTML with specific options
-    marked.setOptions({
-      gfm: true,
-      breaks: true
-    });
-
-    // Clean up the markdown content to ensure proper list formatting
-    const cleanedContent = aiReport.content
-      .replace(/^[-*+]\s+/gm, '• ') // Convert all list markers to bullet points
-      .replace(/^(\d+)\.\s+/gm, (_, num) => `${num}. `); // Preserve numbered lists with proper formatting
-    
-    const htmlContent = marked.parse(cleanedContent);
-    if (typeof htmlContent === 'string') {
-      tempDiv.innerHTML = htmlContent;
-    }
-    
-    // Add custom styles for PDF
-    const style = document.createElement('style');
-    style.textContent = `
-      @page {
-        margin: 1in;
-        size: letter;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        line-height: 1.6;
-        color: #111827;
-      }
-      h1 { 
-        font-size: 24px; 
-        margin-bottom: 16px; 
-        font-weight: bold;
-        page-break-after: avoid;
-      }
-      h2 { 
-        font-size: 20px; 
-        margin: 24px 0 12px 0; 
-        font-weight: bold;
-        page-break-after: avoid;
-      }
-      h3 { 
-        font-size: 16px; 
-        margin: 16px 0 8px 0; 
-        font-weight: bold;
-        page-break-after: avoid;
-      }
-      p { 
-        margin: 0 0 12px 0;
-        line-height: 1.6;
-        orphans: 3;
-        widows: 3;
-      }
-      ul, ol { 
-        margin: 0 0 12px 0;
-        padding-left: 24px;
-        page-break-inside: avoid;
-      }
-      li { 
-        margin: 0 0 6px 0;
-        line-height: 1.6;
-      }
-      strong { 
-        font-weight: 600;
-      }
-      /* Bullet points styling */
-      ul { 
-        list-style-type: disc;
-        margin-left: 0;
-      }
-      ul li {
-        padding-left: 8px;
-      }
-      ul li::marker { 
-        content: "•";
-        font-size: 1.2em;
-        color: #111827;
-      }
-      /* Numbered list styling */
-      ol {
-        list-style-type: decimal;
-        margin-left: 0;
-      }
-      ol li {
-        padding-left: 8px;
-      }
-      /* Preserve bold text */
-      strong, b { 
-        font-weight: 600 !important;
-      }
-    `;
-    tempDiv.appendChild(style);
-    document.body.appendChild(tempDiv);
-
-    const opt = {
-      margin: 0, // We're handling margins in CSS
-      filename: `${feedbackRequest?.employee?.name || 'Employee'}_Feedback_Report.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        letterRendering: true
-      },
-      jsPDF: { 
-        unit: 'in', 
-        format: 'letter', 
-        orientation: 'portrait',
-        compress: true,
-        hotfixes: ['px_scaling']
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy'],
-        before: ['#page-break-before'],
-        after: ['#page-break-after'],
-        avoid: ['li', 'img']
-      }
-    };
-
-    try {
-      await html2pdf.default().set(opt).from(tempDiv).save();
-    } finally {
-      document.body.removeChild(tempDiv);
-    }
-  }
-
-  const handleDeleteClick = (feedbackId: string) => {
-    setFeedbackToDelete(feedbackId);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (feedbackToDelete) {
-      await handleDeleteFeedback(feedbackToDelete);
-      setIsDeleteDialogOpen(false);
-      setFeedbackToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setIsDeleteDialogOpen(false);
-    setFeedbackToDelete(null);
+  const handleExportPDF = async () => {
+    if (!aiReport?.content || !feedbackRequest?.employee?.name) return;
+    await exportToPDF(
+      aiReport.content,
+      `${feedbackRequest.employee.name}_Feedback_Report.pdf`
+    );
   };
 
   if (error) {
@@ -692,7 +268,7 @@ export function EmployeeReviewDetailsPage() {
             employee: feedbackRequest?.employee,
             feedback: feedbackRequest?.feedback?.map(f => ({
               ...f,
-              submitted_at: f.submitted_at || f.created_at // Ensure submitted_at is never null
+              submitted_at: f.submitted_at || f.created_at
             })),
             ai_reports: feedbackRequest?.ai_reports
           }}
