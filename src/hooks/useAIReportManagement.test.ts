@@ -101,18 +101,87 @@ describe('useAIReportManagement', () => {
     expect(result.current.isGeneratingReport).toBe(false);
   });
 
-  it('handles report generation error', async () => {
-    // Mock failed report generation
-    vi.mocked(generateAIReport).mockRejectedValueOnce(new Error('API Error'));
-    
+  it('handles error during report saving', async () => {
+    vi.mocked(generateAIReport).mockResolvedValueOnce('Generated Report Content');
+    vi.mocked(supabase.from).mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+      update: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockRejectedValue(new Error('Database error'))
+    } as unknown as PostgrestQueryBuilder<any, any, any>));
+
     const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }));
 
     await act(async () => {
       await result.current.handleGenerateReport();
     });
 
+    expect(result.current.error).toBe('Failed to save AI report');
     expect(result.current.isGeneratingReport).toBe(false);
-    expect(result.current.error).toBe('Failed to generate AI report');
+  });
+
+  it('tracks elapsed time during report generation', async () => {
+    vi.useFakeTimers();
+    const startTime = new Date();
+    
+    vi.mocked(generateAIReport).mockImplementation(async () => {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return 'Generated Report Content';
+    });
+
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }));
+
+    const generatePromise = act(async () => {
+      await result.current.handleGenerateReport();
+    });
+
+    expect(result.current.isGeneratingReport).toBe(true);
+    expect(result.current.startTime).toBeTruthy();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await generatePromise;
+
+    expect(result.current.isGeneratingReport).toBe(false);
+    expect(result.current.startTime).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('handles invalid feedback data', async () => {
+    const invalidFeedbackRequest = {
+      ...mockFeedbackRequest,
+      feedback: []
+    };
+
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: invalidFeedbackRequest }));
+
+    await act(async () => {
+      await result.current.handleGenerateReport();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.isGeneratingReport).toBe(false);
+  });
+
+  it('debounces multiple report changes', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }));
+    const upsertSpy = vi.spyOn(supabase.from('ai_reports'), 'upsert');
+
+    await act(async () => {
+      result.current.handleReportChange('Content 1');
+      result.current.handleReportChange('Content 2');
+      result.current.handleReportChange('Content 3');
+    });
+
+    await vi.advanceTimersByTimeAsync(1100);
+
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    expect(result.current.aiReport?.content).toBe('Content 3');
+
+    vi.useRealTimers();
   });
 
   it('reuses recent existing report', async () => {
@@ -141,19 +210,6 @@ describe('useAIReportManagement', () => {
 
     expect(result.current.aiReport?.content).toBe('Existing Report Content');
     expect(result.current.isGeneratingReport).toBe(false);
-  });
-
-  it('saves report changes with debounce', async () => {
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }));
-
-    await act(async () => {
-      result.current.handleReportChange('Updated Content');
-    });
-
-    // Wait for debounce
-    await new Promise(resolve => setTimeout(resolve, 1100));
-
-    expect(supabase.from).toHaveBeenCalledWith('ai_reports');
   });
 
   it('handles null feedback request', () => {
