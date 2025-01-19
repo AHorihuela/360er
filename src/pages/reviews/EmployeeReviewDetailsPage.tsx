@@ -223,6 +223,7 @@ export function EmployeeReviewDetailsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
+            key="copy-link"
             variant="outline"
             size="sm"
             onClick={handleCopyLink}
@@ -232,6 +233,7 @@ export function EmployeeReviewDetailsPage() {
             Copy Link
           </Button>
           <Button
+            key="ai-report"
             variant="ghost"
             size="sm"
             onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
@@ -240,6 +242,7 @@ export function EmployeeReviewDetailsPage() {
             AI Report
           </Button>
           <Button
+            key="detailed-feedback"
             variant="ghost"
             size="sm"
             onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
@@ -344,26 +347,31 @@ export function EmployeeReviewDetailsPage() {
                 ) : (
                   <div className="divide-y">
                     {sortedFeedback.map((feedback) => (
-                      <div key={feedback.id} className="p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={cn(
-                              "text-xs capitalize flex items-center gap-1",
-                              feedback.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
-                              feedback.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
-                              feedback.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
-                            )}>
-                              {feedback.relationship === 'senior_colleague' && <ArrowUpIcon className="h-3 w-3" />}
-                              {feedback.relationship === 'equal_colleague' && <EqualIcon className="h-3 w-3" />}
-                              {feedback.relationship === 'junior_colleague' && <ArrowDownIcon className="h-3 w-3" />}
+                      <div key={`${feedback.id}-container`} className="p-4">
+                        <div key={`${feedback.id}-header`} className="flex items-center justify-between mb-4">
+                          <div key={`${feedback.id}-badge-container`} className="flex items-center gap-2">
+                            <Badge 
+                              key={`${feedback.id}-badge`}
+                              variant="outline" 
+                              className={cn(
+                                "text-xs capitalize flex items-center gap-1",
+                                feedback.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
+                                feedback.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
+                                feedback.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
+                              )}
+                            >
+                              {feedback.relationship === 'senior_colleague' && <ArrowUpIcon key={`${feedback.id}-up-icon`} className="h-3 w-3" />}
+                              {feedback.relationship === 'equal_colleague' && <EqualIcon key={`${feedback.id}-equal-icon`} className="h-3 w-3" />}
+                              {feedback.relationship === 'junior_colleague' && <ArrowDownIcon key={`${feedback.id}-down-icon`} className="h-3 w-3" />}
                               {feedback.relationship.replace('_', ' ')}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-xs text-muted-foreground">
+                          <div key={`${feedback.id}-actions`} className="flex items-center gap-4">
+                            <span key={`${feedback.id}-date`} className="text-xs text-muted-foreground">
                               {new Date(feedback.submitted_at ?? feedback.created_at ?? 0).toLocaleDateString()}
                             </span>
                             <Button
+                              key={`${feedback.id}-delete`}
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteClick(feedback.id)}
@@ -371,16 +379,16 @@ export function EmployeeReviewDetailsPage() {
                               aria-label="Delete feedback"
                             >
                               {deletingFeedbackId === feedback.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <Loader2 key={`${feedback.id}-loader`} className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 key={`${feedback.id}-trash`} className="h-3.5 w-3.5" />
                               )}
                             </Button>
                           </div>
                         </div>
-                        <div className="space-y-4">
+                        <div key={`${feedback.id}-content`} className="space-y-4">
                           {feedback.strengths && (
-                            <div className="bg-slate-50 p-3 rounded-md">
+                            <div key={`${feedback.id}-strengths`} className="bg-slate-50 p-3 rounded-md">
                               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                                 <StarIcon className="h-4 w-4 text-yellow-500" />
                                 Strengths
@@ -391,7 +399,7 @@ export function EmployeeReviewDetailsPage() {
                             </div>
                           )}
                           {feedback.areas_for_improvement && (
-                            <div className="bg-slate-50 p-3 rounded-md">
+                            <div key={`${feedback.id}-improvements`} className="bg-slate-50 p-3 rounded-md">
                               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                                 <TrendingUpIcon className="h-4 w-4 text-blue-500" />
                                 Areas for Improvement
