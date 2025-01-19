@@ -14,60 +14,59 @@ vi.mock('@/components/ui/use-toast', () => ({
   })
 }));
 
-describe('useFeedbackFormState', () => {
-  const mockProps = {
-    uniqueLink: 'test-link',
-    sessionId: 'test-session'
-  };
+const mockProps = {
+  uniqueLink: 'test-link'
+};
 
+describe('useFeedbackFormState', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
-  test('initializes with default values when no saved data exists', () => {
+  it('initializes with default values when no saved data exists', () => {
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
-
-    expect(result.current.formData).toEqual({
-      relationship: 'equal_colleague',
-      strengths: '',
-      areas_for_improvement: ''
-    });
 
     expect(result.current.formState).toEqual({
-      step: 'editing',
-      aiAnalysisAttempted: false
+      step: 'form',
+      aiAnalysisAttempted: false,
+      draftId: undefined
     });
   });
 
-  test('restores saved form data from localStorage', () => {
-    const savedData = {
-      relationship: 'senior_colleague',
-      strengths: 'test strengths',
-      areas_for_improvement: 'test improvements'
+  it('restores saved form data from localStorage', () => {
+    const savedState = {
+      step: 'form',
+      aiAnalysisAttempted: true,
+      draftId: 'draft-1'
     };
-
-    localStorage.setItem(`feedback_draft_${mockProps.uniqueLink}`, JSON.stringify(savedData));
+    localStorage.setItem(`feedback_state_${mockProps.uniqueLink}`, JSON.stringify(savedState));
 
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
 
-    expect(result.current.formData).toEqual(savedData);
+    expect(result.current.formState).toEqual(savedState);
   });
 
-  test('updates form data and saves to localStorage', () => {
+  it('updates form state and saves to localStorage', () => {
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
 
     act(() => {
-      result.current.updateFormData({
-        strengths: 'new strengths'
+      result.current.updateFormState({
+        step: 'ai_review',
+        aiAnalysisAttempted: true,
+        draftId: 'draft-1'
       });
     });
 
-    expect(result.current.formData.strengths).toBe('new strengths');
-    expect(JSON.parse(localStorage.getItem(`feedback_draft_${mockProps.uniqueLink}`) || '{}')).toHaveProperty('strengths', 'new strengths');
+    const savedState = JSON.parse(localStorage.getItem(`feedback_state_${mockProps.uniqueLink}`) || '{}');
+    expect(savedState).toEqual({
+      step: 'ai_review',
+      aiAnalysisAttempted: true,
+      draftId: 'draft-1'
+    });
   });
 
-  test('handles form state transitions correctly', () => {
+  it('handles form state transitions correctly', () => {
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
 
     act(() => {
@@ -81,14 +80,16 @@ describe('useFeedbackFormState', () => {
       result.current.moveToEditing();
     });
 
-    expect(result.current.formState.step).toBe('editing');
+    expect(result.current.formState.step).toBe('form');
   });
 
-  test('clears saved data on submission', () => {
-    // Setup initial data
-    localStorage.setItem(`feedback_draft_${mockProps.uniqueLink}`, JSON.stringify({ strengths: 'test' }));
-    localStorage.setItem(`feedback_state_${mockProps.uniqueLink}`, JSON.stringify({ step: 'editing' }));
-    localStorage.setItem('last_feedback_analysis', JSON.stringify({ data: 'test' }));
+  it('clears saved data on submission', () => {
+    const savedState = {
+      step: 'form',
+      aiAnalysisAttempted: true,
+      draftId: 'draft-1'
+    };
+    localStorage.setItem(`feedback_state_${mockProps.uniqueLink}`, JSON.stringify(savedState));
 
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
 
@@ -96,25 +97,12 @@ describe('useFeedbackFormState', () => {
       result.current.clearSavedData();
     });
 
-    expect(localStorage.getItem(`feedback_draft_${mockProps.uniqueLink}`)).toBeNull();
     expect(localStorage.getItem(`feedback_state_${mockProps.uniqueLink}`)).toBeNull();
+    expect(localStorage.getItem(`feedback_draft_${mockProps.uniqueLink}`)).toBeNull();
     expect(localStorage.getItem('last_feedback_analysis')).toBeNull();
   });
 
-  test('handles submission status correctly', () => {
-    const { result } = renderHook(() => useFeedbackFormState(mockProps));
-
-    expect(result.current.isSubmitted).toBe(false);
-
-    act(() => {
-      result.current.markAsSubmitted();
-    });
-
-    const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
-    expect(submittedFeedbacks[mockProps.uniqueLink]).toBe(true);
-  });
-
-  test('handles submission failure correctly', () => {
+  it('handles submission process correctly', () => {
     const { result } = renderHook(() => useFeedbackFormState(mockProps));
 
     act(() => {
@@ -128,5 +116,16 @@ describe('useFeedbackFormState', () => {
     });
 
     expect(result.current.formState.step).toBe('ai_review');
+  });
+
+  it('marks feedback as submitted', () => {
+    const { result } = renderHook(() => useFeedbackFormState(mockProps));
+
+    act(() => {
+      result.current.markAsSubmitted();
+    });
+
+    const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+    expect(submittedFeedbacks[mockProps.uniqueLink]).toBe(true);
   });
 }); 

@@ -366,9 +366,9 @@ export function EmployeeReviewDetailsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={deletingFeedbackId === feedback.id}
                               onClick={() => handleDeleteClick(feedback.id)}
                               className="h-7 px-2 text-destructive hover:text-destructive-foreground"
+                              aria-label="Delete feedback"
                             >
                               {deletingFeedbackId === feedback.id ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -441,4 +441,3 @@ export function EmployeeReviewDetailsPage() {
       </AlertDialog>
     </div>
   );
-} 
