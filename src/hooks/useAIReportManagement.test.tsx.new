@@ -1,0 +1,207 @@
+import React, { ReactNode } from 'react';
+import { renderHook, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { useAIReportManagement } from './useAIReportManagement';
+import { generateAIReport } from '../lib/openai';
+import { supabase } from '../lib/supabase';
+import { useToast } from '../components/ui/use-toast';
+import { FeedbackRequest } from '../types/reviews/employee-review';
+import { PostgrestQueryBuilder } from '@supabase/postgrest-js';
+import { CoreFeedbackResponse } from '../types/feedback/base';
+import { Toaster } from '../components/ui/toaster';
+
+// Mock dependencies
+vi.mock('../lib/openai', () => ({
+  generateAIReport: vi.fn()
+}));
+
+vi.mock('../lib/supabase', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null })
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      url: new URL('http://localhost'),
+      headers: {},
+      insert: vi.fn(),
+      delete: vi.fn()
+    }))
+  }
+}));
+
+// Mock setup
+const mockToast = vi.fn();
+
+vi.mock('../components/ui/use-toast', () => ({
+  useToast: () => ({
+    toast: mockToast,
+    dismiss: vi.fn(),
+    toasts: []
+  })
+}));
+
+const mockFeedbackRequest: FeedbackRequest = {
+  id: '123',
+  unique_link: 'test-link',
+  status: 'active',
+  target_responses: 5,
+  employee: {
+    name: 'John Doe',
+    role: 'Developer'
+  },
+  feedback: [
+    {
+      id: 'feedback-1',
+      feedback_request_id: '123',
+      session_id: 'session-1',
+      submitted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      status: 'submitted',
+      relationship: 'senior_colleague',
+      strengths: 'Great team player',
+      areas_for_improvement: 'Could improve communication'
+    }
+  ]
+};
+
+// Add wrapper component
+const Wrapper = ({ children }: { children: ReactNode }) => {
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
+  );
+};
+
+describe('useAIReportManagement', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    mockToast.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('initializes with default values', () => {
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    expect(result.current.isGeneratingReport).toBe(false);
+    expect(result.current.aiReport).toBeNull();
+    expect(result.current.generationStep).toBe(0);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('cleans up interval on unmount during generation', async () => {
+    (generateAIReport as jest.Mock).mockResolvedValue('New Report Content');
+
+    const { result, unmount } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      const promise = result.current.handleGenerateReport();
+      await vi.advanceTimersByTimeAsync(100);
+      unmount();
+      await promise;
+    });
+
+    expect(result.current.isGeneratingReport).toBe(false);
+    expect(result.current.generationStep).toBe(0);
+  });
+
+  it('progresses through generation steps', async () => {
+    (generateAIReport as jest.Mock).mockResolvedValue('New Report Content');
+
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      const promise = result.current.handleGenerateReport();
+      await vi.advanceTimersByTimeAsync(100);
+      expect(result.current.generationStep).toBe(1);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(result.current.generationStep).toBe(2);
+      await promise;
+    });
+
+    expect(result.current.isGeneratingReport).toBe(false);
+    expect(result.current.generationStep).toBe(0);
+  });
+
+  it('does not reuse expired report', async () => {
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: '123',
+          content: 'Old Report Content',
+          created_at: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() // 25 hours ago
+        }
+      }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null })
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null })
+    } as any);
+
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      await result.current.handleGenerateReport();
+    });
+
+    expect(generateAIReport).toHaveBeenCalled();
+  });
+
+  it('shows success toast on report generation', async () => {
+    (generateAIReport as jest.Mock).mockResolvedValue('New Report Content');
+
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      await result.current.handleGenerateReport();
+    });
+
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Report generated successfully',
+      description: 'The AI report has been generated and saved.',
+      variant: 'default'
+    });
+  });
+
+  it('cleans markdown content on report change', async () => {
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      result.current.handleReportChange('### Test Content');
+      await vi.advanceTimersByTimeAsync(1100); // Wait for debounce
+    });
+
+    expect(supabase.from).toHaveBeenCalledWith('ai_reports');
+    expect(vi.mocked(supabase.from).mock.results[0].value.update).toHaveBeenCalledWith({
+      content: '### Test Content',
+      updated_at: expect.any(String)
+    });
+  });
+}); 

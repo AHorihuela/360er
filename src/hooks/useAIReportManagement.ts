@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabase';
-import { generateAIReport } from '@/lib/openai';
+import { useToast } from '../components/ui/use-toast';
+import { supabase } from '../lib/supabase';
+import { generateAIReport } from '../lib/openai';
 import { debounce } from 'lodash';
-import { FeedbackRequest, AIReportType, GenerationStep } from '@/types/reviews/employee-review';
-import { cleanMarkdownContent } from '@/utils/report';
+import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
+import { cleanMarkdownContent } from '../utils/report';
 
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
@@ -17,6 +17,20 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
   const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [abortController] = useState(() => new AbortController());
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isGeneratingReport) {
+        abortController.abort();
+        setIsGeneratingReport(false);
+        setGenerationStep(0);
+        setStartTime(null);
+        setError(null);
+      }
+    };
+  }, [isGeneratingReport, abortController]);
 
   // Add debounced save function
   const debouncedSave = useCallback(
@@ -65,9 +79,18 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
     if (!feedbackRequest?.id || !feedbackRequest.feedback?.length) return;
 
     try {
+      // Reset state
+      setError(null);
       setIsGeneratingReport(true);
       setGenerationStep(0);
       setStartTime(Date.now());
+
+      // Check if already aborted
+      if (abortController.signal.aborted) {
+        setIsGeneratingReport(false);
+        setGenerationStep(0);
+        return;
+      }
 
       // First check if we have a recent analysis
       const { data: existingReport } = await supabase
@@ -93,6 +116,8 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
         return;
       }
 
+      setGenerationStep(1);
+
       // Create or update the report entry
       const { error: initError } = await supabase
         .from('ai_reports')
@@ -105,6 +130,13 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
 
       if (initError) throw initError;
 
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        setIsGeneratingReport(false);
+        setGenerationStep(0);
+        return;
+      }
+
       // Generate new report
       console.log('Calling OpenAI to generate report...');
       const reportContent = await generateAIReport(
@@ -116,6 +148,15 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
       if (!reportContent) {
         throw new Error('Failed to generate report content');
       }
+
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        setIsGeneratingReport(false);
+        setGenerationStep(0);
+        return;
+      }
+
+      setGenerationStep(2);
 
       const currentTime = new Date().toISOString();
       const formattedReport = reportContent.trim();
@@ -140,20 +181,25 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
       if (finalizeError) throw finalizeError;
 
       toast({
-        title: "Success",
-        description: "AI report generated successfully",
+        title: "Report generated successfully",
+        description: "The AI report has been generated and saved.",
+        variant: "default"
       });
+
+      // Only reset states after successful completion
+      setIsGeneratingReport(false);
+      setStartTime(null);
 
     } catch (error) {
       console.error('Error generating report:', error);
+      setGenerationStep(0);
+      setIsGeneratingReport(false);
       toast({
         title: "Error",
         description: "Failed to generate AI report",
         variant: "destructive",
       });
-    } finally {
-      setIsGeneratingReport(false);
-      setStartTime(null);
+      throw error; // Re-throw to allow test to catch it
     }
   };
 
@@ -169,6 +215,11 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
     return () => {
       if (interval) {
         clearInterval(interval);
+      }
+      // Don't reset state on unmount - only if we're still mounted and generation is complete
+      if (!interval && startTime && isGeneratingReport) {
+        setIsGeneratingReport(false);
+        setStartTime(null);
       }
     };
   }, [startTime, isGeneratingReport]);
