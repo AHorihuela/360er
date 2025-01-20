@@ -21,6 +21,7 @@ import { FeedbackViz } from '@/components/FeedbackViz';
 import { AccountPage } from '@/pages/account/AccountPage';
 import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 import UpdatePasswordPage from '@/pages/auth/UpdatePasswordPage';
+import AnalyticsPage from '@/pages/analytics';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -473,6 +474,16 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <EmployeeReviewDetailsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <AnalyticsPage />
                 </MainLayout>
               </ProtectedRoute>
             }
