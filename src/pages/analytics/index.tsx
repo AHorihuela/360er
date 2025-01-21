@@ -217,14 +217,28 @@ export default function AnalyticsPage() {
       <h1 className="text-3xl font-bold mb-8">Analytics</h1>
       
       <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle>Filters</CardTitle>
+            {selectedRelationships.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setSelectedRelationships([]);
+                  setFilters(current => ({ ...current, relationships: [] }));
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
+          <div className="flex flex-wrap gap-6">
             {/* Review Cycle Filter */}
-            <div className="space-y-1.5">
-              <label htmlFor="cycle-select" className="text-sm font-medium">
+            <div className="flex-1 min-w-[250px]">
+              <label htmlFor="cycle-select" className="text-sm font-medium block mb-2">
                 Review Cycle
               </label>
               {allReviewCycles.length > 0 ? (
@@ -232,7 +246,7 @@ export default function AnalyticsPage() {
                   value={activeReviewCycle?.id}
                   onValueChange={handleCycleChange}
                 >
-                  <SelectTrigger className="w-[300px]">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a review cycle" />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,46 +263,26 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Relationship Filter */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">
+            <div className="flex-1 min-w-[250px]">
+              <label className="text-sm font-medium block mb-2">
                 Feedback Source
               </label>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
                 {RELATIONSHIP_OPTIONS.map((option) => (
-                  <div 
+                  <Button
                     key={option.value}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-2 rounded"
+                    variant={selectedRelationships.includes(option.value) ? "default" : "outline"}
+                    size="sm"
                     onClick={() => toggleRelationship(option.value)}
+                    className="flex items-center gap-2"
                   >
-                    <div className={cn(
-                      "h-4 w-4 border rounded flex items-center justify-center",
-                      selectedRelationships.includes(option.value) 
-                        ? "bg-primary border-primary" 
-                        : "border-input"
-                    )}>
-                      {selectedRelationships.includes(option.value) && (
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      )}
-                    </div>
-                    <span className="text-sm">{option.label}</span>
-                  </div>
+                    {selectedRelationships.includes(option.value) && (
+                      <Check className="h-4 w-4" />
+                    )}
+                    {option.label}
+                  </Button>
                 ))}
               </div>
-              {selectedRelationships.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedRelationships.map(relationship => (
-                    <Badge
-                      key={relationship}
-                      variant="secondary"
-                      className="cursor-pointer"
-                      onClick={() => toggleRelationship(relationship)}
-                    >
-                      {RELATIONSHIP_OPTIONS.find(opt => opt.value === relationship)?.label}
-                      <span className="ml-1 text-muted-foreground">×</span>
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </CardContent>
