@@ -21,7 +21,9 @@ export function CompetencyCard({ score }: CompetencyCardProps) {
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-medium">{score.name}</h3>
-            <p className="text-sm text-muted-foreground">{score.description}</p>
+            {score.description && (
+              <p className="text-sm text-muted-foreground mt-1">{score.description}</p>
+            )}
           </div>
           <div className="text-right">
             <div className="text-2xl font-semibold">{score.score.toFixed(1)}</div>

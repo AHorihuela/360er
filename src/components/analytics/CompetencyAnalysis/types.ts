@@ -1,18 +1,3 @@
-import { type DashboardFeedbackRequest } from "@/types/feedback/dashboard";
-
-export interface AnalyticsFilters {
-  employeeIds: string[];
-  relationships: ('senior' | 'peer' | 'junior')[];
-  cycleIds: string[];
-}
-
-export interface CompetencyAnalysisProps {
-  feedbackRequests: DashboardFeedbackRequest[];
-  filters?: AnalyticsFilters;
-  showTeamStats?: boolean;
-  showDetailedView?: boolean;
-}
-
 export interface Employee {
   id: string;
   name: string;

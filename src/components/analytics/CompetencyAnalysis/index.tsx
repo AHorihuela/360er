@@ -13,13 +13,7 @@ interface CompetencyAnalysisProps {
 
 export function CompetencyAnalysis({ feedbackRequests, filters }: CompetencyAnalysisProps) {
   const {
-    employeesWithAnalytics,
-    totalEmployees,
-    includedReviewCount,
-    analyzedReviewCount,
-    sortedScores,
-    averageConfidence,
-    evidenceCountByCompetency
+    sortedScores
   } = useCompetencyScores(feedbackRequests, filters);
 
   return (

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { type CompetencyScore } from './useCompetencyScores';
+import { type ScoreWithOutlier } from "@/components/dashboard/types";
 
 /**
  * Metrics used to calculate confidence level
@@ -32,19 +32,19 @@ interface ConfidenceMetrics {
  * - Score consistency: Lower variance in scores increases confidence
  * - Distribution quality: Absence of outliers increases confidence
  * 
- * @param {CompetencyScore[]} scores - Array of scores to analyze
+ * @param {ScoreWithOutlier[]} scores - Array of scores to analyze
  * @returns {ConfidenceMetrics} Calculated confidence metrics
  * 
  * @example
  * ```tsx
- * const scores = [...]; // Array of CompetencyScore
+ * const scores = [...]; // Array of ScoreWithOutlier
  * const confidence = useConfidenceMetrics(scores);
  * 
  * console.log(confidence.level); // 'high', 'medium', or 'low'
  * console.log(confidence.score); // numerical score between 0 and 1
  * ```
  */
-export function useConfidenceMetrics(scores: CompetencyScore[]): ConfidenceMetrics {
+export function useConfidenceMetrics(scores: ScoreWithOutlier[]): ConfidenceMetrics {
   return useMemo(() => {
     // Calculate evidence quantity factor (0-1)
     const totalEvidence = scores.reduce((sum, s) => sum + s.evidenceCount, 0);

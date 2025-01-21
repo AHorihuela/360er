@@ -42,7 +42,7 @@ export function CompetencyAnalysis({
 
     // First, filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
-      ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
+      ? feedbackRequests.filter(request => filters?.employeeIds?.includes(request.employee_id) ?? false)
       : feedbackRequests;
 
     employeeFilteredRequests.forEach(request => {
@@ -127,7 +127,7 @@ export function CompetencyAnalysis({
   } = useMemo(() => {
     // First, filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
-      ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
+      ? feedbackRequests.filter(request => filters?.employeeIds?.includes(request.employee_id) ?? false)
       : feedbackRequests;
 
     // Calculate total reviews for filtered employees

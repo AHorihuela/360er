@@ -263,10 +263,11 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
           <TeamSummaryStats
             employeesWithAnalytics={employeesWithAnalytics}
             totalEmployees={totalEmployees}
-            includedReviewCount={analyzedReviewCount}
-            totalReviewCount={includedReviewCount}
+            includedReviewCount={includedReviewCount}
+            totalReviewCount={analyzedReviewCount}
             averageEvidenceCount={sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length}
             averageConfidence={averageConfidence}
+            evidenceCountByCompetency={{}}
           />
 
           {/* Detailed Scores */}

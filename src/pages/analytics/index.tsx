@@ -45,8 +45,7 @@ export default function AnalyticsPage() {
   });
   const [filters, setFilters] = useState<CompetencyFilters>({
     employeeIds: [],
-    relationships: [],
-    cycleIds: [],
+    relationships: []
   });
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
@@ -200,6 +199,13 @@ export default function AnalyticsPage() {
     });
   };
 
+  const resetFilters = () => {
+    setFilters({
+      employeeIds: [],
+      relationships: []
+    });
+  };
+
   if (authState !== "Authenticated") {
     return null;
   }
@@ -237,15 +243,7 @@ export default function AnalyticsPage() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => {
-                  setSelectedRelationships([]);
-                  setSelectedEmployeeIds([]);
-                  setFilters({
-                    relationships: [],
-                    employeeIds: [],
-                    cycleIds: [],
-                  });
-                }}
+                onClick={resetFilters}
               >
                 Clear filters
               </Button>
