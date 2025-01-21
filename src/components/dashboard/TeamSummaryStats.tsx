@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react';
+import { Info, Star } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +16,7 @@ export interface TeamSummaryStatsProps {
   averageEvidenceCount: number;
   evidenceCountByCompetency: Record<string, number>;
   averageConfidence: number;
+  sortedScores: Array<{ name: string; score: number; confidence: 'low' | 'medium' | 'high' }>;
 }
 
 export function TeamSummaryStats({
@@ -25,14 +26,27 @@ export function TeamSummaryStats({
   totalReviewCount,
   averageEvidenceCount,
   evidenceCountByCompetency,
-  averageConfidence
+  averageConfidence,
+  sortedScores
 }: TeamSummaryStatsProps) {
   const coveragePercentage = (employeesWithAnalytics / totalEmployees) * 100;
   const reviewPercentage = (includedReviewCount / totalReviewCount) * 100;
   const confidencePercentage = averageConfidence * 100;
 
+  // Calculate weighted average score based on confidence
+  const weightedAverageScore = sortedScores.reduce((acc, score) => {
+    const weight = score.confidence === 'high' ? 1 : score.confidence === 'medium' ? 0.7 : 0.4;
+    return acc + (score.score * weight);
+  }, 0) / sortedScores.reduce((acc, score) => {
+    const weight = score.confidence === 'high' ? 1 : score.confidence === 'medium' ? 0.7 : 0.4;
+    return acc + weight;
+  }, 0);
+
+  // Calculate progress value (1-5 scale to 0-100)
+  const scoreProgressValue = ((weightedAverageScore - 1) / 4) * 100;
+
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <div className="p-4 border rounded-lg bg-slate-50">
         <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
           Team Coverage
@@ -60,12 +74,56 @@ export function TeamSummaryStats({
         <div className="text-sm text-muted-foreground">employees analyzed</div>
         <Progress value={coveragePercentage} className="h-1 mt-2" />
       </div>
+
       <div className="p-4 border rounded-lg bg-slate-50">
         <div className="text-sm font-medium text-muted-foreground mb-1">Review Coverage</div>
         <div className="text-2xl font-semibold">{includedReviewCount}/{totalReviewCount}</div>
         <div className="text-sm text-muted-foreground">reviews analyzed</div>
         <Progress value={reviewPercentage} className="h-1 mt-2" />
       </div>
+
+      <div className="p-4 border rounded-lg bg-slate-50">
+        <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
+          Team Score
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[300px] p-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Average Competency Score</div>
+                  <div className="text-sm text-muted-foreground">
+                    Weighted average of all competency scores, with weights based on confidence level:
+                    <ul className="space-y-1 mt-1">
+                      <li>• High confidence: 100% weight</li>
+                      <li>• Medium confidence: 70% weight</li>
+                      <li>• Low confidence: 40% weight</li>
+                    </ul>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div className="text-2xl font-semibold flex items-center gap-2">
+          {weightedAverageScore.toFixed(1)}
+          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+        </div>
+        <div className="text-sm text-muted-foreground">average score</div>
+        <Progress 
+          value={scoreProgressValue} 
+          className={cn(
+            "h-1 mt-2",
+            scoreProgressValue >= 80 ? "bg-emerald-100 [&>div]:bg-emerald-500" :
+            scoreProgressValue >= 70 ? "bg-blue-100 [&>div]:bg-blue-500" :
+            scoreProgressValue >= 60 ? "bg-yellow-100 [&>div]:bg-yellow-500" :
+            scoreProgressValue >= 50 ? "bg-orange-100 [&>div]:bg-orange-500" :
+            "bg-red-100 [&>div]:bg-red-500"
+          )}
+        />
+      </div>
+
       <div className="p-4 border rounded-lg bg-slate-50">
         <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
           Evidence Density
@@ -109,6 +167,7 @@ export function TeamSummaryStats({
         <div className="text-2xl font-semibold">{averageEvidenceCount.toFixed(1)}</div>
         <div className="text-sm text-muted-foreground">examples per competency</div>
       </div>
+
       <div className="p-4 border rounded-lg bg-slate-50">
         <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
           Analysis Confidence

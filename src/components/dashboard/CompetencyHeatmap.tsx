@@ -268,6 +268,7 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
             averageEvidenceCount={sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length}
             averageConfidence={averageConfidence}
             evidenceCountByCompetency={{}}
+            sortedScores={sortedScores}
           />
 
           {/* Detailed Scores */}

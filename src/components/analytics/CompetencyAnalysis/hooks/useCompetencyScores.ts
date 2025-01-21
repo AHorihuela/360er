@@ -187,12 +187,15 @@ export function useCompetencyScores(
         ? allCompScores
         : filteredCompScores;
 
-      if (scoresToUse.length === 0) {
+      // Filter out scores with no evidence before aggregation
+      const validScores = scoresToUse.filter(s => s.evidenceCount > 0);
+
+      if (validScores.length === 0) {
         return null;
       }
 
       // Detect and adjust outliers using appropriate scores
-      const adjustedScores = detectOutliers(scoresToUse);
+      const adjustedScores = detectOutliers(validScores);
       const hasOutliers = adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]);
       const adjustmentDetails = adjustedScores
         .filter(s => s.adjustmentDetails)

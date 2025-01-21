@@ -412,6 +412,7 @@ export function CompetencyAnalysis({
               averageEvidenceCount={sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length}
               evidenceCountByCompetency={evidenceCountByCompetency}
               averageConfidence={averageConfidence}
+              sortedScores={sortedScores}
             />
           )}
 
