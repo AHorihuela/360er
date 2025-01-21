@@ -17,19 +17,22 @@ import { TeamSummaryStats } from '@/components/dashboard/TeamSummaryStats';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { cn } from "@/lib/utils";
 import { type ScoreWithOutlier } from '@/components/dashboard/types';
+import { type CompetencyFilters } from '@/components/analytics/CompetencyAnalysis/types';
 
 interface CompetencyAnalysisProps {
   feedbackRequests: DashboardFeedbackRequest[];
   title?: string;
   subtitle?: string;
   showTeamStats?: boolean;
+  filters?: CompetencyFilters;
 }
 
 export function CompetencyAnalysis({ 
   feedbackRequests,
   title = "Team Competency Analysis",
   subtitle,
-  showTeamStats = true
+  showTeamStats = true,
+  filters
 }: CompetencyAnalysisProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
 
@@ -41,6 +44,7 @@ export function CompetencyAnalysis({
       if (!request.analytics?.insights) return;
 
       request.analytics.insights.forEach(insight => {
+        // Store all scores first, before filtering
         insight.competencies.forEach(comp => {
           if (!scores.has(comp.name)) {
             scores.set(comp.name, []);
@@ -64,8 +68,29 @@ export function CompetencyAnalysis({
       });
     });
 
-    return scores;
-  }, [feedbackRequests]);
+    // Now apply filters and calculate scores
+    const filteredScores = new Map<string, ScoreWithOutlier[]>();
+    scores.forEach((compScores, compName) => {
+      const filtered = compScores.filter(score => {
+        if (filters?.relationships && filters.relationships.length > 0) {
+          const relationshipType = score.relationship.replace('_colleague', '') as 'senior' | 'peer' | 'junior';
+          if (!filters.relationships.includes(relationshipType)) {
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      if (filtered.length > 0) {
+        filteredScores.set(compName, filtered);
+      }
+    });
+
+    return {
+      allScores: scores,
+      filteredScores
+    };
+  }, [feedbackRequests, filters?.relationships]);
 
   // Memoize the processed data
   const {
@@ -84,54 +109,61 @@ export function CompetencyAnalysis({
 
     // Calculate aggregate scores with outlier detection
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
-      const scores = competencyScores.get(competencyName) || [];
-      if (scores.length === 0) return null;
+      const allCompScores = competencyScores.allScores.get(competencyName) || [];
+      const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
+      
+      if (filteredCompScores.length === 0) return null;
 
-      // Detect and adjust outliers - only calculate once per competency
-      const adjustedScores = detectOutliers(scores);
+      // Detect and adjust outliers using filtered scores
+      const adjustedScores = detectOutliers(filteredCompScores);
       const hasOutliers = adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]);
       const adjustmentDetails = adjustedScores
         .filter(s => s.adjustmentDetails)
         .flatMap(s => s.adjustmentDetails || []);
       
-      // Calculate weighted average score
+      // Calculate weighted average score using filtered scores
       const totalWeight = adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]), 0);
       
       const weightedScore = Number((adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight).toFixed(3));
 
-      // Calculate confidence based on evidence and consistency - only once per competency
-      const confidenceResult = calculateConfidence(scores);
+      // Calculate confidence based on filtered or all scores depending on filter state
+      const confidenceResult = calculateConfidence(
+        // If no filters or all relationship types are selected, use all scores
+        (!filters?.relationships || filters.relationships.length === 3) 
+          ? allCompScores 
+          : filteredCompScores
+      );
 
-      // Calculate relationship breakdown
+      // Calculate relationship breakdown using filtered scores
       const relationshipBreakdown = {
-        senior: scores.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
-        peer: scores.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
-        junior: scores.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
+        senior: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
+        peer: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
+        junior: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
       };
 
-      // Calculate score distribution
-      const scoreDistribution = scores.reduce((dist, s) => {
+      // Calculate score distribution using filtered scores
+      const scoreDistribution = filteredCompScores.reduce((dist, s) => {
         const roundedScore = Math.round(s.score);
         dist[roundedScore] = (dist[roundedScore] || 0) + 1;
         return dist;
       }, {} as Record<number, number>);
 
-      // Calculate average score and standard deviation
-      const allScores = scores.map(s => s.score);
+      // Calculate average score and standard deviation using filtered scores
+      const allScores = filteredCompScores.map(s => s.score);
       const averageScore = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
       const variance = allScores.reduce((sum, score) => sum + Math.pow(score - averageScore, 2), 0) / allScores.length;
       const standardDeviation = Math.sqrt(variance);
 
-      // Combine evidence quotes from all scores
-      const evidenceQuotes = Array.from(new Set(scores.flatMap(s => s.evidenceQuotes ?? [])));
+      // Combine evidence quotes from filtered scores
+      const evidenceQuotes = Array.from(new Set(filteredCompScores.flatMap(s => s.evidenceQuotes ?? [])));
 
       return {
         name: competencyName,
         score: weightedScore,
         confidence: confidenceResult.level,
-        evidenceCount: scores.reduce((sum, s) => sum + s.evidenceCount, 0),
+        evidenceCount: filteredCompScores.reduce((sum, s) => sum + s.evidenceCount, 0),
         effectiveEvidenceCount: confidenceResult.metrics.factors.evidenceCount,
         relationship: 'aggregate',
         hasOutliers,
@@ -146,7 +178,7 @@ export function CompetencyAnalysis({
       } as ScoreWithOutlier;
     }).filter((score): score is ScoreWithOutlier => score !== null);
 
-    // Calculate confidence metrics
+    // Calculate confidence metrics using all scores
     const averageConfidence = sortedScores.reduce((sum, s) => {
       const weight = CONFIDENCE_WEIGHTS[s.confidence];
       return sum + weight;

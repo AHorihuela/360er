@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type CompetencyFilters } from "@/components/analytics/CompetencyAnalysis/types";
+import { type CompetencyFilters, type RelationshipType as AnalyticsRelationshipType } from "@/components/analytics/CompetencyAnalysis/types";
 import { CompetencyAnalysis } from "@/components/competency/CompetencyAnalysis";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { type ReviewCycle } from "@/types/review";
 import { type DashboardFeedbackRequest } from "@/types/feedback/dashboard";
+import { type RelationshipType as BaseRelationshipType } from "@/types/feedback/base";
 import {
   Select,
   SelectContent,
@@ -15,6 +16,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+// Map between base relationship types and analytics relationship types
+const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
+  'senior_colleague': 'senior',
+  'equal_colleague': 'peer',
+  'junior_colleague': 'junior'
+};
+
+const RELATIONSHIP_OPTIONS = [
+  { value: "senior_colleague" as BaseRelationshipType, label: "Senior Colleagues", analyticsValue: "senior" as AnalyticsRelationshipType },
+  { value: "equal_colleague" as BaseRelationshipType, label: "Peer Colleagues", analyticsValue: "peer" as AnalyticsRelationshipType },
+  { value: "junior_colleague" as BaseRelationshipType, label: "Junior Colleagues", analyticsValue: "junior" as AnalyticsRelationshipType },
+] as const;
 
 export default function AnalyticsPage() {
   const { authState, user } = useAuth();
@@ -32,6 +55,8 @@ export default function AnalyticsPage() {
     relationships: [],
     cycleIds: [],
   });
+  const [open, setOpen] = useState(false);
+  const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
 
   useEffect(() => {
     if (authState !== "Authenticated") {
@@ -149,6 +174,22 @@ export default function AnalyticsPage() {
     setSelectedCycleId(cycleId);
   };
 
+  const toggleRelationship = (relationship: BaseRelationshipType) => {
+    setSelectedRelationships(current => {
+      const newRelationships = current.includes(relationship)
+        ? current.filter(r => r !== relationship)
+        : [...current, relationship];
+      
+      // Update the filters state with mapped relationship types
+      setFilters(current => ({
+        ...current,
+        relationships: newRelationships.map(r => RELATIONSHIP_MAPPING[r])
+      }));
+
+      return newRelationships;
+    });
+  };
+
   if (authState !== "Authenticated") {
     return null;
   }
@@ -180,8 +221,9 @@ export default function AnalyticsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col space-y-1.5">
+          <div className="space-y-6">
+            {/* Review Cycle Filter */}
+            <div className="space-y-1.5">
               <label htmlFor="cycle-select" className="text-sm font-medium">
                 Review Cycle
               </label>
@@ -205,7 +247,49 @@ export default function AnalyticsPage() {
                 <p className="text-sm text-muted-foreground">No review cycles available</p>
               )}
             </div>
-            {/* Additional filters will go here */}
+
+            {/* Relationship Filter */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Feedback Source
+              </label>
+              <div className="flex flex-col gap-2">
+                {RELATIONSHIP_OPTIONS.map((option) => (
+                  <div 
+                    key={option.value}
+                    className="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-2 rounded"
+                    onClick={() => toggleRelationship(option.value)}
+                  >
+                    <div className={cn(
+                      "h-4 w-4 border rounded flex items-center justify-center",
+                      selectedRelationships.includes(option.value) 
+                        ? "bg-primary border-primary" 
+                        : "border-input"
+                    )}>
+                      {selectedRelationships.includes(option.value) && (
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      )}
+                    </div>
+                    <span className="text-sm">{option.label}</span>
+                  </div>
+                ))}
+              </div>
+              {selectedRelationships.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedRelationships.map(relationship => (
+                    <Badge
+                      key={relationship}
+                      variant="secondary"
+                      className="cursor-pointer"
+                      onClick={() => toggleRelationship(relationship)}
+                    >
+                      {RELATIONSHIP_OPTIONS.find(opt => opt.value === relationship)?.label}
+                      <span className="ml-1 text-muted-foreground">×</span>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -216,6 +300,7 @@ export default function AnalyticsPage() {
           showTeamStats={true}
           title="Team Competency Analysis"
           subtitle="Comprehensive view of your team's competency levels based on feedback data"
+          filters={filters}
         />
       ) : (
         <Card>
