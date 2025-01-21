@@ -16,15 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 // Map between base relationship types and analytics relationship types
 const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
@@ -55,7 +48,6 @@ export default function AnalyticsPage() {
     relationships: [],
     cycleIds: [],
   });
-  const [open, setOpen] = useState(false);
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
 
   useEffect(() => {
