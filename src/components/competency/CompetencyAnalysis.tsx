@@ -122,7 +122,8 @@ export function CompetencyAnalysis({
     includedReviewCount,
     analyzedReviewCount,
     sortedScores,
-    averageConfidence
+    averageConfidence,
+    evidenceCountByCompetency
   } = useMemo(() => {
     // First, filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
@@ -279,13 +280,20 @@ export function CompetencyAnalysis({
       return sum + weight;
     }, 0) / sortedScores.length;
 
+    // Calculate evidence counts per competency
+    const evidenceCountByCompetency = sortedScores.reduce((acc, score) => {
+      acc[score.name] = score.evidenceCount;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
       employeesWithAnalytics: employeesWithAnalytics.size,
       totalEmployees,
       includedReviewCount,
       analyzedReviewCount,
       sortedScores,
-      averageConfidence
+      averageConfidence,
+      evidenceCountByCompetency
     };
   }, [competencyScores]);
 
@@ -402,6 +410,7 @@ export function CompetencyAnalysis({
               includedReviewCount={analyzedReviewCount}
               totalReviewCount={includedReviewCount}
               averageEvidenceCount={sortedScores.reduce((sum, s) => sum + s.evidenceCount, 0) / sortedScores.length}
+              evidenceCountByCompetency={evidenceCountByCompetency}
               averageConfidence={averageConfidence}
             />
           )}

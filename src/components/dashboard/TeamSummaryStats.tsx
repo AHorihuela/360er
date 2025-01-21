@@ -14,6 +14,7 @@ export interface TeamSummaryStatsProps {
   includedReviewCount: number;
   totalReviewCount: number;
   averageEvidenceCount: number;
+  evidenceCountByCompetency: Record<string, number>;
   averageConfidence: number;
 }
 
@@ -23,6 +24,7 @@ export function TeamSummaryStats({
   includedReviewCount,
   totalReviewCount,
   averageEvidenceCount,
+  evidenceCountByCompetency,
   averageConfidence
 }: TeamSummaryStatsProps) {
   const coveragePercentage = (employeesWithAnalytics / totalEmployees) * 100;
@@ -65,7 +67,45 @@ export function TeamSummaryStats({
         <Progress value={reviewPercentage} className="h-1 mt-2" />
       </div>
       <div className="p-4 border rounded-lg bg-slate-50">
-        <div className="text-sm font-medium text-muted-foreground mb-1">Evidence Density</div>
+        <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1">
+          Evidence Density
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[350px] p-3">
+                <div className="space-y-2">
+                  <div className="font-medium">Evidence Density</div>
+                  <div className="text-sm text-muted-foreground">
+                    The number of specific feedback examples our AI has identified and analyzed for each competency.
+                    <div className="mt-3">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th className="text-left font-medium pb-2">Competency</th>
+                            <th className="text-right font-medium pb-2">Examples</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {Object.entries(evidenceCountByCompetency).map(([competency, count]) => (
+                            <tr key={competency}>
+                              <td className="py-1.5">{competency}</td>
+                              <td className="text-right py-1.5">{count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-3 pt-2 border-t text-xs">
+                      Higher density indicates more detailed feedback and more comprehensive analysis.
+                    </div>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <div className="text-2xl font-semibold">{averageEvidenceCount.toFixed(1)}</div>
         <div className="text-sm text-muted-foreground">examples per competency</div>
       </div>
