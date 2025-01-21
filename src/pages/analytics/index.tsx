@@ -170,45 +170,31 @@ export default function AnalyticsPage() {
   };
 
   const toggleEmployee = (employeeId: string) => {
-    console.log('Toggling employee:', employeeId);
     setSelectedEmployeeIds(current => {
       const newEmployees = current.includes(employeeId)
         ? current.filter(id => id !== employeeId)
         : [...current, employeeId];
       
-      console.log('New selected employees:', newEmployees);
-      
-      setFilters(current => {
-        const newFilters = {
-          ...current,
-          employeeIds: newEmployees
-        };
-        console.log('Updated filters:', newFilters);
-        return newFilters;
-      });
+      setFilters(current => ({
+        ...current,
+        employeeIds: newEmployees
+      }));
 
       return newEmployees;
     });
   };
 
   const toggleRelationship = (relationship: BaseRelationshipType) => {
-    console.log('Toggling relationship:', relationship);
     setSelectedRelationships(current => {
       const newRelationships = current.includes(relationship)
         ? current.filter(r => r !== relationship)
         : [...current, relationship];
       
-      console.log('New selected relationships:', newRelationships);
-      
       // Update the filters state with mapped relationship types
-      setFilters(current => {
-        const newFilters = {
-          ...current,
-          relationships: newRelationships.map(r => RELATIONSHIP_MAPPING[r])
-        };
-        console.log('Updated filters:', newFilters);
-        return newFilters;
-      });
+      setFilters(current => ({
+        ...current,
+        relationships: newRelationships.map(r => RELATIONSHIP_MAPPING[r])
+      }));
 
       return newRelationships;
     });

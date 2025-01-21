@@ -34,22 +34,16 @@ export function CompetencyAnalysis({
   showTeamStats = true,
   filters
 }: CompetencyAnalysisProps) {
-  console.log('CompetencyAnalysis received filters:', filters);
-  console.log('Initial feedbackRequests:', feedbackRequests);
-
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
 
   // Memoize the competency score calculations
   const competencyScores = useMemo(() => {
-    console.log('Recalculating competencyScores with filters:', filters);
     const scores = new Map<string, ScoreWithOutlier[]>();
 
     // First, filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
       ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
       : feedbackRequests;
-
-    console.log('After employee filtering:', employeeFilteredRequests);
 
     employeeFilteredRequests.forEach(request => {
       if (!request.analytics?.insights) return;
@@ -78,8 +72,6 @@ export function CompetencyAnalysis({
         });
       });
     });
-
-    console.log('Initial scores map:', scores);
 
     // Now apply filters and calculate scores
     const filteredScores = new Map<string, ScoreWithOutlier[]>();
@@ -117,8 +109,6 @@ export function CompetencyAnalysis({
       }
     });
 
-    console.log('After all filtering:', filteredScores);
-
     return {
       allScores: scores,
       filteredScores
@@ -134,20 +124,14 @@ export function CompetencyAnalysis({
     sortedScores,
     averageConfidence
   } = useMemo(() => {
-    console.log('Recalculating metrics with competencyScores:', competencyScores);
-
     // First, filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
       ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
       : feedbackRequests;
 
-    console.log('Employee filtered requests:', employeeFilteredRequests);
-
     // Calculate total reviews for filtered employees
     const totalReviews = employeeFilteredRequests.reduce((sum, request) => 
       sum + (request.feedback_responses?.length || 0), 0);
-
-    console.log('Total reviews:', totalReviews);
 
     // Process feedback data with relationship filters
     const requestsToUse = employeeFilteredRequests
@@ -184,16 +168,12 @@ export function CompetencyAnalysis({
         };
       });
 
-    console.log('Requests after relationship filtering:', requestsToUse);
-
     // Calculate coverage metrics using filtered data
     const employeesWithAnalytics = new Set(
       requestsToUse
         .filter(r => r.analytics?.insights && r.analytics.insights.length > 0 && r.feedback_responses && r.feedback_responses.length > 0)
         .map(r => r.employee_id)
     );
-
-    console.log('Employees with analytics:', employeesWithAnalytics);
 
     // Calculate total employees who have any feedback of the selected types
     const employeesWithSelectedFeedback = new Set(
@@ -202,16 +182,12 @@ export function CompetencyAnalysis({
         .map(r => r.employee_id)
     );
 
-    console.log('Employees with selected feedback:', employeesWithSelectedFeedback);
-
     // For team coverage:
     // - Numerator: number of employees with analyzed feedback of selected types
     // - Denominator: number of selected employees (if any), otherwise all employees with feedback
     const totalEmployees = filters?.employeeIds && filters.employeeIds.length > 0
       ? filters.employeeIds.length
       : employeesWithSelectedFeedback.size;
-
-    console.log('Total employees:', totalEmployees);
 
     // For review coverage:
     // - When no relationship filters or all selected: use total reviews from filtered employees
@@ -221,8 +197,6 @@ export function CompetencyAnalysis({
       ? totalReviews 
       : requestsToUse.reduce((sum, r) => sum + (r.feedback_responses?.length || 0), 0);
 
-    console.log('Review count:', reviewCount);
-
     const includedReviewCount = reviewCount;
     const analyzedReviewCount = reviewCount;
 
@@ -231,19 +205,12 @@ export function CompetencyAnalysis({
       const allCompScores = competencyScores.allScores.get(competencyName) || [];
       const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
       
-      console.log(`Processing competency ${competencyName}:`);
-      console.log('- All scores:', allCompScores);
-      console.log('- Filtered scores:', filteredCompScores);
-      
       // Use all scores when no filters or all filters are selected
       const scoresToUse = (!filters?.relationships || filters.relationships.length === 3)
         ? allCompScores
         : filteredCompScores;
 
-      console.log('- Scores to use:', scoresToUse);
-
       if (scoresToUse.length === 0) {
-        console.log(`- No scores available for ${competencyName} after filtering`);
         return null;
       }
 
@@ -446,6 +413,14 @@ export function CompetencyAnalysis({
               <p className="text-sm text-muted-foreground mt-1">
                 Click on any competency to see detailed analysis
               </p>
+              {COMPETENCY_ORDER.length > sortedScores.length && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                  <p className="flex items-center gap-2">
+                    <InfoIcon className="h-4 w-4" />
+                    Some competencies are not shown due to insufficient feedback data for the selected filters
+                  </p>
+                </div>
+              )}
             </div>
             <div className="divide-y">
               {COMPETENCY_ORDER.map((name) => {
