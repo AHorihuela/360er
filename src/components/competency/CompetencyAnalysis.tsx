@@ -409,18 +409,34 @@ export function CompetencyAnalysis({
           {/* Detailed Scores */}
           <div className="border rounded-lg">
             <div className="p-3 border-b bg-slate-50">
-              <h3 className="text-sm font-medium">Competency Analysis</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Click on any competency to see detailed analysis
-              </p>
-              {COMPETENCY_ORDER.length > sortedScores.length && (
-                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                  <p className="flex items-center gap-2">
-                    <InfoIcon className="h-4 w-4" />
-                    Some competencies are not shown due to insufficient feedback data for the selected filters
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Competency Analysis</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Click on any competency to see detailed analysis
                   </p>
                 </div>
-              )}
+                {COMPETENCY_ORDER.length > sortedScores.length && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                          <InfoIcon className="h-4 w-4 shrink-0" />
+                          <span className="whitespace-nowrap">Filtered view active</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[200px]">
+                        <div className="flex items-start gap-2 p-1">
+                          <InfoIcon className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                          <p className="text-sm leading-snug">
+                            Some competencies are hidden due to insufficient feedback data for the current filters
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </div>
             <div className="divide-y">
               {COMPETENCY_ORDER.map((name) => {
