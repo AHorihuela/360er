@@ -34,13 +34,24 @@ export function CompetencyAnalysis({
   showTeamStats = true,
   filters
 }: CompetencyAnalysisProps) {
+  console.log('CompetencyAnalysis received filters:', filters);
+  console.log('Initial feedbackRequests:', feedbackRequests);
+
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
 
   // Memoize the competency score calculations
   const competencyScores = useMemo(() => {
+    console.log('Recalculating competencyScores with filters:', filters);
     const scores = new Map<string, ScoreWithOutlier[]>();
 
-    feedbackRequests.forEach(request => {
+    // First, filter requests by employee if needed
+    const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
+      ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
+      : feedbackRequests;
+
+    console.log('After employee filtering:', employeeFilteredRequests);
+
+    employeeFilteredRequests.forEach(request => {
       if (!request.analytics?.insights) return;
 
       request.analytics.insights.forEach(insight => {
@@ -68,10 +79,30 @@ export function CompetencyAnalysis({
       });
     });
 
+    console.log('Initial scores map:', scores);
+
     // Now apply filters and calculate scores
     const filteredScores = new Map<string, ScoreWithOutlier[]>();
     scores.forEach((compScores, compName) => {
       const filtered = compScores.filter(score => {
+        // First filter by employee if needed
+        if (filters?.employeeIds && filters.employeeIds.length > 0) {
+          const employeeId = feedbackRequests.find(r => 
+            r.analytics?.insights?.some(insight => 
+              insight.competencies.some(comp => 
+                comp.name === score.name && 
+                comp.score === score.score && 
+                insight.relationship === score.relationship
+              )
+            )
+          )?.employee_id;
+          
+          if (!employeeId || !filters.employeeIds.includes(employeeId)) {
+            return false;
+          }
+        }
+
+        // Then filter by relationship if needed
         if (filters?.relationships && filters.relationships.length > 0) {
           // Normalize relationship type by removing _colleague and handling equal/peer
           const relationshipType = score.relationship.replace('_colleague', '');
@@ -86,11 +117,13 @@ export function CompetencyAnalysis({
       }
     });
 
+    console.log('After all filtering:', filteredScores);
+
     return {
       allScores: scores,
       filteredScores
     };
-  }, [feedbackRequests, filters?.relationships]);
+  }, [feedbackRequests, filters?.employeeIds, filters?.relationships]);
 
   // Memoize the processed data
   const {
@@ -101,43 +134,57 @@ export function CompetencyAnalysis({
     sortedScores,
     averageConfidence
   } = useMemo(() => {
-    // First, calculate total reviews regardless of filters
-    const totalReviews = feedbackRequests.reduce((sum, request) => 
+    console.log('Recalculating metrics with competencyScores:', competencyScores);
+
+    // First, filter requests by employee if needed
+    const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
+      ? feedbackRequests.filter(request => filters.employeeIds.includes(request.employee_id))
+      : feedbackRequests;
+
+    console.log('Employee filtered requests:', employeeFilteredRequests);
+
+    // Calculate total reviews for filtered employees
+    const totalReviews = employeeFilteredRequests.reduce((sum, request) => 
       sum + (request.feedback_responses?.length || 0), 0);
 
-    // Process feedback data with filters
-    const requestsToUse = feedbackRequests.map(request => {
-      // Filter responses based on relationship filter
-      const filteredResponses = request.feedback_responses?.filter(response => {
-        if (filters?.relationships && filters.relationships.length > 0) {
-          // Normalize relationship type by removing _colleague and handling equal/peer
-          const relationshipType = response.relationship.replace('_colleague', '');
-          const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
-          return filters.relationships.includes(normalizedType as 'senior' | 'peer' | 'junior');
-        }
-        return true;
-      }) || [];
+    console.log('Total reviews:', totalReviews);
 
-      // Filter insights based on relationship filter
-      const filteredInsights = request.analytics?.insights?.filter(insight => {
-        if (filters?.relationships && filters.relationships.length > 0) {
-          // Normalize relationship type by removing _colleague and handling equal/peer
-          const relationshipType = insight.relationship.replace('_colleague', '');
-          const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
-          return filters.relationships.includes(normalizedType as 'senior' | 'peer' | 'junior');
-        }
-        return true;
-      }) || [];
+    // Process feedback data with relationship filters
+    const requestsToUse = employeeFilteredRequests
+      .map(request => {
+        // Filter responses based on relationship filter
+        const filteredResponses = request.feedback_responses?.filter(response => {
+          if (filters?.relationships && filters.relationships.length > 0) {
+            // Normalize relationship type by removing _colleague and handling equal/peer
+            const relationshipType = response.relationship.replace('_colleague', '');
+            const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
+            return filters.relationships.includes(normalizedType as 'senior' | 'peer' | 'junior');
+          }
+          return true;
+        }) || [];
 
-      return {
-        ...request,
-        analytics: request.analytics ? {
-          ...request.analytics,
-          insights: filteredInsights
-        } : undefined,
-        feedback_responses: filteredResponses
-      };
-    });
+        // Filter insights based on relationship filter
+        const filteredInsights = request.analytics?.insights?.filter(insight => {
+          if (filters?.relationships && filters.relationships.length > 0) {
+            // Normalize relationship type by removing _colleague and handling equal/peer
+            const relationshipType = insight.relationship.replace('_colleague', '');
+            const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
+            return filters.relationships.includes(normalizedType as 'senior' | 'peer' | 'junior');
+          }
+          return true;
+        }) || [];
+
+        return {
+          ...request,
+          analytics: request.analytics ? {
+            ...request.analytics,
+            insights: filteredInsights
+          } : undefined,
+          feedback_responses: filteredResponses
+        };
+      });
+
+    console.log('Requests after relationship filtering:', requestsToUse);
 
     // Calculate coverage metrics using filtered data
     const employeesWithAnalytics = new Set(
@@ -146,6 +193,8 @@ export function CompetencyAnalysis({
         .map(r => r.employee_id)
     );
 
+    console.log('Employees with analytics:', employeesWithAnalytics);
+
     // Calculate total employees who have any feedback of the selected types
     const employeesWithSelectedFeedback = new Set(
       requestsToUse
@@ -153,18 +202,26 @@ export function CompetencyAnalysis({
         .map(r => r.employee_id)
     );
 
+    console.log('Employees with selected feedback:', employeesWithSelectedFeedback);
+
     // For team coverage:
-    // - Numerator: number of employees with analyzed feedback of selected types (must be subset of denominator)
-    // - Denominator: number of employees with any feedback of selected types
-    const totalEmployees = employeesWithSelectedFeedback.size;
+    // - Numerator: number of employees with analyzed feedback of selected types
+    // - Denominator: number of selected employees (if any), otherwise all employees with feedback
+    const totalEmployees = filters?.employeeIds && filters.employeeIds.length > 0
+      ? filters.employeeIds.length
+      : employeesWithSelectedFeedback.size;
+
+    console.log('Total employees:', totalEmployees);
 
     // For review coverage:
-    // - When no filters or all filters selected: use total reviews
-    // - When specific filters selected: use filtered reviews
+    // - When no relationship filters or all selected: use total reviews from filtered employees
+    // - When specific relationship filters: use filtered reviews
     const shouldUseTotal = !filters?.relationships || filters.relationships.length === 3;
     const reviewCount = shouldUseTotal 
       ? totalReviews 
       : requestsToUse.reduce((sum, r) => sum + (r.feedback_responses?.length || 0), 0);
+
+    console.log('Review count:', reviewCount);
 
     const includedReviewCount = reviewCount;
     const analyzedReviewCount = reviewCount;

@@ -49,6 +49,7 @@ export default function AnalyticsPage() {
     cycleIds: [],
   });
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (authState !== "Authenticated") {
@@ -161,22 +162,53 @@ export default function AnalyticsPage() {
   }, [authState, user?.id, selectedCycleId, toast]);
 
   const handleCycleChange = (cycleId: string) => {
-    // Save to localStorage when cycle changes (syncs with dashboard)
     localStorage.setItem('selectedCycleId', cycleId);
     setSelectedCycleId(cycleId);
+    // Reset employee selection when cycle changes
+    setSelectedEmployeeIds([]);
+    setFilters(current => ({ ...current, employeeIds: [] }));
+  };
+
+  const toggleEmployee = (employeeId: string) => {
+    console.log('Toggling employee:', employeeId);
+    setSelectedEmployeeIds(current => {
+      const newEmployees = current.includes(employeeId)
+        ? current.filter(id => id !== employeeId)
+        : [...current, employeeId];
+      
+      console.log('New selected employees:', newEmployees);
+      
+      setFilters(current => {
+        const newFilters = {
+          ...current,
+          employeeIds: newEmployees
+        };
+        console.log('Updated filters:', newFilters);
+        return newFilters;
+      });
+
+      return newEmployees;
+    });
   };
 
   const toggleRelationship = (relationship: BaseRelationshipType) => {
+    console.log('Toggling relationship:', relationship);
     setSelectedRelationships(current => {
       const newRelationships = current.includes(relationship)
         ? current.filter(r => r !== relationship)
         : [...current, relationship];
       
+      console.log('New selected relationships:', newRelationships);
+      
       // Update the filters state with mapped relationship types
-      setFilters(current => ({
-        ...current,
-        relationships: newRelationships.map(r => RELATIONSHIP_MAPPING[r])
-      }));
+      setFilters(current => {
+        const newFilters = {
+          ...current,
+          relationships: newRelationships.map(r => RELATIONSHIP_MAPPING[r])
+        };
+        console.log('Updated filters:', newFilters);
+        return newFilters;
+      });
 
       return newRelationships;
     });
@@ -203,6 +235,9 @@ export default function AnalyticsPage() {
 
   console.log("Has analytics:", hasAnalytics);
   console.log("Active review cycle:", activeReviewCycle);
+  console.log("Current filters:", filters);
+  console.log("Selected employees:", selectedEmployeeIds);
+  console.log("Selected relationships:", selectedRelationships);
 
   return (
     <div className="container mx-auto py-8">
@@ -212,13 +247,18 @@ export default function AnalyticsPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle>Filters</CardTitle>
-            {selectedRelationships.length > 0 && (
+            {(selectedRelationships.length > 0 || selectedEmployeeIds.length > 0) && (
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => {
                   setSelectedRelationships([]);
-                  setFilters(current => ({ ...current, relationships: [] }));
+                  setSelectedEmployeeIds([]);
+                  setFilters({
+                    relationships: [],
+                    employeeIds: [],
+                    cycleIds: [],
+                  });
                 }}
               >
                 Clear filters
@@ -254,7 +294,34 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* Relationship Filter */}
+            {/* Employee Filter */}
+            {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
+              <div className="flex-1 min-w-[250px]">
+                <label className="text-sm font-medium block mb-2">
+                  Employees
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {activeReviewCycle.feedback_requests
+                    .filter(request => request.employee)
+                    .map(request => (
+                      <Button
+                        key={request.employee_id}
+                        variant={selectedEmployeeIds.includes(request.employee_id) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleEmployee(request.employee_id)}
+                        className="flex items-center gap-2"
+                      >
+                        {selectedEmployeeIds.includes(request.employee_id) && (
+                          <Check className="h-4 w-4" />
+                        )}
+                        {request.employee?.name}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Feedback Source Filter */}
             <div className="flex-1 min-w-[250px]">
               <label className="text-sm font-medium block mb-2">
                 Feedback Source
