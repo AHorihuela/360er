@@ -22,7 +22,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { generateShortId } from '../utils/uniqueId';
 import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
-import { CompetencyAnalysis } from '@/components/competency/CompetencyAnalysis';
 import { type DashboardCompetency } from '@/types/feedback/dashboard';
 
 export function DashboardPage(): JSX.Element {
@@ -425,13 +424,21 @@ export function DashboardPage(): JSX.Element {
                 pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
               />
 
-              {/* Team Competency Heatmap */}
-              {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
-                <CompetencyAnalysis 
-                  feedbackRequests={activeReviewCycle.feedback_requests as DashboardFeedbackRequest[]}
-                  showTeamStats={true}
-                />
-              )}
+              {/* Link to Analytics */}
+              <Card 
+                onClick={() => navigate('/analytics')}
+                className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Team Competency Analysis</span>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    View detailed competency analysis and insights for your team
+                  </p>
+                </CardHeader>
+              </Card>
             </div>
           )}
         </>
