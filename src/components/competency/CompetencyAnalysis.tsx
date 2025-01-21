@@ -101,69 +101,107 @@ export function CompetencyAnalysis({
     sortedScores,
     averageConfidence
   } = useMemo(() => {
-    // Process feedback data
-    const employeesWithAnalytics = new Set(feedbackRequests.filter(r => r.analytics).map(r => r.employee_id));
-    const totalEmployees = new Set(feedbackRequests.map(r => r.employee_id)).size;
-    const includedReviewCount = feedbackRequests.reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
-    const analyzedReviewCount = feedbackRequests.filter(r => r.analytics).reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
+    // Process feedback data with filters
+    const filteredRequests = feedbackRequests.map(request => {
+      if (!request.analytics?.insights) return request;
+
+      // Filter insights based on relationship filter
+      const filteredInsights = request.analytics.insights.filter(insight => {
+        if (filters?.relationships && filters.relationships.length > 0) {
+          const relationshipType = insight.relationship.replace('_colleague', '') as 'senior' | 'peer' | 'junior';
+          return filters.relationships.includes(relationshipType);
+        }
+        return true;
+      });
+
+      // Only count responses that match our relationship filter
+      const filteredResponses = request.feedback_responses?.filter(response => {
+        if (filters?.relationships && filters.relationships.length > 0) {
+          const relationshipType = response.relationship.replace('_colleague', '') as 'senior' | 'peer' | 'junior';
+          return filters.relationships.includes(relationshipType);
+        }
+        return true;
+      });
+
+      return {
+        ...request,
+        analytics: filteredInsights.length > 0 ? {
+          ...request.analytics,
+          insights: filteredInsights
+        } : undefined,
+        feedback_responses: filteredResponses
+      };
+    });
+
+    // Calculate coverage metrics using filtered data
+    const employeesWithAnalytics = new Set(
+      filteredRequests
+        .filter(r => r.analytics?.insights && r.analytics.insights.length > 0)
+        .map(r => r.employee_id)
+    );
+    const totalEmployees = new Set(filteredRequests.map(r => r.employee_id)).size;
+    const includedReviewCount = filteredRequests.reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
+    const analyzedReviewCount = filteredRequests
+      .filter(r => r.analytics?.insights && r.analytics.insights.length > 0)
+      .reduce((sum, r) => sum + (r.feedback_responses?.length ?? 0), 0);
 
     // Calculate aggregate scores with outlier detection
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
       const allCompScores = competencyScores.allScores.get(competencyName) || [];
       const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
       
-      if (filteredCompScores.length === 0) return null;
+      // Use all scores when no filters or all filters are selected
+      const scoresToUse = (!filters?.relationships || filters.relationships.length === 3)
+        ? allCompScores
+        : filteredCompScores;
 
-      // Detect and adjust outliers using filtered scores
-      const adjustedScores = detectOutliers(filteredCompScores);
+      if (scoresToUse.length === 0) return null;
+
+      // Detect and adjust outliers using appropriate scores
+      const adjustedScores = detectOutliers(scoresToUse);
       const hasOutliers = adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]);
       const adjustmentDetails = adjustedScores
         .filter(s => s.adjustmentDetails)
         .flatMap(s => s.adjustmentDetails || []);
       
-      // Calculate weighted average score using filtered scores
+      // Calculate weighted average score using appropriate scores
       const totalWeight = adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]), 0);
       
       const weightedScore = Number((adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
         sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight).toFixed(3));
 
-      // Calculate confidence based on filtered or all scores depending on filter state
-      const confidenceResult = calculateConfidence(
-        // If no filters or all relationship types are selected, use all scores
-        (!filters?.relationships || filters.relationships.length === 3) 
-          ? allCompScores 
-          : filteredCompScores
-      );
+      // Calculate confidence using the same scores as the weighted average
+      const confidenceResult = calculateConfidence(scoresToUse);
 
-      // Calculate relationship breakdown using filtered scores
+      // Calculate relationship breakdown using appropriate scores
       const relationshipBreakdown = {
-        senior: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
-        peer: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
-        junior: filteredCompScores.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
+        senior: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
+        peer: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
+        junior: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
       };
 
-      // Calculate score distribution using filtered scores
-      const scoreDistribution = filteredCompScores.reduce((dist, s) => {
+      // Calculate score distribution using appropriate scores
+      const scoreDistribution = scoresToUse.reduce((dist, s) => {
         const roundedScore = Math.round(s.score);
         dist[roundedScore] = (dist[roundedScore] || 0) + 1;
         return dist;
       }, {} as Record<number, number>);
 
-      // Calculate average score and standard deviation using filtered scores
-      const allScores = filteredCompScores.map(s => s.score);
+      // Calculate average score and standard deviation using appropriate scores
+      const allScores = scoresToUse.map(s => s.score);
       const averageScore = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
       const variance = allScores.reduce((sum, score) => sum + Math.pow(score - averageScore, 2), 0) / allScores.length;
       const standardDeviation = Math.sqrt(variance);
 
-      // Combine evidence quotes from filtered scores
-      const evidenceQuotes = Array.from(new Set(filteredCompScores.flatMap(s => s.evidenceQuotes ?? [])));
+      // Combine evidence quotes from appropriate scores
+      const evidenceQuotes = Array.from(new Set(scoresToUse.flatMap(s => s.evidenceQuotes ?? [])));
 
       return {
         name: competencyName,
         score: weightedScore,
         confidence: confidenceResult.level,
-        evidenceCount: filteredCompScores.reduce((sum, s) => sum + s.evidenceCount, 0),
+        evidenceCount: scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0),
         effectiveEvidenceCount: confidenceResult.metrics.factors.evidenceCount,
         relationship: 'aggregate',
         hasOutliers,
