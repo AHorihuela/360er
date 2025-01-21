@@ -1,6 +1,6 @@
 import React from 'react';
 import { vi } from 'vitest';
-import { mockReviewCycle, mockHandleGenerateReport, mockDelete, mockEq, mockSelect, mockSingle, mockFrom, mockUseAIReportManagement } from './mocks';
+import { mockFrom, mockUseAIReportManagement } from './mocks';
 
 export function setupMocks() {
   // Mock react-router-dom

@@ -52,11 +52,9 @@ vi.mock('@/components/ui/alert-dialog', () => ({
 }));
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, variant, size, className, 'aria-label': ariaLabel }: { 
+  Button: ({ children, onClick, className, 'aria-label': ariaLabel }: { 
     children: React.ReactNode; 
     onClick?: () => void;
-    variant?: string;
-    size?: string;
     className?: string;
     'aria-label'?: string;
   }) => 
@@ -164,7 +162,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { EmployeeReviewDetailsPage } from '@/pages/reviews/EmployeeReviewDetailsPage';
-import { mockReviewCycle, mockHandleGenerateReport, mockDelete, mockEq, mockSelect, mockSingle, mockFrom, mockUseAIReportManagement } from './mocks';
+import { mockReviewCycle, mockHandleGenerateReport, mockDelete, mockUseAIReportManagement } from './mocks';
 import { setupMocks } from './mockSetup';
 
 // Set up mocks
