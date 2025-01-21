@@ -6,9 +6,9 @@ import { generateAIReport } from '@/lib/openai';
 import { useToast } from '@/components/ui/use-toast';
 import { FeedbackRequest } from '@/types/reviews/employee-review';
 import { PostgrestQueryBuilder } from '@supabase/postgrest-js';
-import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/toaster';
+import * as React from 'react';
 
 // Mock dependencies
 vi.mock('@/lib/supabase', () => ({
@@ -50,9 +50,12 @@ vi.mock('@/components/ui/use-toast', () => ({
 }));
 
 // Create a wrapper component with the Toaster provider
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <Toaster>{children}</Toaster>
-);
+const Wrapper = ({ children }: { children: ReactNode }) => {
+  return React.createElement(React.Fragment, null, [
+    children,
+    React.createElement(Toaster, null)
+  ]);
+};
 
 describe('useAIReportManagement', () => {
   const mockFeedbackRequest: FeedbackRequest = {
@@ -84,7 +87,7 @@ describe('useAIReportManagement', () => {
   });
 
   it('initializes with default values', () => {
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     expect(result.current.isGeneratingReport).toBe(false);
     expect(result.current.aiReport).toBeNull();
@@ -104,7 +107,7 @@ describe('useAIReportManagement', () => {
       upsert: vi.fn().mockResolvedValue({ error: null })
     } as unknown as PostgrestQueryBuilder<any, any, any>));
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -126,7 +129,7 @@ describe('useAIReportManagement', () => {
       upsert: vi.fn().mockRejectedValue(new Error('Database error'))
     } as unknown as PostgrestQueryBuilder<any, any, any>));
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -145,7 +148,7 @@ describe('useAIReportManagement', () => {
       return 'Generated Report Content';
     });
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     const generatePromise = act(async () => {
       result.current.handleGenerateReport();
@@ -175,7 +178,7 @@ describe('useAIReportManagement', () => {
       feedback: []
     };
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: invalidFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: invalidFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -187,7 +190,7 @@ describe('useAIReportManagement', () => {
 
   it('debounces multiple report changes', async () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       result.current.handleReportChange('Content 1');
@@ -223,7 +226,7 @@ describe('useAIReportManagement', () => {
       upsert: vi.fn().mockResolvedValue({ error: null })
     } as unknown as PostgrestQueryBuilder<any, any, any>));
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -234,7 +237,7 @@ describe('useAIReportManagement', () => {
   });
 
   it('handles null feedback request', () => {
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: null }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: null }), { wrapper: Wrapper });
 
     expect(result.current.aiReport).toBeNull();
     expect(result.current.error).toBeNull();
@@ -249,7 +252,7 @@ describe('useAIReportManagement', () => {
     }));
     vi.mocked(useToast).mockReturnValue({ toast: mockToast, dismiss: vi.fn(), toasts: [] });
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -272,7 +275,7 @@ describe('useAIReportManagement', () => {
       return 'Generated Report Content';
     });
 
-    const { result, unmount } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result, unmount } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     const generatePromise = act(async () => {
       result.current.handleGenerateReport();
@@ -300,7 +303,7 @@ describe('useAIReportManagement', () => {
       return 'Generated Report Content';
     });
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     const generatePromise = act(async () => {
       result.current.handleGenerateReport();
@@ -343,7 +346,7 @@ describe('useAIReportManagement', () => {
 
     vi.mocked(generateAIReport).mockResolvedValueOnce('New Report Content');
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -362,7 +365,7 @@ describe('useAIReportManagement', () => {
     }));
     vi.mocked(useToast).mockReturnValue({ toast: mockToast, dismiss: vi.fn(), toasts: [] });
 
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.handleGenerateReport();
@@ -376,7 +379,7 @@ describe('useAIReportManagement', () => {
 
   it('cleans markdown content on report change', async () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper });
+    const { result } = renderHook(() => useAIReportManagement({ feedbackRequest: mockFeedbackRequest }), { wrapper: Wrapper });
 
     await act(async () => {
       result.current.handleReportChange('### Heading\n\n#### Subheading\n\nContent');
