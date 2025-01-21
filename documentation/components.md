@@ -36,34 +36,6 @@ interface CompetencyCardProps {
 **Location**: `src/components/analytics/CompetencyAnalysis/components/ScoreDistribution.tsx`
 **Purpose**: Visualizes the distribution of scores for a competency.
 
-### EmployeeFilter
-**Location**: `src/components/analytics/EmployeeFilter.tsx`
-**Purpose**: Provides a searchable multi-select dropdown for filtering employees.
-**Features**:
-- Searchable employee list
-- Multi-select functionality
-- Shows selected employees as badges
-- Allows quick deselection
-- Scrollable list for many employees
-
-**Props**:
-```typescript
-interface EmployeeFilterProps {
-  employees: Employee[];
-  selectedEmployees: string[];
-  onToggleEmployee: (employeeId: string) => void;
-}
-```
-
-**Usage Example**:
-```tsx
-<EmployeeFilter
-  employees={employees}
-  selectedEmployees={selectedEmployeeIds}
-  onToggleEmployee={handleEmployeeToggle}
-/>
-```
-
 ## Analytics Components
 
 ### CompetencyAnalysis
@@ -154,7 +126,6 @@ This section tracks recently added components that should be considered for reus
 1. CompetencyCard (Added: Jan 21, 2024)
 2. ScoreDistribution (Added: Jan 21, 2024)
 3. AnalyticsSummary (Added: Jan 21, 2024)
-4. EmployeeFilter (Added: Jan 21, 2024)
 
 ## Component Roadmap
 
