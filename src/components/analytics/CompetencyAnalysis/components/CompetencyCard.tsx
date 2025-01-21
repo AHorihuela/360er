@@ -3,7 +3,6 @@ import { useConfidenceMetrics } from '../hooks/useConfidenceMetrics';
 import { ScoreDistribution } from './ScoreDistribution';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { HelpCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,

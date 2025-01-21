@@ -157,9 +157,6 @@ export function CompetencyAnalysis({
     // - Numerator: number of employees with analyzed feedback of selected types (must be subset of denominator)
     // - Denominator: number of employees with any feedback of selected types
     const totalEmployees = employeesWithSelectedFeedback.size;
-    const analyzedEmployees = new Set(
-      Array.from(employeesWithAnalytics).filter(id => employeesWithSelectedFeedback.has(id))
-    ).size;
 
     // For review coverage:
     // - When no filters or all filters selected: use total reviews

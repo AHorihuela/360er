@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AnalysisSection } from '../../AnalysisSection';
-import { InsightContent } from '../../InsightContent';
 import { RelationshipInsight, CompetencyScore } from '@/types/feedback/analysis';
 import userEvent from '@testing-library/user-event';
 

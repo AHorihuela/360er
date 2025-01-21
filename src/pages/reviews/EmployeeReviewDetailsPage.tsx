@@ -45,7 +45,7 @@ export function EmployeeReviewDetailsPage() {
   const {
     deletingFeedbackId,
     isDeleteDialogOpen,
-    feedbackToDelete,
+    feedbackToDelete: _feedbackToDelete,
     handleDeleteClick,
     handleDeleteConfirm,
     handleDeleteCancel,

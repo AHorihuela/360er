@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { type CompetencyScore } from './useCompetencyScores';
-import { CONFIDENCE_WEIGHTS } from '@/components/dashboard/constants';
 
 /**
  * Metrics used to calculate confidence level
