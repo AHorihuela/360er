@@ -2,6 +2,17 @@ import { useMemo } from 'react';
 import { type CompetencyScore } from './useCompetencyScores';
 import { CONFIDENCE_WEIGHTS } from '@/components/dashboard/constants';
 
+/**
+ * Metrics used to calculate confidence level
+ * @interface ConfidenceMetrics
+ * @property {('low' | 'medium' | 'high')} level - Overall confidence level
+ * @property {number} score - Numerical confidence score (0-1)
+ * @property {Object} factors - Individual factors contributing to confidence
+ * @property {number} factors.evidenceCount - Score based on amount of evidence (0-1)
+ * @property {number} factors.relationshipCoverage - Score based on feedback source diversity (0-1)
+ * @property {number} factors.scoreConsistency - Score based on variance in ratings (0-1)
+ * @property {number} factors.distributionQuality - Score based on outlier presence (0-1)
+ */
 interface ConfidenceMetrics {
   level: 'low' | 'medium' | 'high';
   score: number;
@@ -13,6 +24,27 @@ interface ConfidenceMetrics {
   };
 }
 
+/**
+ * Hook to calculate confidence metrics for a set of competency scores.
+ * 
+ * The confidence calculation considers multiple factors:
+ * - Evidence quantity: More evidence increases confidence
+ * - Relationship coverage: Feedback from diverse sources increases confidence
+ * - Score consistency: Lower variance in scores increases confidence
+ * - Distribution quality: Absence of outliers increases confidence
+ * 
+ * @param {CompetencyScore[]} scores - Array of scores to analyze
+ * @returns {ConfidenceMetrics} Calculated confidence metrics
+ * 
+ * @example
+ * ```tsx
+ * const scores = [...]; // Array of CompetencyScore
+ * const confidence = useConfidenceMetrics(scores);
+ * 
+ * console.log(confidence.level); // 'high', 'medium', or 'low'
+ * console.log(confidence.score); // numerical score between 0 and 1
+ * ```
+ */
 export function useConfidenceMetrics(scores: CompetencyScore[]): ConfidenceMetrics {
   return useMemo(() => {
     // Calculate evidence quantity factor (0-1)
@@ -35,13 +67,13 @@ export function useConfidenceMetrics(scores: CompetencyScore[]): ConfidenceMetri
 
     // Calculate overall confidence score (0-1)
     const weightedScore = (
-      evidenceCount * 0.3 +
-      relationshipCoverage * 0.3 +
-      scoreConsistency * 0.2 +
-      distributionQuality * 0.2
+      evidenceCount * 0.3 +        // 30% weight for evidence quantity
+      relationshipCoverage * 0.3 + // 30% weight for relationship coverage
+      scoreConsistency * 0.2 +     // 20% weight for score consistency
+      distributionQuality * 0.2    // 20% weight for distribution quality
     );
 
-    // Determine confidence level
+    // Determine confidence level based on score thresholds
     let level: 'low' | 'medium' | 'high';
     if (weightedScore >= 0.8) level = 'high';
     else if (weightedScore >= 0.6) level = 'medium';
@@ -51,7 +83,7 @@ export function useConfidenceMetrics(scores: CompetencyScore[]): ConfidenceMetri
       level,
       score: weightedScore,
       factors: {
-        evidenceCount: evidenceCount,
+        evidenceCount,
         relationshipCoverage,
         scoreConsistency,
         distributionQuality

@@ -11,12 +11,39 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+/**
+ * Props for the CompetencyCard component
+ * @interface CompetencyCardProps
+ * @property {string} name - The name of the competency
+ * @property {CompetencyScore[]} scores - Array of individual scores for this competency
+ * @property {string} [description] - Optional description of the competency
+ */
 interface CompetencyCardProps {
   name: string;
   scores: CompetencyScore[];
   description?: string;
 }
 
+/**
+ * CompetencyCard displays detailed information about a single competency.
+ * 
+ * Features:
+ * - Displays average score with a progress bar
+ * - Shows confidence level with detailed metrics in a tooltip
+ * - Visualizes score distribution
+ * - Shows breakdown of feedback sources (senior/peer/junior)
+ * - Displays supporting evidence quotes
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <CompetencyCard
+ *   name="Technical Skills"
+ *   scores={competencyScores}
+ *   description="Ability to apply technical knowledge effectively"
+ * />
+ * ```
+ */
 export function CompetencyCard({ name, scores, description }: CompetencyCardProps) {
   const confidence = useConfidenceMetrics(scores);
   const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;

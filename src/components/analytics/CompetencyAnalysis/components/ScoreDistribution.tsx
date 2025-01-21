@@ -1,9 +1,29 @@
 import { type CompetencyScore } from '../hooks/useCompetencyScores';
 
+/**
+ * Props for the ScoreDistribution component
+ * @interface ScoreDistributionProps
+ * @property {CompetencyScore[]} scores - Array of scores to visualize
+ */
 interface ScoreDistributionProps {
   scores: CompetencyScore[];
 }
 
+/**
+ * ScoreDistribution visualizes the distribution of scores on a 1-5 scale.
+ * 
+ * Features:
+ * - Shows bar chart of score frequencies
+ * - Automatically scales based on maximum count
+ * - Displays count for each score level
+ * - Handles empty data gracefully
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * <ScoreDistribution scores={competencyScores} />
+ * ```
+ */
 export function ScoreDistribution({ scores }: ScoreDistributionProps) {
   // Calculate score distribution (1-5 scale)
   const distribution = scores.reduce((acc, score) => {
@@ -12,7 +32,7 @@ export function ScoreDistribution({ scores }: ScoreDistributionProps) {
     return acc;
   }, {} as Record<number, number>);
 
-  // Find the maximum count for scaling
+  // Find the maximum count for scaling the bars
   const maxCount = Math.max(...Object.values(distribution));
 
   return (
