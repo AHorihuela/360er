@@ -1,5 +1,6 @@
 import { type CompetencyScore } from '../hooks/useCompetencyScores';
 import { useConfidenceMetrics } from '../hooks/useConfidenceMetrics';
+import { ScoreDistribution } from './ScoreDistribution';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { HelpCircle } from 'lucide-react';
@@ -78,6 +79,9 @@ export function CompetencyCard({ name, scores, description }: CompetencyCardProp
             Based on {scores.length} reviews
           </div>
         </div>
+
+        {/* Score Distribution */}
+        <ScoreDistribution scores={scores} />
 
         {/* Relationship Breakdown */}
         <div className="space-y-2">
