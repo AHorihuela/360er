@@ -1,6 +1,5 @@
 import { type CompetencyScore } from '../hooks/useCompetencyScores';
-import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { CompetencyCard } from './CompetencyCard';
 
 interface CompetencyScoreCardsProps {
   allScores: Map<string, CompetencyScore[]>;
@@ -15,24 +14,16 @@ export function CompetencyScoreCards({ allScores, filteredScores }: CompetencySc
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {competencyNames.map(name => {
         const scores = filteredScores.get(name) || allScores.get(name) || [];
-        const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
+        // Get description from the first score (they all have the same description)
+        const description = scores[0]?.description;
 
         return (
-          <Card key={name} className="p-6">
-            <h3 className="text-lg font-medium">{name}</h3>
-            <div className="mt-2">
-              <div className="text-3xl font-bold">
-                {avgScore.toFixed(1)}
-              </div>
-              <Progress 
-                value={avgScore * 20} // Convert 0-5 scale to 0-100
-                className="mt-2" 
-              />
-              <div className="text-sm text-muted-foreground mt-1">
-                Based on {scores.length} reviews
-              </div>
-            </div>
-          </Card>
+          <CompetencyCard
+            key={name}
+            name={name}
+            scores={scores}
+            description={description}
+          />
         );
       })}
     </div>
