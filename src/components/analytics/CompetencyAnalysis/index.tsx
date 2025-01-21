@@ -1,41 +1,42 @@
 import { type DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { type CompetencyFilters } from './types';
 import { useCompetencyScores } from './hooks/useCompetencyScores';
-import { useCoverageMetrics } from './hooks/useCoverageMetrics';
-import { CoverageMetrics } from './components/CoverageMetrics';
-import { CompetencyScoreCards } from './components/CompetencyScoreCards';
+import { CompetencyHeader } from './components/CompetencyHeader';
+import { CompetencyCard } from './components/CompetencyCard';
+import { ScoreDistribution } from './components/ScoreDistribution';
+import { COMPETENCY_ORDER } from '@/components/dashboard/constants';
 
 interface CompetencyAnalysisProps {
   feedbackRequests: DashboardFeedbackRequest[];
-  title?: string;
-  subtitle?: string;
-  showTeamStats?: boolean;
   filters?: CompetencyFilters;
 }
 
-export function CompetencyAnalysis({ 
-  feedbackRequests,
-  title = "Team Competency Analysis",
-  subtitle,
-  showTeamStats = true,
-  filters
-}: CompetencyAnalysisProps) {
-  const { allScores, filteredScores } = useCompetencyScores(feedbackRequests, filters);
-  const coverageMetrics = useCoverageMetrics(feedbackRequests, filters);
+export function CompetencyAnalysis({ feedbackRequests, filters }: CompetencyAnalysisProps) {
+  const {
+    employeesWithAnalytics,
+    totalEmployees,
+    includedReviewCount,
+    analyzedReviewCount,
+    sortedScores,
+    averageConfidence,
+    evidenceCountByCompetency
+  } = useCompetencyScores(feedbackRequests, filters);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">{title}</h2>
-        {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
-      </div>
-
-      {showTeamStats && <CoverageMetrics {...coverageMetrics} />}
-
-      <CompetencyScoreCards 
-        allScores={allScores} 
-        filteredScores={filteredScores} 
+      <CompetencyHeader 
+        title="Competency Analysis" 
+        hasInsufficientData={COMPETENCY_ORDER.length > sortedScores.length} 
       />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sortedScores.map(score => (
+          <div key={score.name} className="space-y-4">
+            <CompetencyCard score={score} />
+            <ScoreDistribution score={score} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 } 

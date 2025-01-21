@@ -1,144 +1,48 @@
-import { type CompetencyScore } from '../hooks/useCompetencyScores';
-import { useConfidenceMetrics } from '../hooks/useConfidenceMetrics';
-import { ScoreDistribution } from './ScoreDistribution';
-import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { type ScoreWithOutlier } from "@/components/dashboard/types";
 
-/**
- * Props for the CompetencyCard component
- * @interface CompetencyCardProps
- * @property {string} name - The name of the competency
- * @property {CompetencyScore[]} scores - Array of individual scores for this competency
- * @property {string} [description] - Optional description of the competency
- */
 interface CompetencyCardProps {
-  name: string;
-  scores: CompetencyScore[];
-  description?: string;
+  score: ScoreWithOutlier;
 }
 
-/**
- * CompetencyCard displays detailed information about a single competency.
- * 
- * Features:
- * - Displays average score with a progress bar
- * - Shows confidence level with detailed metrics in a tooltip
- * - Visualizes score distribution
- * - Shows breakdown of feedback sources (senior/peer/junior)
- * - Displays supporting evidence quotes
- * 
- * @component
- * @example
- * ```tsx
- * <CompetencyCard
- *   name="Technical Skills"
- *   scores={competencyScores}
- *   description="Ability to apply technical knowledge effectively"
- * />
- * ```
- */
-export function CompetencyCard({ name, scores, description }: CompetencyCardProps) {
-  const confidence = useConfidenceMetrics(scores);
-  const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
-
-  // Calculate relationship breakdown
-  const relationshipCounts = scores.reduce((acc, score) => {
-    const baseType = score.relationship.replace('_colleague', '');
-    const type = baseType === 'equal' ? 'peer' : baseType;
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Get evidence quotes
-  const evidenceQuotes = Array.from(new Set(scores.flatMap(s => s.evidenceQuotes))).slice(0, 3);
+export function CompetencyCard({ score }: CompetencyCardProps) {
+  // Calculate progress value (1-5 scale to 0-100)
+  const progressValue = ((score.score - 1) / 4) * 100;
+  
+  // Calculate confidence percentage with fallback
+  const confidencePercentage = score.confidenceMetrics?.finalScore 
+    ? (score.confidenceMetrics.finalScore * 100).toFixed(0)
+    : "N/A";
 
   return (
-    <Card className="p-6">
-      <div className="space-y-4">
-        {/* Header */}
-        <div>
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">{name}</h3>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <div className={`px-2 py-1 rounded text-sm ${
-                    confidence.level === 'high' ? 'bg-green-100 text-green-800' :
-                    confidence.level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {confidence.level.charAt(0).toUpperCase() + confidence.level.slice(1)} Confidence
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="space-y-1">
-                    <p>Confidence Score: {(confidence.score * 100).toFixed(0)}%</p>
-                    <p>Evidence: {(confidence.factors.evidenceCount * 100).toFixed(0)}%</p>
-                    <p>Coverage: {(confidence.factors.relationshipCoverage * 100).toFixed(0)}%</p>
-                    <p>Consistency: {(confidence.factors.scoreConsistency * 100).toFixed(0)}%</p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+    <Card className="p-4">
+      <div className="space-y-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-medium">{score.name}</h3>
+            <p className="text-sm text-muted-foreground">{score.description}</p>
           </div>
-          {description && (
-            <p className="text-sm text-muted-foreground mt-1">{description}</p>
-          )}
-        </div>
-
-        {/* Score */}
-        <div>
-          <div className="text-3xl font-bold">
-            {avgScore.toFixed(1)}
-          </div>
-          <Progress 
-            value={avgScore * 20} // Convert 0-5 scale to 0-100
-            className="mt-2" 
-          />
-          <div className="text-sm text-muted-foreground mt-1">
-            Based on {scores.length} reviews
+          <div className="text-right">
+            <div className="text-2xl font-semibold">{score.score.toFixed(1)}</div>
+            <div className="text-sm text-muted-foreground">average score</div>
           </div>
         </div>
-
-        {/* Score Distribution */}
-        <ScoreDistribution scores={scores} />
-
-        {/* Relationship Breakdown */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Feedback Sources</h4>
-          <div className="grid grid-cols-3 gap-2">
-            {['senior', 'peer', 'junior'].map(type => (
-              <div key={type} className="text-center">
-                <div className="text-lg font-semibold">
-                  {relationshipCounts[type] || 0}
-                </div>
-                <div className="text-xs text-muted-foreground capitalize">
-                  {type}
-                </div>
-              </div>
-            ))}
+        <Progress value={progressValue} className="h-2" />
+        <div className="grid grid-cols-3 gap-4 pt-2">
+          <div>
+            <div className="text-sm font-medium">{score.evidenceCount}</div>
+            <div className="text-xs text-muted-foreground">examples found</div>
+          </div>
+          <div>
+            <div className="text-sm font-medium">{(score.scoreSpread || 0).toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">score spread</div>
+          </div>
+          <div>
+            <div className="text-sm font-medium">{confidencePercentage}%</div>
+            <div className="text-xs text-muted-foreground">confidence</div>
           </div>
         </div>
-
-        {/* Evidence Quotes */}
-        {evidenceQuotes.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Supporting Evidence</h4>
-            <div className="space-y-2">
-              {evidenceQuotes.map((quote, i) => (
-                <div key={i} className="text-sm text-muted-foreground">
-                  "{quote}"
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   );

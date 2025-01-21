@@ -25,10 +25,19 @@ export interface ReviewCycle {
 
 export type RelationshipType = "senior" | "peer" | "junior";
 
+/**
+ * Represents the filters that can be applied to competency analysis
+ */
 export interface CompetencyFilters {
-  employeeIds: string[];
-  relationships: RelationshipType[];
-  cycleIds: string[];
+  /**
+   * Array of relationship types to filter by (senior, peer, junior)
+   */
+  relationships?: ('senior' | 'peer' | 'junior')[];
+  
+  /**
+   * Array of employee IDs to filter by
+   */
+  employeeIds?: string[];
 }
 
 export interface CompetencyFiltersProps {
