@@ -231,12 +231,21 @@ export function CompetencyAnalysis({
       const allCompScores = competencyScores.allScores.get(competencyName) || [];
       const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
       
+      console.log(`Processing competency ${competencyName}:`);
+      console.log('- All scores:', allCompScores);
+      console.log('- Filtered scores:', filteredCompScores);
+      
       // Use all scores when no filters or all filters are selected
       const scoresToUse = (!filters?.relationships || filters.relationships.length === 3)
         ? allCompScores
         : filteredCompScores;
 
-      if (scoresToUse.length === 0) return null;
+      console.log('- Scores to use:', scoresToUse);
+
+      if (scoresToUse.length === 0) {
+        console.log(`- No scores available for ${competencyName} after filtering`);
+        return null;
+      }
 
       // Detect and adjust outliers using appropriate scores
       const adjustedScores = detectOutliers(scoresToUse);
