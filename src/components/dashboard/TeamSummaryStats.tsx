@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface TeamSummaryStatsProps {
@@ -109,6 +110,19 @@ export function TeamSummaryStats({
         <div className="text-2xl font-semibold flex items-center gap-2">
           {weightedAverageScore.toFixed(1)}
           <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+          <Badge 
+            variant="secondary" 
+            className={cn(
+              confidencePercentage >= 80 ? "bg-green-100 text-green-700" :
+              confidencePercentage >= 60 ? "bg-yellow-100 text-yellow-700" :
+              "bg-red-100 text-red-700",
+              "ml-2 text-xs"
+            )}
+          >
+            {confidencePercentage >= 80 ? "High" :
+             confidencePercentage >= 60 ? "Medium" :
+             "Low"} Confidence
+          </Badge>
         </div>
         <div className="text-sm text-muted-foreground">average score</div>
         <Progress 
