@@ -11,17 +11,39 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface LevelAndGrowthProps {
   score: ScoreWithOutlier;
   competency: Competency | null;
 }
 
+type RelationshipType = 'senior' | 'peer' | 'junior';
+
+const RELATIONSHIP_LABELS: Record<RelationshipType, { label: string; color: string }> = {
+  senior: { label: 'Senior', color: 'bg-blue-100 text-blue-700' },
+  peer: { label: 'Peer', color: 'bg-violet-100 text-violet-700' },
+  junior: { label: 'Junior', color: 'bg-amber-100 text-amber-700' }
+};
+
 export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
   const currentLevel = Math.floor(score.score);
   const nextLevel = currentLevel < 5 ? currentLevel + 1 : currentLevel;
   const progressToNext = Math.min(((score.score - currentLevel) * 100), 100);
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Helper function to get relationship type from evidence index
+  const getRelationshipForEvidence = (index: number): RelationshipType | null => {
+    if (!score.evidenceQuotes || !score.relationshipBreakdown) return null;
+    
+    let count = 0;
+    for (const type of ['senior', 'peer', 'junior'] as RelationshipType[]) {
+      const typeCount = score.relationshipBreakdown[type] || 0;
+      if (index < count + typeCount) return type;
+      count += typeCount;
+    }
+    return null;
+  };
   
   return (
     <TooltipProvider>
@@ -44,7 +66,7 @@ export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
               </div>
               {currentLevel < 5 && (
                 <div className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                  {progressToNext}% to Level {nextLevel}
+                  {Math.round(progressToNext)}% to Level {nextLevel}
                 </div>
               )}
             </div>
@@ -74,7 +96,7 @@ export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
               {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
                 <div className="space-y-2 pt-2 border-t">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Supporting Evidence</div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Supporting Quotes from Reviews</div>
                     {score.evidenceQuotes.length > 2 && (
                       <Button 
                         variant="ghost" 
@@ -97,12 +119,32 @@ export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
                   <div className="space-y-2">
                     {score.evidenceQuotes
                       .slice(0, isExpanded ? undefined : 2)
-                      .map((quote, i) => (
-                        <div key={i} className="flex gap-2 items-start">
-                          <Check className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                          <div className="text-sm text-muted-foreground">{quote}</div>
-                        </div>
-                    ))}
+                      .map((quote, i) => {
+                        const relationship = getRelationshipForEvidence(i);
+                        const relationshipInfo = relationship ? RELATIONSHIP_LABELS[relationship] : null;
+                        
+                        return (
+                          <div key={i} className="flex gap-2 items-start group">
+                            <Check className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                            <div>
+                              <div className="flex items-start gap-2">
+                                <div className="text-sm text-muted-foreground flex-1">{quote}</div>
+                                {relationshipInfo && (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={cn(
+                                      "text-[10px] px-1.5 py-0.5 font-normal shrink-0 mt-0.5",
+                                      relationshipInfo.color
+                                    )}
+                                  >
+                                    {relationshipInfo.label}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                    })}
                   </div>
                 </div>
               )}
