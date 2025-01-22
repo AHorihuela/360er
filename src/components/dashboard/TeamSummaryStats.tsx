@@ -95,12 +95,26 @@ export function TeamSummaryStats({
                 <div className="space-y-2">
                   <div className="font-medium">Average Competency Score</div>
                   <div className="text-sm text-muted-foreground">
-                    Weighted average of all competency scores, with weights based on confidence level:
-                    <ul className="space-y-1 mt-1">
-                      <li>• High confidence: 100% weight</li>
-                      <li>• Medium confidence: 70% weight</li>
-                      <li>• Low confidence: 40% weight</li>
-                    </ul>
+                    <p className="mb-2">
+                      Weighted average of all competency scores across the team. The weight of each score is adjusted based on its confidence level to ensure more reliable data has greater impact.
+                    </p>
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">Confidence Weights:</p>
+                      <ul className="space-y-1">
+                        <li className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700">High</Badge>
+                          <span>100% weight - Strong evidence & consistent feedback</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-amber-50 text-amber-700">Medium</Badge>
+                          <span>70% weight - Moderate evidence with some variation</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-red-100 text-red-700">Low</Badge>
+                          <span>40% weight - Limited evidence or high variation</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </TooltipContent>
