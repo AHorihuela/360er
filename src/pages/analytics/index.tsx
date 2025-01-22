@@ -18,6 +18,9 @@ import {
 } from "@/components/ui/select";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Map between base relationship types and analytics relationship types
 const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
@@ -200,10 +203,15 @@ export default function AnalyticsPage() {
   };
 
   const resetFilters = () => {
+    // Reset the filters state
     setFilters({
       employeeIds: [],
       relationships: []
     });
+    // Reset selected employees
+    setSelectedEmployeeIds([]);
+    // Reset selected relationships
+    setSelectedRelationships([]);
   };
 
   if (authState !== "Authenticated") {
@@ -244,6 +252,7 @@ export default function AnalyticsPage() {
                 variant="ghost" 
                 size="sm"
                 onClick={resetFilters}
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Clear filters
               </Button>
@@ -251,9 +260,9 @@ export default function AnalyticsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-6">
+          <div className="flex flex-wrap gap-x-8 gap-y-4">
             {/* Review Cycle Filter */}
-            <div className="flex-1 min-w-[250px]">
+            <div className="min-w-[200px]">
               <label htmlFor="cycle-select" className="text-sm font-medium block mb-2">
                 Review Cycle
               </label>
@@ -263,7 +272,10 @@ export default function AnalyticsPage() {
                   onValueChange={handleCycleChange}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a review cycle" />
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Select a review cycle" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     {allReviewCycles.map((cycle) => (
@@ -280,25 +292,34 @@ export default function AnalyticsPage() {
 
             {/* Employee Filter */}
             {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
-              <div className="flex-1 min-w-[250px]">
-                <label className="text-sm font-medium block mb-2">
-                  Employees
-                </label>
+              <div className="flex-1 min-w-[300px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium">
+                    Employees
+                  </label>
+                  {selectedEmployeeIds.length > 0 && (
+                    <span className="text-xs text-orange-500 font-medium">
+                      {selectedEmployeeIds.length} selected
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {activeReviewCycle.feedback_requests
                     .filter(request => request.employee)
                     .map(request => (
                       <Button
                         key={request.employee_id}
-                        variant={selectedEmployeeIds.includes(request.employee_id) ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
                         onClick={() => toggleEmployee(request.employee_id)}
-                        className="flex items-center gap-2"
+                        className="h-8 border-muted hover:bg-transparent"
                       >
-                        {selectedEmployeeIds.includes(request.employee_id) && (
-                          <Check className="h-4 w-4" />
-                        )}
-                        {request.employee?.name}
+                        <div className="flex items-center gap-1.5">
+                          {selectedEmployeeIds.includes(request.employee_id) && (
+                            <Check className="h-3.5 w-3.5 text-orange-500" />
+                          )}
+                          <span>{request.employee?.name}</span>
+                        </div>
                       </Button>
                     ))}
                 </div>
@@ -306,23 +327,32 @@ export default function AnalyticsPage() {
             )}
 
             {/* Feedback Source Filter */}
-            <div className="flex-1 min-w-[250px]">
-              <label className="text-sm font-medium block mb-2">
-                Feedback Source
-              </label>
+            <div className="min-w-[300px]">
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium">
+                  Feedback Source
+                </label>
+                {selectedRelationships.length > 0 && (
+                  <span className="text-xs text-orange-500 font-medium">
+                    {selectedRelationships.length} selected
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {RELATIONSHIP_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
-                    variant={selectedRelationships.includes(option.value) ? "default" : "outline"}
+                    variant="outline"
                     size="sm"
                     onClick={() => toggleRelationship(option.value)}
-                    className="flex items-center gap-2"
+                    className="h-8 border-muted hover:bg-transparent"
                   >
-                    {selectedRelationships.includes(option.value) && (
-                      <Check className="h-4 w-4" />
-                    )}
-                    {option.label}
+                    <div className="flex items-center gap-1.5">
+                      {selectedRelationships.includes(option.value) && (
+                        <Check className="h-3.5 w-3.5 text-orange-500" />
+                      )}
+                      <span>{option.label}</span>
+                    </div>
                   </Button>
                 ))}
               </div>
