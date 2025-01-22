@@ -45,28 +45,6 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
         <RelationshipCoverageCard score={score} />
       </div>
 
-      {/* Supporting Evidence */}
-      {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium mb-3">Supporting Evidence</h3>
-          <div className="p-4 bg-background rounded-lg border space-y-3">
-            {score.evidenceQuotes.slice(0, 3).map((quote, i) => (
-              <div 
-                key={i} 
-                className="text-sm text-muted-foreground pl-3 border-l-2 border-muted"
-              >
-                "{quote}"
-              </div>
-            ))}
-            {score.evidenceQuotes.length > 3 && (
-              <div className="text-sm text-muted-foreground">
-                +{score.evidenceQuotes.length - 3} more examples
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Performance Overview */}
       <PerformanceOverview score={score} />
 
