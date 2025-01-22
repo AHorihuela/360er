@@ -428,3 +428,30 @@ Feedback from different relationship types is weighted according to their relati
    - Senior score: 4.0 (normalized to ~53.3%)
    - Peer score: 3.5 (normalized to ~46.7%)
    - Final score: (4.0 * 0.533) + (3.5 * 0.467) = 3.767 
+
+### 5. Aggregate Confidence Calculation
+The aggregate (team-wide) confidence level is calculated independently from individual competency confidence levels, considering:
+
+1. **Review Coverage (40% weight)**
+   - Ratio of completed reviews to total expected reviews
+   - High confidence requires near-complete coverage (>90%)
+   - Medium confidence requires substantial coverage (>70%)
+   - Below 70% results in low confidence
+
+2. **Score Consistency (30% weight)**
+   - Measures variance across all competency scores
+   - Lower variance (scores within ±0.5) contributes to higher confidence
+   - High consistency can elevate aggregate confidence even when individual competencies show medium confidence
+
+3. **Evidence Density (30% weight)**
+   - Average number of evidence examples per competency
+   - High: >10 examples per competency
+   - Medium: 5-10 examples per competency
+   - Low: <5 examples per competency
+
+This explains why aggregate confidence can be "High" even when individual competencies show "Medium" confidence - the holistic view considers team-wide patterns that may indicate higher reliability than individual measurements.
+
+#### Confidence Level Thresholds
+- High Confidence: Weighted score ≥ 0.85
+- Medium Confidence: Weighted score ≥ 0.70
+- Low Confidence: Weighted score < 0.70 
