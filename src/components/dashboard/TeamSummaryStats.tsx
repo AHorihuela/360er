@@ -113,10 +113,10 @@ export function TeamSummaryStats({
           <Badge 
             variant="secondary" 
             className={cn(
-              confidencePercentage >= 80 ? "bg-green-100 text-green-700" :
-              confidencePercentage >= 60 ? "bg-yellow-100 text-yellow-700" :
-              "bg-red-100 text-red-700",
-              "ml-2 text-xs"
+              confidencePercentage >= 80 ? "bg-green-100 text-green-700 hover:bg-green-200" :
+              confidencePercentage >= 60 ? "bg-amber-50 text-amber-700 hover:bg-amber-100" :
+              "bg-red-100 text-red-700 hover:bg-red-200",
+              "ml-2 text-xs transition-colors"
             )}
           >
             {confidencePercentage >= 80 ? "High" :
