@@ -6,6 +6,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Competency } from '@/lib/competencies';
 import { ScoreWithOutlier } from '../types';
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface LevelAndGrowthProps {
   score: ScoreWithOutlier;
@@ -13,105 +18,101 @@ interface LevelAndGrowthProps {
 }
 
 export function LevelAndGrowth({ score, competency }: LevelAndGrowthProps) {
-  console.log('LevelAndGrowth - score:', score);
-  console.log('LevelAndGrowth - evidenceQuotes:', score.evidenceQuotes);
-  console.log('LevelAndGrowth - competency:', competency);
+  const currentLevel = Math.floor(score.score);
+  const nextLevel = currentLevel < 5 ? currentLevel + 1 : currentLevel;
+  const progressToNext = Math.min(((score.score - currentLevel) * 100), 100);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="p-6 bg-background rounded-lg border relative overflow-hidden cursor-help">
-              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
-              <div className="mb-4">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Current Level</div>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-2xl font-semibold text-blue-500">Level {Math.floor(score.score)}</h3>
-                  <div className="text-sm text-muted-foreground">of 5</div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="p-6 bg-background rounded-lg border relative">
+            {/* Level Progress Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
+                    <span className="text-blue-500 font-semibold">{currentLevel}</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <span className="text-emerald-500 font-semibold">{nextLevel}</span>
+                  </div>
                 </div>
+                <div className="text-sm text-muted-foreground">of 5</div>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {competency?.rubric[Math.floor(score.score)] || "Score description not available"}
-              </p>
+              {currentLevel < 5 && (
+                <div className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                  {progressToNext}% to Level {nextLevel}
+                </div>
+              )}
+            </div>
 
-              {/* Evidence Quotes */}
+            {/* Current Level Description */}
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium mb-1.5">Current Level {currentLevel}</div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {competency?.rubric[currentLevel] || "Score description not available"}
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              {currentLevel < 5 && (
+                <div className="space-y-1.5">
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 transition-all duration-500"
+                      style={{ width: `${progressToNext}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Supporting Evidence */}
               {score.evidenceQuotes && score.evidenceQuotes.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Supporting Evidence</div>
-                  <div className="space-y-2">
-                    {score.evidenceQuotes.slice(0, 2).map((quote, i) => (
-                      <div key={i} className="text-sm text-muted-foreground pl-3 border-l-2 border-muted">
-                        "{quote}"
-                      </div>
-                    ))}
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Supporting Evidence</div>
                     {score.evidenceQuotes.length > 2 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{score.evidenceQuotes.length - 2} more examples
-                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsExpanded(!isExpanded);
+                        }}
+                      >
+                        <span className="mr-1">{isExpanded ? 'Show Less' : 'Show All'}</span>
+                        <ChevronDown className={cn(
+                          "h-3.5 w-3.5 transition-transform duration-200",
+                          isExpanded && "transform rotate-180"
+                        )} />
+                      </Button>
                     )}
+                  </div>
+                  <div className="space-y-2">
+                    {score.evidenceQuotes
+                      .slice(0, isExpanded ? undefined : 2)
+                      .map((quote, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <Check className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                          <div className="text-sm text-muted-foreground">{quote}</div>
+                        </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p>Your current performance level based on aggregated feedback. Each level represents a distinct stage of competency development, from basic proficiency (Level 1) to exceptional mastery (Level 5).</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {score.score < 5.0 && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="p-6 bg-background rounded-lg border relative overflow-hidden cursor-help">
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
-                <div className="mb-4">
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Next Level Target</div>
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-semibold text-emerald-500">Level {Math.floor(score.score) + 1}</h3>
-                    <div className="text-sm text-muted-foreground">of 5</div>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {competency?.rubric[Math.floor(score.score) + 1] || "Score description not available"}
-                </p>
-                <div className="mt-4">
-                  <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium text-blue-500">Current</span>
-                      <span>Level {Math.floor(score.score)}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="font-medium text-emerald-500">Target</span>
-                      <span>Level {Math.floor(score.score) + 1}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-emerald-500 transition-all duration-500"
-                        style={{ 
-                          width: `${Math.min(((score.score - Math.floor(score.score)) * 100), 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                        {Math.round((score.score - Math.floor(score.score)) * 100)}% progress to Level {Math.floor(score.score) + 1}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>Your next development target with a progress indicator showing how close you are to reaching the next level. The progress bar shows your advancement within your current level.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
-    </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p>Your current performance level and progress toward the next level, based on aggregated feedback.</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 } 
