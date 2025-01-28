@@ -4,6 +4,12 @@ import { ScoreWithOutlier } from '@/components/dashboard/types';
 import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { calculateWeightedAverageScore } from '../utils/statCalculations';
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TeamComparisonCardProps {
   score: ScoreWithOutlier;
@@ -54,9 +60,9 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
             });
 
             employeeScores.set(employee.id, currentEmployeeData);
-    }
-  });
-  });
+          }
+        });
+      });
     }
   });
 
@@ -113,7 +119,27 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
   return (
     <Card className="relative">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Team Comparison</CardTitle>
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          Team Comparison
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="outline" className="text-[10px] h-4 bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700">
+                  alpha
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[300px]">
+                <p className="font-normal text-sm">This feature is being optimized for:</p>
+                <ul className="list-disc pl-4 mt-1 text-xs space-y-1">
+                  <li>Score aggregation across multiple reviews</li>
+                  <li>Confidence-based weighting (High: 100%, Medium: 80%, Low: 50%)</li>
+                  <li>Relationship-based weighting (Senior: 40%, Peer: 35%, Junior: 25%)</li>
+                  <li>Outlier detection and adjustment</li>
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         <div className="h-[160px]">
