@@ -300,7 +300,10 @@ export function CompetencyHeatmap({ feedbackRequests }: CompetencyHeatmapProps) 
                     />
                     
                     {isExpanded && (
-                      <CompetencyDetails score={score} />
+                      <CompetencyDetails 
+                        score={score}
+                        feedbackRequests={feedbackRequests}
+                      />
                     )}
                   </div>
                 );

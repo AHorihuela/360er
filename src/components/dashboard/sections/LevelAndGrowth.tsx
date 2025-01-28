@@ -6,7 +6,6 @@ import {
 } from "@/components/ui/tooltip";
 import { Competency } from '@/lib/competencies';
 import { ScoreWithOutlier } from '../types';
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";

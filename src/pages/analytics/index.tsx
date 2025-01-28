@@ -19,8 +19,6 @@ import {
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 // Map between base relationship types and analytics relationship types
 const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
