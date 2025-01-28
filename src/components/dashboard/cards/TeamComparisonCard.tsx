@@ -84,7 +84,7 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
         overallConfidence = 'low';
       } else {
         overallConfidence = 'medium';
-      }
+        }
       
       console.log(`Weighted average for ${name}:`, weightedAvg, 'confidence:', overallConfidence);
 

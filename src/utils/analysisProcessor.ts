@@ -4,6 +4,8 @@ import { type RelationshipInsight, type OpenAICompetencyScore } from "@/types/fe
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
 import { analyzeRelationshipFeedback } from './feedback';
+import { calculateConfidence as calculateComprehensiveConfidence } from "@/components/dashboard/utils";
+import type { ScoreWithOutlier } from "@/components/dashboard/types";
 
 interface GroupedFeedback {
   [key: string]: CoreFeedbackResponse[];
@@ -248,21 +250,116 @@ function calculateConfidence(
   peerScore?: OpenAICompetencyScore,
   juniorScore?: OpenAICompetencyScore
 ): 'low' | 'medium' | 'high' {
-  const totalEvidence = calculateTotalEvidence(seniorScore, peerScore, juniorScore);
+  // Convert scores to ScoreWithOutlier format for comprehensive confidence calculation
+  const scores: ScoreWithOutlier[] = [];
   
-  const scores = [
-    seniorScore?.score,
-    peerScore?.score,
-    juniorScore?.score
-  ].filter((s): s is number => s !== undefined);
-  
-  const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-  const variance = scores.reduce((sum, s) => sum + Math.pow(s - avgScore, 2), 0) / scores.length;
-  
-  if (totalEvidence >= 10 && variance < 1 && scores.length >= 2) {
-    return 'high';
-  } else if (totalEvidence >= 5 && variance < 2 && scores.length >= 2) {
-    return 'medium';
+  if (seniorScore) {
+    scores.push({
+      name: seniorScore.name,
+      score: seniorScore.score,
+      confidence: seniorScore.confidence,
+      description: seniorScore.description || '',
+      evidenceCount: seniorScore.evidenceCount,
+      effectiveEvidenceCount: seniorScore.evidenceCount,
+      relationship: 'senior',
+      evidenceQuotes: seniorScore.evidenceQuotes,
+      hasOutliers: false,
+      adjustmentDetails: undefined,
+      scoreDistribution: undefined,
+      averageScore: seniorScore.score,
+      scoreSpread: undefined,
+      adjustedWeight: undefined,
+      confidenceMetrics: {
+        evidenceScore: 1,
+        consistencyScore: 1,
+        relationshipScore: 1,
+        finalScore: 1,
+        factors: {
+          evidenceCount: seniorScore.evidenceCount,
+          variance: 0,
+          relationshipCount: 1,
+          distributionQuality: 1
+        }
+      },
+      relationshipBreakdown: {
+        senior: seniorScore.evidenceCount,
+        peer: 0,
+        junior: 0
+      }
+    });
   }
-  return 'low';
+
+  if (peerScore) {
+    scores.push({
+      name: peerScore.name,
+      score: peerScore.score,
+      confidence: peerScore.confidence,
+      description: peerScore.description || '',
+      evidenceCount: peerScore.evidenceCount,
+      effectiveEvidenceCount: peerScore.evidenceCount,
+      relationship: 'peer',
+      evidenceQuotes: peerScore.evidenceQuotes,
+      hasOutliers: false,
+      adjustmentDetails: undefined,
+      scoreDistribution: undefined,
+      averageScore: peerScore.score,
+      scoreSpread: undefined,
+      adjustedWeight: undefined,
+      confidenceMetrics: {
+        evidenceScore: 1,
+        consistencyScore: 1,
+        relationshipScore: 1,
+        finalScore: 1,
+        factors: {
+          evidenceCount: peerScore.evidenceCount,
+          variance: 0,
+          relationshipCount: 1,
+          distributionQuality: 1
+        }
+      },
+      relationshipBreakdown: {
+        senior: 0,
+        peer: peerScore.evidenceCount,
+        junior: 0
+      }
+    });
+  }
+
+  if (juniorScore) {
+    scores.push({
+      name: juniorScore.name,
+      score: juniorScore.score,
+      confidence: juniorScore.confidence,
+      description: juniorScore.description || '',
+      evidenceCount: juniorScore.evidenceCount,
+      effectiveEvidenceCount: juniorScore.evidenceCount,
+      relationship: 'junior',
+      evidenceQuotes: juniorScore.evidenceQuotes,
+      hasOutliers: false,
+      adjustmentDetails: undefined,
+      scoreDistribution: undefined,
+      averageScore: juniorScore.score,
+      scoreSpread: undefined,
+      adjustedWeight: undefined,
+      confidenceMetrics: {
+        evidenceScore: 1,
+        consistencyScore: 1,
+        relationshipScore: 1,
+        finalScore: 1,
+        factors: {
+          evidenceCount: juniorScore.evidenceCount,
+          variance: 0,
+          relationshipCount: 1,
+          distributionQuality: 1
+        }
+      },
+      relationshipBreakdown: {
+        senior: 0,
+        peer: 0,
+        junior: juniorScore.evidenceCount
+      }
+    });
+  }
+
+  return calculateComprehensiveConfidence(scores).level;
 } 
