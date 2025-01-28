@@ -118,30 +118,37 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
 
   return (
     <Card className="relative">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          Team Comparison
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge variant="outline" className="text-[10px] h-4 bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700">
-                  alpha
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px]">
-                <p className="font-normal text-sm">This feature is being optimized for:</p>
-                <ul className="list-disc pl-4 mt-1 text-xs space-y-1">
-                  <li>Score aggregation across multiple reviews</li>
-                  <li>Confidence-based weighting (High: 100%, Medium: 80%, Low: 50%)</li>
-                  <li>Relationship-based weighting (Senior: 40%, Peer: 35%, Junior: 25%)</li>
-                  <li>Outlier detection and adjustment</li>
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
+      <CardHeader className="p-6 pb-0">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 rounded-full bg-violet-50">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-violet-500">
+              <path d="M18 21V19C18 17.9391 17.5786 16.9217 16.8284 16.1716C16.0783 15.4214 15.0609 15 14 15H10C8.93913 15 7.92172 15.4214 7.17157 16.1716C6.42143 16.9217 6 17.9391 6 19V21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Team Comparison</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge className="text-[10px] h-4 bg-black hover:bg-black/90 text-white border-0">
+                    alpha
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[300px]">
+                  <p className="font-normal text-sm">This feature is being optimized for:</p>
+                  <ul className="list-disc pl-4 mt-1 text-xs space-y-1">
+                    <li>Score aggregation across multiple reviews</li>
+                    <li>Confidence-based weighting (High: 100%, Medium: 80%, Low: 50%)</li>
+                    <li>Relationship-based weighting (Senior: 40%, Peer: 35%, Junior: 25%)</li>
+                    <li>Outlier detection and adjustment</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="p-4">
+      <CardContent className="p-6 pt-0">
         <div className="h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
@@ -190,28 +197,18 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
                   
                   return (
                     <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="grid gap-1">
-                        <div className="flex flex-col">
-                          <span className="text-[0.70rem] uppercase text-muted-foreground">
-                            {data.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-muted-foreground">
-                              Score: {data.score.toFixed(1)}
-                            </span>
-                            <Badge variant="secondary" className={getConfidenceColor(data.confidence)}>
-                              {data.confidence}
-                            </Badge>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">
+                          {data.name}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Score:</span>
+                          <span className="text-sm font-medium">{data.score.toFixed(1)}</span>
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                            {data.confidence}
+                          </Badge>
                         </div>
                       </div>
-                      {data.isCurrentUser && (
-                        <div className="mt-1 pt-1 border-t">
-                          <span className="text-[0.70rem] text-violet-500">
-                            Current employee
-                          </span>
-                        </div>
-                      )}
                     </div>
                   );
                 }}
