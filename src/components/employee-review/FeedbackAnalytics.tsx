@@ -11,6 +11,8 @@ import { ErrorState } from './ErrorState';
 import { AnalysisHeader } from './AnalysisHeader';
 import { EmptyAnalysisState } from './EmptyAnalysisState';
 import { AnalysisSection } from './AnalysisSection';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type ExpandedSections = Record<RelationshipType, boolean>;
 
