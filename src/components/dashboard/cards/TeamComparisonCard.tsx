@@ -52,11 +52,11 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
               score: comp.score,
               confidence: comp.confidence || 'medium'
             });
-            
+
             employeeScores.set(employee.id, currentEmployeeData);
-          }
-        });
-      });
+    }
+  });
+  });
     }
   });
 
@@ -79,7 +79,7 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
       } else {
         overallConfidence = 'medium';
       }
-
+      
       console.log(`Weighted average for ${name}:`, weightedAvg, 'confidence:', overallConfidence);
 
       return {
