@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Cell } from "recharts";
 import { ScoreWithOutlier } from '@/components/dashboard/types';
 import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
+import { calculateWeightedAverageScore } from '../utils/statCalculations';
+import { Badge } from "@/components/ui/badge";
 
 interface TeamComparisonCardProps {
   score: ScoreWithOutlier;
@@ -28,49 +30,85 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
     feedbackRequestsLength: feedbackRequests.length
   });
 
-  // Create a map of employee IDs to their names
-  const employeeNames = new Map<string, string>();
+  // Create a map to store all scores per employee
+  const employeeScores = new Map<string, {
+    name: string;
+    scores: Array<{ score: number; confidence: 'low' | 'medium' | 'high' }>;
+  }>();
+
+  // Collect all scores per employee
   feedbackRequests.forEach(request => {
-    if (request.employee?.id && request.employee?.name) {
-      employeeNames.set(request.employee.id, request.employee.name);
+    const employee = request.employee;
+    if (employee?.id && employee?.name && request.analytics?.insights) {
+      request.analytics.insights.forEach(insight => {
+        insight.competencies.forEach(comp => {
+          if (comp.name === score.name) {
+            const currentEmployeeData = employeeScores.get(employee.id) || {
+              name: employee.name,
+              scores: []
+            };
+            
+            currentEmployeeData.scores.push({
+              score: comp.score,
+              confidence: comp.confidence || 'medium'
+            });
+            
+            employeeScores.set(employee.id, currentEmployeeData);
+          }
+        });
+      });
     }
   });
 
-  // Create a map of competency scores to employee IDs
-  const scoreToEmployeeId = new Map<number, string>();
-  feedbackRequests.forEach(request => {
-    request.analytics?.insights?.forEach(insight => {
-      insight.competencies.forEach(comp => {
-        if (comp.name === score.name) {
-          scoreToEmployeeId.set(comp.score, request.employee?.id || '');
-        }
-      });
-    });
-  });
+  // Calculate weighted average for each employee
+  const data = Array.from(employeeScores.entries())
+    .map(([employeeId, { name, scores }]) => {
+      const weightedAvg = calculateWeightedAverageScore(scores);
+      // Calculate overall confidence based on individual scores
+      const confidenceCounts = scores.reduce((acc, { confidence }) => {
+        acc[confidence]++;
+        return acc;
+      }, { low: 0, medium: 0, high: 0 });
+      
+      // Determine overall confidence level
+      let overallConfidence: 'low' | 'medium' | 'high';
+      if (confidenceCounts.high > scores.length / 2) {
+        overallConfidence = 'high';
+      } else if (confidenceCounts.low > scores.length / 2) {
+        overallConfidence = 'low';
+      } else {
+        overallConfidence = 'medium';
+      }
 
-  // Map team scores to chart data
-  const data = teamScores
-    .map(teamScore => {
-      const employeeId = scoreToEmployeeId.get(teamScore.score);
-      if (!employeeId || !employeeNames.has(employeeId)) return null;
-
-      const name = employeeNames.get(employeeId)!;
-      console.log('Mapping score for', name, ':', teamScore.score);
+      console.log(`Weighted average for ${name}:`, weightedAvg, 'confidence:', overallConfidence);
 
       return {
+        employeeId,
         name,
         initials: getInitials(name),
-        score: teamScore.score,
-        isCurrentUser: Math.abs(teamScore.score - score.score) < 0.01
+        score: weightedAvg,
+        confidence: overallConfidence,
+        isCurrentUser: employeeId === score.reviewerId
       };
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
     .sort((a, b) => b.score - a.score);
 
-  console.log('Final chart data:', data);
+  console.log('Final aggregated chart data:', data);
 
-  // Calculate team average
-  const teamAverage = data.reduce((sum, d) => sum + d.score, 0) / data.length;
+  // Calculate overall team weighted average
+  const weightedTeamAverage = calculateWeightedAverageScore(
+    data.map(d => ({ score: d.score, confidence: d.confidence }))
+  );
+
+  // Get confidence indicator color
+  const getConfidenceColor = (confidence: 'low' | 'medium' | 'high') => {
+    switch (confidence) {
+      case 'high': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <Card className="relative">
@@ -131,9 +169,14 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
                           <span className="text-[0.70rem] uppercase text-muted-foreground">
                             {data.name}
                           </span>
-                          <span className="font-bold text-muted-foreground">
-                            Score: {data.score.toFixed(1)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-muted-foreground">
+                              Score: {data.score.toFixed(1)}
+                            </span>
+                            <Badge variant="secondary" className={getConfidenceColor(data.confidence)}>
+                              {data.confidence}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       {data.isCurrentUser && (
@@ -153,11 +196,16 @@ export function TeamComparisonCard({ score, teamScores, feedbackRequests }: Team
         <div className="mt-4 grid grid-cols-2 gap-2 text-xs border-t pt-3">
           <div className="text-center">
             <div className="text-muted-foreground">Your Score</div>
-            <div className="font-medium mt-0.5">{score.score.toFixed(1)}</div>
+            <div className="flex items-center justify-center gap-2">
+              <span className="font-medium mt-0.5">{score.score.toFixed(1)}</span>
+              <Badge variant="secondary" className={`${getConfidenceColor(score.confidence)} text-xs`}>
+                {score.confidence}
+              </Badge>
+            </div>
           </div>
           <div className="text-center border-l">
-            <div className="text-muted-foreground">Team Avg</div>
-            <div className="font-medium mt-0.5">{teamAverage.toFixed(1)}</div>
+            <div className="text-muted-foreground">Team Avg (Weighted)</div>
+            <div className="font-medium mt-0.5">{weightedTeamAverage.toFixed(1)}</div>
           </div>
         </div>
       </CardContent>
