@@ -469,7 +469,13 @@ export function CompetencyAnalysis({
                     />
                     
                     {isExpanded && (
-                      <CompetencyDetails score={score} />
+                      <CompetencyDetails 
+                        score={{
+                          ...score,
+                          teamScores: competencyScores.allScores.get(score.name) || []
+                        }} 
+                        feedbackRequests={feedbackRequests}
+                      />
                     )}
                   </div>
                 );

@@ -7,12 +7,17 @@ import { RelationshipCoverageCard } from './cards/RelationshipCoverageCard';
 import { AreasOfEvaluation } from './sections/AreasOfEvaluation';
 import { PerformanceOverview } from './sections/PerformanceOverview';
 import { LevelAndGrowth } from './sections/LevelAndGrowth';
+import { TeamComparisonCard } from "@/components/dashboard/cards/TeamComparisonCard";
+import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 
 interface CompetencyDetailsProps {
-  score: ScoreWithOutlier;
+  score: ScoreWithOutlier & {
+    teamScores?: ScoreWithOutlier[];
+  };
+  feedbackRequests: DashboardFeedbackRequest[];
 }
 
-export function CompetencyDetails({ score }: CompetencyDetailsProps) {
+export function CompetencyDetails({ score, feedbackRequests }: CompetencyDetailsProps) {
   console.log('CompetencyDetails - score:', score);
   console.log('CompetencyDetails - evidenceQuotes:', score.evidenceQuotes);
   
@@ -39,9 +44,14 @@ export function CompetencyDetails({ score }: CompetencyDetailsProps) {
       <AreasOfEvaluation competency={competency} />
 
       {/* Analysis Grid - Feedback Data */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <EvidenceBaseCard score={score} />
         <ScoreDistributionCard score={score} />
+        <TeamComparisonCard 
+          score={score} 
+          teamScores={score.teamScores || []} 
+          feedbackRequests={feedbackRequests}
+        />
         <RelationshipCoverageCard score={score} />
       </div>
 
