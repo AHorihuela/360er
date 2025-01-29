@@ -72,7 +72,7 @@ export interface FeedbackRequest {
   target_responses: number;
   unique_link: string;
   created_at?: string;
-  employee?: Employee;
+  employee?: Employee | Employee[];
   feedback_responses?: FeedbackResponse[];
   analytics?: {
     id: string;
