@@ -1,17 +1,16 @@
 import { OpenAI } from 'openai';
 import { supabase } from '@/lib/supabase';
-import { type RelationshipInsight, type OpenAICompetencyScore } from "@/types/feedback/analysis";
+import { type RelationshipInsight, type OpenAICompetencyScore, CompetencyScore, BaseCompetencyScore } from "@/types/feedback/analysis";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
-import { RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
+import { RELATIONSHIP_WEIGHTS } from "@/components/dashboard/constants";
 import { analyzeRelationshipFeedback } from './feedback';
 import { calculateConfidence as calculateComprehensiveConfidence } from "@/components/dashboard/utils";
 import type { ScoreWithOutlier } from "@/components/dashboard/types";
+import { processCompetencyScores, type ScoreInput, type RelationshipType, type ProcessedScore } from './competencyScoring';
+import { type GroupedFeedback as ImportedGroupedFeedback } from '@/types/feedback/request';
 
-interface GroupedFeedback {
-  [key: string]: CoreFeedbackResponse[];
-}
+type GroupedFeedback = ImportedGroupedFeedback;
 
-export type RelationshipType = 'senior' | 'peer' | 'junior' | 'aggregate';
 export type AnalysisSubstep = 'SENIOR' | 'PEER' | 'JUNIOR' | 'AGGREGATE';
 
 interface AnalysisCallbacks {
@@ -143,33 +142,158 @@ function calculateAggregateInsights(
   ];
 }
 
+function isCompetencyScore(score: any): score is CompetencyScore {
+  return (
+    typeof score === 'object' &&
+    score !== null &&
+    typeof score.name === 'string' &&
+    typeof score.score === 'number' &&
+    ['low', 'medium', 'high'].includes(score.confidence) &&
+    typeof score.evidenceCount === 'number' &&
+    typeof score.roleSpecificNotes === 'string' &&
+    (score.description === undefined || typeof score.description === 'string') &&
+    (score.effectiveEvidenceCount === undefined || typeof score.effectiveEvidenceCount === 'number') &&
+    (score.evidenceQuotes === undefined || Array.isArray(score.evidenceQuotes))
+  );
+}
+
+// Score processing utilities
+function createScoreInput(
+  source: OpenAICompetencyScore,
+  relationship: RelationshipType
+): ScoreInput {
+  return {
+    name: source.name,
+    score: source.score,
+    confidence: source.confidence,
+    description: source.description || '',
+    evidenceCount: source.evidenceCount || 0,
+    effectiveEvidenceCount: source.effectiveEvidenceCount,
+    relationship,
+    evidenceQuotes: source.evidenceQuotes || []
+  };
+}
+
+function createCompetencyScore(
+  processedScore: ProcessedScore,
+  relationship: string
+): CompetencyScore {
+  // Create base score first
+  const baseScore: BaseCompetencyScore = {
+    name: processedScore.name,
+    score: processedScore.score,
+    confidence: processedScore.confidence,
+    evidenceCount: processedScore.evidenceCount,
+    relationship,
+    description: processedScore.description,
+    effectiveEvidenceCount: processedScore.effectiveEvidenceCount,
+    evidenceQuotes: processedScore.evidenceQuotes
+  };
+
+  // Extend to CompetencyScore
+  return {
+    ...baseScore,
+    roleSpecificNotes: processedScore.roleSpecificNotes || ''
+  };
+}
+
+function collectScoresForCompetency(
+  name: string,
+  analysis: any,
+  relationship: RelationshipType
+): ScoreInput[] {
+  return analysis.competency_scores?.filter((s: OpenAICompetencyScore) => s.name === name)
+    .map((s: OpenAICompetencyScore) => createScoreInput(s, relationship)) || [];
+}
+
 function calculateAggregateCompetencies(
   competencyNames: string[],
   seniorAnalysis: any,
   peerAnalysis: any,
   juniorAnalysis: any,
   groupedFeedback: GroupedFeedback
-) {
-  return competencyNames.map(name => {
-    const seniorScore = seniorAnalysis.competency_scores?.find((s: OpenAICompetencyScore) => s.name === name);
-    const peerScore = peerAnalysis.competency_scores?.find((s: OpenAICompetencyScore) => s.name === name);
-    const juniorScore = juniorAnalysis.competency_scores?.find((s: OpenAICompetencyScore) => s.name === name);
-    
-    const weights = calculateWeights(groupedFeedback);
-    const weightedScore = calculateWeightedScore(seniorScore, peerScore, juniorScore, weights);
-    const evidenceQuotes = combineEvidenceQuotes(seniorScore, peerScore, juniorScore);
-    const confidence = calculateConfidence(seniorScore, peerScore, juniorScore);
-
-    return {
-      name,
-      score: weightedScore,
-      confidence,
-      description: "",
-      evidenceCount: calculateTotalEvidence(seniorScore, peerScore, juniorScore),
-      roleSpecificNotes: "",
-      evidenceQuotes: evidenceQuotes.length > 0 ? evidenceQuotes : undefined
-    };
+): CompetencyScore[] {
+  console.group('Reviews View - Score Processing');
+  console.log('Input data:', {
+    competencyNames,
+    seniorAnalysis,
+    peerAnalysis,
+    juniorAnalysis,
+    groupedFeedback
   });
+
+  // Calculate normalized weights first
+  const weights = calculateWeights(groupedFeedback);
+  console.log('Normalized weights:', weights);
+
+  const results = competencyNames
+    .map((name: string) => {
+      console.group(`Processing competency: ${name}`);
+      
+      // Collect scores from each relationship type
+      const scores: ScoreInput[] = [
+        ...collectScoresForCompetency(name, seniorAnalysis, 'senior'),
+        ...collectScoresForCompetency(name, peerAnalysis, 'peer'),
+        ...collectScoresForCompetency(name, juniorAnalysis, 'junior')
+      ];
+
+      console.log('All collected scores:', {
+        competency: name,
+        totalScores: scores.length,
+        byRelationship: {
+          senior: scores.filter(s => s.relationship === 'senior').length,
+          peer: scores.filter(s => s.relationship === 'peer').length,
+          junior: scores.filter(s => s.relationship === 'junior').length
+        },
+        scores
+      });
+
+      // Process scores using shared scoring system
+      const processedScore = processCompetencyScores(scores, name, false); // Don't apply weights in processCompetencyScores
+      console.log('Processed score:', {
+        competency: name,
+        result: processedScore,
+        appliedWeights: false
+      });
+      
+      if (!processedScore) {
+        console.log('No processed score returned');
+        console.groupEnd();
+        return null;
+      }
+
+      // Apply normalized weights
+      const weightedScore = scores.reduce((sum, s) => {
+        const weight = weights[s.relationship as keyof typeof weights] || 0;
+        return sum + (s.score * weight);
+      }, 0);
+
+      console.log('After applying weights:', {
+        originalScore: processedScore.score,
+        weightedScore,
+        weights,
+        breakdown: scores.map(s => ({
+          relationship: s.relationship,
+          score: s.score,
+          weight: weights[s.relationship as keyof typeof weights] || 0,
+          contribution: s.score * (weights[s.relationship as keyof typeof weights] || 0)
+        }))
+      });
+
+      const competencyScore = createCompetencyScore({
+        ...processedScore,
+        score: weightedScore
+      }, 'aggregate');
+
+      console.log('Final result:', competencyScore);
+      console.groupEnd();
+      return competencyScore;
+    })
+    .filter((score): score is NonNullable<CompetencyScore> => score !== null);
+
+  console.log('All results:', results);
+  console.groupEnd();
+  return results;
 }
 
 function createRelationshipInsight(
@@ -177,21 +301,70 @@ function createRelationshipInsight(
   analysis: any,
   responseCount: number
 ): RelationshipInsight {
-  return {
+  console.group(`Processing ${relationship} relationship insight`);
+  
+  // Convert scores to ScoreInput format
+  const scores: ScoreInput[] = analysis.competency_scores?.map((score: OpenAICompetencyScore) => 
+    createScoreInput(score, relationship)
+  ) || [];
+
+  console.log('Collected scores:', {
+    relationship,
+    totalScores: scores.length,
+    scores
+  });
+
+  // Group scores by competency name
+  const scoresByCompetency = scores.reduce((acc, score) => {
+    if (!acc[score.name]) {
+      acc[score.name] = [];
+    }
+    acc[score.name].push(score);
+    return acc;
+  }, {} as Record<string, ScoreInput[]>);
+
+  // Process each competency group using the shared scoring system
+  const processedCompetencies = Object.entries(scoresByCompetency)
+    .map(([name, competencyScores]) => {
+      console.group(`Processing competency: ${name}`);
+      
+      const processedScore = processCompetencyScores(competencyScores, name, true); // Always apply weights
+      console.log('Processed score:', {
+        competency: name,
+        result: processedScore,
+        appliedWeights: true,
+        weightedScores: competencyScores.map(s => ({
+          relationship: s.relationship,
+          originalScore: s.score,
+          weight: RELATIONSHIP_WEIGHTS[s.relationship],
+          weightedScore: s.score * RELATIONSHIP_WEIGHTS[s.relationship]
+        }))
+      });
+
+      if (!processedScore) {
+        console.log('No processed score returned');
+        console.groupEnd();
+        return null;
+      }
+
+      const competencyScore = createCompetencyScore(processedScore, relationship);
+      console.log('Final result:', competencyScore);
+      console.groupEnd();
+      return competencyScore;
+    })
+    .filter((score): score is CompetencyScore => score !== null);
+
+  const result = {
     relationship,
     themes: analysis.key_insights || [],
-    competencies: analysis.competency_scores?.map((score: OpenAICompetencyScore) => ({
-      name: score.name,
-      score: score.score,
-      confidence: score.confidence,
-      description: score.description,
-      evidenceCount: score.evidenceCount,
-      roleSpecificNotes: "",
-      evidenceQuotes: score.evidenceQuotes
-    })) || [],
+    competencies: processedCompetencies,
     responseCount,
     uniquePerspectives: []
   };
+
+  console.log('Final insight:', result);
+  console.groupEnd();
+  return result;
 }
 
 function calculateWeights(groupedFeedback: GroupedFeedback) {
