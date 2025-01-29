@@ -314,19 +314,22 @@ export function ReviewCyclesPage() {
   }
 
   function getStatusColor(cycle: ReviewCycle): "default" | "destructive" | "secondary" {
-    const isOverdue = new Date(cycle.review_by_date) < new Date();
+    const now = new Date();
+    const reviewByDate = new Date(cycle.review_by_date);
     const progress = calculateProgress(cycle);
     
-    if (isOverdue && progress < 100) return 'destructive';
-    return progress === 100 ? 'default' : 'secondary';
+    if (progress >= 100) return 'default';
+    return reviewByDate > now ? 'secondary' : 'destructive';
   }
 
   function getStatusText(cycle: ReviewCycle): string {
-    const isOverdue = new Date(cycle.review_by_date) < new Date();
+    const now = new Date();
+    const reviewByDate = new Date(cycle.review_by_date);
     const progress = calculateProgress(cycle);
     
-    if (isOverdue && progress < 100) return 'Overdue';
-    return progress === 100 ? 'Completed' : 'In Progress';
+    if (progress >= 100) return 'Completed';
+    if (reviewByDate > now) return 'In Progress';
+    return 'Overdue';
   }
 
   function formatDate(dateString: string) {
