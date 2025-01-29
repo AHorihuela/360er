@@ -63,7 +63,13 @@ export function AIReport({
       created_at: existingReport.updated_at
     } : null;
   });
-  const [isReportOpen, setIsReportOpen] = useState(false);
+  
+  // Automatically expand if we have enough reviews to generate a report
+  const [isReportOpen, setIsReportOpen] = useState(() => {
+    const hasEnoughReviews = (feedbackRequest?.feedback?.length ?? 0) > 0;
+    const hasNoReport = !feedbackRequest.ai_reports?.[0];
+    return hasEnoughReviews && hasNoReport;
+  });
 
   const handleReportChange = debounce(async (newContent: string) => {
     if (!feedbackRequest?.id) return;
