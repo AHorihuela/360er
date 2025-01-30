@@ -39,43 +39,63 @@ export function MethodologyExplanation() {
             <div className="p-3 rounded-lg bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">1. Collecting Diverse Feedback</h3>
-              <p className="text-muted-foreground">We gather feedback from multiple perspectives to ensure a comprehensive view:</p>
-              <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Who Provides Feedback?</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Senior colleagues (managers, mentors)
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Peers and team members
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Direct reports (if applicable)
-                    </li>
-                  </ul>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">1. Collecting Diverse Feedback</h3>
+                <p className="text-muted-foreground">We gather feedback from multiple perspectives to ensure a comprehensive view:</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <h4 className="font-medium text-base mb-4">Who Provides Feedback?</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-blue-500/10 text-blue-700 border-blue-200 font-medium">Senior</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Managers & mentors</p>
+                        <p className="text-xs text-muted-foreground">Strategic oversight and experience</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-green-500/10 text-green-700 border-green-200 font-medium">Peer</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Team members</p>
+                        <p className="text-xs text-muted-foreground">Day-to-day collaboration insights</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-yellow-500/10 text-yellow-700 border-yellow-200 font-medium">Junior</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Direct reports</p>
+                        <p className="text-xs text-muted-foreground">Upward management perspective</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">What We Ask For</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Specific examples of behaviors
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Impact on team/projects
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                      Areas for improvement
-                    </li>
-                  </ul>
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <h4 className="font-medium text-base mb-4">What We Ask For</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Examples</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Specific behaviors</p>
+                        <p className="text-xs text-muted-foreground">Concrete situations and actions observed</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Impact</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Team & project effects</p>
+                        <p className="text-xs text-muted-foreground">How behaviors influenced outcomes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Areas for improvement</p>
+                        <p className="text-xs text-muted-foreground">Specific development opportunities</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -87,29 +107,47 @@ export function MethodologyExplanation() {
             <div className="p-3 rounded-lg bg-primary/10">
               <MessagesSquare className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">2. Guiding Quality Feedback</h3>
-              <p className="text-muted-foreground">We help reviewers provide meaningful feedback through:</p>
-              <div className="grid gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <ul className="space-y-4 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-3">
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">2. Guiding Quality Feedback</h3>
+                <p className="text-muted-foreground">We help reviewers provide meaningful feedback through structured prompts:</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="bg-muted/50 p-6 rounded-lg space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
                       <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Examples</Badge>
-                      <span>Prompting for specific situations where the behavior was observed</span>
-                    </li>
-                    <li className="flex items-start gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Specific Situations</p>
+                        <p className="text-sm text-muted-foreground">Describe concrete instances where you observed the behavior in action</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
                       <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Context</Badge>
-                      <span>Asking about the setting and circumstances of the feedback</span>
-                    </li>
-                    <li className="flex items-start gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Setting & Circumstances</p>
+                        <p className="text-sm text-muted-foreground">Provide details about when and where the behavior occurred</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-muted/50 p-6 rounded-lg space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
                       <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Impact</Badge>
-                      <span>Understanding how the behavior affected the team or project outcomes</span>
-                    </li>
-                    <li className="flex items-start gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Team & Project Effects</p>
+                        <p className="text-sm text-muted-foreground">Explain how the behavior influenced outcomes and team dynamics</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
                       <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
-                      <span>Suggesting specific ways the person could improve or develop further</span>
-                    </li>
-                  </ul>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Development Areas</p>
+                        <p className="text-sm text-muted-foreground">Suggest specific ways the person could improve or develop further</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -151,6 +189,19 @@ export function MethodologyExplanation() {
                         <p className="text-xs text-muted-foreground">Upward management perspective</p>
                       </div>
                     </div>
+                    <div className="mt-6 pt-4 border-t">
+                      <h5 className="text-sm font-medium mb-2">Dynamic Weight Adjustment</h5>
+                      <p className="text-sm text-muted-foreground mb-3">If any relationship type is missing, weights are redistributed proportionally:</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="bg-background/50 p-3 rounded">
+                          <p className="font-medium mb-1">Example: No Junior Feedback</p>
+                          <ul className="space-y-1 text-muted-foreground">
+                            <li>• Senior: 53.3% (40/75)</li>
+                            <li>• Peer: 46.7% (35/75)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="bg-muted/50 p-6 rounded-lg">
@@ -176,6 +227,60 @@ export function MethodologyExplanation() {
                         <p className="text-sm font-medium">Limited interaction</p>
                         <p className="text-xs text-muted-foreground">Minimal direct experience</p>
                       </div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t">
+                      <h5 className="text-sm font-medium mb-2">Confidence Factors</h5>
+                      <div className="space-y-3">
+                        <div className="bg-background/50 p-3 rounded">
+                          <p className="font-medium text-sm mb-2">Evidence Quantity (40%)</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li>• First piece: Full value</li>
+                            <li>• Additional pieces: Diminishing returns</li>
+                            <li>• Maximum: 15 pieces considered</li>
+                          </ul>
+                        </div>
+                        <div className="bg-background/50 p-3 rounded">
+                          <p className="font-medium text-sm mb-2">Score Consistency (30%)</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li>• Perfect consistency: 100%</li>
+                            <li>• Some variance: Partial weight</li>
+                            <li>• High variance: Weight reduced</li>
+                          </ul>
+                        </div>
+                        <div className="bg-background/50 p-3 rounded">
+                          <p className="font-medium text-sm mb-2">Coverage & Distribution (30%)</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li>• Multiple relationship types</li>
+                            <li>• Even feedback distribution</li>
+                            <li>• Minimum review thresholds</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 bg-muted/50 p-6 rounded-lg">
+                <h4 className="font-medium text-base mb-3">How Weights Work Together</h4>
+                <div className="space-y-4">
+                  <div className="bg-background/50 p-4 rounded">
+                    <p className="font-medium text-sm mb-2">Example Calculation</p>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>A senior manager (40% relationship weight) provides feedback:</p>
+                      <ul className="space-y-1 ml-4">
+                        <li>• With direct observation (100% confidence)</li>
+                        <li>• Score: 4.0 out of 5.0</li>
+                      </ul>
+                      <p className="mt-2 font-medium">Final weighted contribution:</p>
+                      <p>4.0 × 0.40 × 1.0 = 1.6 points toward final score</p>
+                    </div>
+                  </div>
+                  <div className="bg-background/50 p-4 rounded">
+                    <p className="font-medium text-sm mb-2">Same Example with Low Confidence</p>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>If the confidence is low (50%):</p>
+                      <p className="mt-2 font-medium">Adjusted weighted contribution:</p>
+                      <p>4.0 × 0.40 × 0.5 = 0.8 points toward final score</p>
                     </div>
                   </div>
                 </div>
