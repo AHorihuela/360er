@@ -11,51 +11,133 @@ function formatFeedbackForPrompt(
   employeeRole: string,
   feedback: CoreFeedbackResponse[]
 ): string {
-  const formattedFeedback = feedback.map(f => `
-Relationship: ${f.relationship.replace('_', ' ')}
+  // Group feedback by relationship
+  const groupedFeedback = {
+    senior: feedback.filter(f => f.relationship.includes('senior')),
+    peer: feedback.filter(f => f.relationship.includes('equal')),
+    junior: feedback.filter(f => f.relationship.includes('junior'))
+  };
+
+  // Format feedback statistics
+  const stats = `
+Feedback Overview:
+- Total Reviews: ${feedback.length}
+- Senior Reviews: ${groupedFeedback.senior.length}
+- Peer Reviews: ${groupedFeedback.peer.length}
+- Junior Reviews: ${groupedFeedback.junior.length}`;
+
+  // Format feedback by relationship type
+  const formatGroupFeedback = (group: CoreFeedbackResponse[], type: string) => {
+    if (group.length === 0) return '';
+    return `
+${type} Feedback:
+${group.map((f, i) => `
+Reviewer ${i + 1}:
 Strengths: "${f.strengths}"
 Areas for Improvement: "${f.areas_for_improvement}"
-  `).join('\n');
+`).join('\n')}`;
+  };
 
   return `
-Employee Name: ${employeeName}
-Employee Role: ${employeeRole}
+Employee Information:
+- Name: ${employeeName}
+- Role: ${employeeRole}
 
-Feedback Received:
-${formattedFeedback}
-`;
+${stats}
+
+${formatGroupFeedback(groupedFeedback.senior, 'Senior')}
+${formatGroupFeedback(groupedFeedback.peer, 'Peer')}
+${formatGroupFeedback(groupedFeedback.junior, 'Junior')}`;
 }
 
-const SYSTEM_PROMPT = `You are assisting a manager in creating a 360-degree feedback report. Your task is to analyze feedback from multiple reviewers and create a comprehensive report that combines the manager's perspective with insights from the feedback.
+const SYSTEM_PROMPT = `You are an expert HR analyst tasked with generating a 360-degree feedback report for the employee. Your goal is to synthesize feedback from peers, juniors, seniors, and managers into a professional, actionable report for the employee's self-improvement.
 
-Follow these guidelines:
-1. Structure the report into clear sections:
-   - Executive Summary (briefly introducing the review's purpose and scope)
-   - Key Strengths (highlighting consistent themes and notable achievements)
-   - Areas for Development (constructive feedback and growth opportunities)
-   - Recommendations (actionable suggestions for improvement)
-2. Maintain anonymity while incorporating specific feedback insights
-3. Use a balanced, professional tone that reflects managerial oversight
-4. Include relevant quotes (marked with quotation marks) to support key points
-5. Quantify feedback when multiple reviewers share similar sentiments
-6. Focus on specific, actionable insights
-7. Ensure a balanced perspective between strengths and development areas
-8. End with clear, actionable recommendations for growth
+Report Structure:
+1. Executive Summary
+   - State the number of reviewers and their roles (e.g., "8 reviewers: 3 seniors, 3 peers, 2 juniors")
+   - Briefly explain the report's purpose and methodology
+   - Preview the major themes identified across all feedback
 
-Format the report in markdown for easy reading.`;
+2. Key Strengths (Organized by Theme)
+   - Identify 3-5 major strength themes that emerged across feedback
+   - For each theme:
+     * Describe the theme and its impact
+     * Quantify consensus across roles (e.g., "This strength was noted by 2 seniors and 3 peers")
+     * Include 2-3 supporting quotes with role attribution
+     * Note any role-specific perspectives on the theme
 
-const USER_PROMPT_TEMPLATE = `Please analyze the following feedback data and create a comprehensive 360-degree feedback report that combines managerial oversight with team insights.
+3. Areas for Improvement (Organized by Theme)
+   - Present 3-5 key development themes
+   - For each theme:
+     * Describe the specific challenge or opportunity
+     * Show how different roles perceive this area
+     * Support with role-attributed quotes
+     * Note any contradictions or varying perspectives
+
+4. Recommendations
+   - For each major development theme:
+     * Current Challenge: Specific description of the issue
+     * Target Outcome: Clear success metrics
+     * Action Plan: Concrete steps with timelines
+   - Address any contradictions in perspectives
+   - Ensure recommendations are specific and achievable
+
+Tone & Style:
+- Professional yet empathetic
+- Frame areas for improvement as growth opportunities
+- Always attribute quotes to roles (e.g., "A peer shared...", "One senior colleague mentioned...")
+- Use clear section headers and bullet points
+- Never use generic phrases like "Anonymized quote"
+
+Data Analysis:
+- Focus on identifying and clustering common themes across all feedback
+- Within each theme, analyze how different roles perceive it
+- Use role attribution to show perspective diversity
+- Highlight where themes appear across multiple roles
+- Note unique insights that don't fit major themes
+
+Format the report in clean, readable markdown with clear section breaks and consistent formatting.`;
+
+const USER_PROMPT_TEMPLATE = `Generate a comprehensive 360-degree feedback report using the following feedback data. Focus on identifying and analyzing themes that emerge across all feedback, regardless of reviewer role.
 
 FEEDBACK DATA:
 {feedbackData}
 
-Generate a report that:
-1. Synthesizes the feedback into clear, actionable insights
-2. Incorporates specific examples and quotes from the feedback
-3. Quantifies feedback when multiple reviewers share similar views
-4. Provides concrete, actionable recommendations
-5. Maintains a professional and constructive tone
-6. Concludes with specific development goals and growth opportunities`;
+Requirements:
+1. Theme-Based Analysis
+   - Identify major themes that appear across feedback from all roles
+   - For each theme:
+     * Describe the theme's core characteristics
+     * Show how different roles perceive it
+     * Support with role-attributed quotes
+     * Note any contradictions or variations in perspective
+
+2. Structure & Content
+   - Begin with a clear executive summary including reviewer count by role
+   - Present analysis organized by themes, not by reviewer roles
+   - Include role-attributed quotes to support each theme
+   - Quantify theme frequency across roles
+   - Address contradictions within themes explicitly
+
+3. Key Areas to Cover
+   - Present 3-5 major strength themes with evidence
+   - Identify 3-5 development themes with specific examples
+   - For each development theme, provide:
+     * Clear description of current challenge
+     * Specific target outcome
+     * Detailed action steps with timeline
+
+4. Style Guidelines
+   - Use role attribution for all quotes (e.g., "A peer shared...", "Multiple senior colleagues noted...")
+   - Frame development areas constructively
+   - Keep tone professional and growth-oriented
+   - Use clear section headers and bullet points
+
+5. Special Considerations
+   - Focus on themes that appear across multiple roles
+   - Note unique insights that don't fit major themes
+   - Support all themes with specific examples and quotes
+   - Ensure recommendations align with identified themes`;
 
 export async function generateAIReport(
   employeeName: string,
@@ -75,7 +157,7 @@ export async function generateAIReport(
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 2500  // Increased to accommodate more detailed analysis
     });
 
     console.log('OpenAI response received:', response.choices[0]?.message);
