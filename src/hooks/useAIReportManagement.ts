@@ -204,8 +204,8 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
     let interval: NodeJS.Timeout;
     if (startTime && isGeneratingReport) {
       interval = setInterval(() => {
-        // Force re-render to update elapsed time
-        setStartTime(prev => prev);
+        // Force re-render by updating a state value
+        setGenerationStep(prev => prev); // This will trigger a re-render without changing the step
       }, 1000);
     }
     return () => {
