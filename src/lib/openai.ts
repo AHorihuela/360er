@@ -151,34 +151,52 @@ export async function generateAIReport(
   try {
     console.log('Formatting feedback for prompt...');
     const formattedFeedback = formatFeedbackForPrompt(employeeName, employeeRole, feedback);
-    const userPrompt = USER_PROMPT_TEMPLATE.replace('{feedbackData}', formattedFeedback);
 
     console.log('Sending request to OpenAI...');
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-1106-preview",
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt }
+        {
+          role: "system",
+          content: `You are an expert in performance reviews and professional development. Create a clear, professional feedback report that balances data with insights. Your writing should:
+
+1. Present feedback in a clear, flowing narrative that connects ideas naturally
+2. Integrate quotes within paragraphs to support key points (not as separate lists)
+3. Focus on concrete patterns and themes from the feedback
+4. Use clear transitions between topics
+5. Maintain a professional, straightforward tone (avoid flowery or literary language)
+6. Organize by themes and competencies
+7. Balance quantitative data with specific examples
+
+For example, instead of listing quotes separately:
+"Isaac demonstrates strong leadership skills, particularly in driving projects forward. As noted by a senior colleague, he 'is great at moving things forward even where there is uncertainty,' showing his ability to navigate complex situations effectively."
+
+Format in Markdown with clear section headings. Focus on specific, actionable insights rather than narrative flourishes.`
+        },
+        {
+          role: "user",
+          content: formattedFeedback
+        }
       ],
-      temperature: 0.7,
-      max_tokens: 2500  // Increased to accommodate more detailed analysis
+      temperature: 0.3, // Reduced for more consistent, professional tone
+      max_tokens: 2500
     });
 
-    console.log('OpenAI response received:', response.choices[0]?.message);
-    const markdownContent = response.choices[0]?.message?.content || 'Failed to generate report';
+    console.log('OpenAI response received:', completion.choices[0]?.message);
+    const markdownContent = completion.choices[0]?.message?.content || 'Failed to generate report';
     console.log('Markdown content:', markdownContent.substring(0, 200) + '...');
-    
+
     // Replace the title with the correct employee name
     const updatedMarkdown = markdownContent.replace(
       /# [\s\S]*?(?=##)/,
       `# 360-Degree Feedback Report for ${employeeName} (${employeeRole})\n\n`
     );
-    
+
     console.log('Final markdown:', updatedMarkdown.substring(0, 200) + '...');
     if (!updatedMarkdown.trim()) {
       throw new Error('Generated report is empty');
     }
-    
+
     return updatedMarkdown;
   } catch (error) {
     console.error('Error generating AI report:', error);
