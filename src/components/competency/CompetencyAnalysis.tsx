@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -35,6 +35,21 @@ export function CompetencyAnalysis({
   filters
 }: CompetencyAnalysisProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
+
+  // Add ref for scrolling
+  const competencyRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const handleCompetencyToggle = (name: string, isCurrentlyExpanded: boolean) => {
+    setExpandedCompetency(isCurrentlyExpanded ? null : name);
+    
+    // If expanding, scroll the section into view
+    if (!isCurrentlyExpanded && competencyRefs.current[name]) {
+      competencyRefs.current[name]?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
 
   // Memoize the competency score calculations
   const competencyScores = useMemo(() => {
@@ -448,7 +463,7 @@ export function CompetencyAnalysis({
                 )}
               </div>
             </div>
-            <div className="divide-y">
+            <div className="divide-y relative">
               {COMPETENCY_ORDER.map((name) => {
                 const score = sortedScores.find(s => s.name === name);
                 if (!score) return null;
@@ -457,25 +472,44 @@ export function CompetencyAnalysis({
                 return (
                   <div 
                     key={name} 
+                    ref={el => competencyRefs.current[name] = el}
                     className={cn(
-                      "p-4 transition-colors duration-200",
+                      "transition-colors duration-200 scroll-mt-16",
                       isExpanded && "bg-slate-50"
                     )}
                   >
-                    <CompetencySummaryCard
-                      score={score}
-                      isExpanded={isExpanded}
-                      onToggle={() => setExpandedCompetency(isExpanded ? null : name)}
-                    />
+                    {/* Header Section */}
+                    <div className={cn(
+                      "transition-colors duration-200",
+                      isExpanded && "sticky top-0 z-10"
+                    )}>
+                      {/* Header Background - separate layer for visual effects */}
+                      <div className={cn(
+                        "absolute inset-x-0 top-0 h-full bg-slate-50 shadow-sm",
+                        isExpanded ? "border-b" : "hidden"
+                      )} />
+                      
+                      {/* Header Content */}
+                      <div className="relative p-4">
+                        <CompetencySummaryCard
+                          score={score}
+                          isExpanded={isExpanded}
+                          onToggle={() => handleCompetencyToggle(name, isExpanded)}
+                        />
+                      </div>
+                    </div>
                     
+                    {/* Content Section */}
                     {isExpanded && (
-                      <CompetencyDetails 
-                        score={{
-                          ...score,
-                          teamScores: competencyScores.allScores.get(score.name) || []
-                        }} 
-                        feedbackRequests={feedbackRequests}
-                      />
+                      <div className="px-4 pb-4 pt-4">
+                        <CompetencyDetails 
+                          score={{
+                            ...score,
+                            teamScores: competencyScores.allScores.get(score.name) || []
+                          }} 
+                          feedbackRequests={feedbackRequests}
+                        />
+                      </div>
                     )}
                   </div>
                 );
