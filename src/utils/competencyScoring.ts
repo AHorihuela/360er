@@ -1,6 +1,5 @@
 import { type ScoreWithOutlier } from "@/components/dashboard/types";
 import { RELATIONSHIP_WEIGHTS } from "@/components/dashboard/constants";
-import { calculateConfidence as calculateComprehensiveConfidence } from "@/components/dashboard/utils";
 import { type RelationshipType as BaseRelationshipType } from "@/types/feedback/base";
 
 export type RelationshipType = 'senior' | 'peer' | 'junior' | 'aggregate';
