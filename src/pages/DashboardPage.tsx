@@ -24,15 +24,46 @@ import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
 import { type DashboardCompetency } from '@/types/feedback/dashboard';
 
-function mapFeedbackRequestsToDashboard(
-  reviewCycle: any,
-  employeesData: DashboardEmployee[] | null
-): {
+type ReviewCycleInput = {
+  id: string;
+  title: string;
+  review_by_date: string;
+  feedback_requests?: Array<FeedbackRequest & {
+    feedback_responses?: FeedbackResponse[];
+    analytics?: {
+      id: string;
+      insights: Array<{
+        competencies: Array<DashboardCompetency>;
+        relationship: string;
+      }>;
+    };
+  }>;
+};
+
+type MapFeedbackResult = {
   mappedRequests: DashboardFeedbackRequest[];
   totalRequests: number;
   completedRequests: number;
   employeesWithStatus: DashboardEmployee[] | undefined;
-} {
+};
+
+function mapFeedbackRequestsToDashboard(
+  reviewCycle: ReviewCycleInput,
+  employeesData: DashboardEmployee[] | null
+): MapFeedbackResult {
+  if (!reviewCycle.feedback_requests) {
+    return {
+      mappedRequests: [],
+      totalRequests: 0,
+      completedRequests: 0,
+      employeesWithStatus: employeesData?.map(employee => ({
+        ...employee,
+        completed_reviews: 0,
+        total_reviews: 0
+      }))
+    };
+  }
+
   const totalRequests = reviewCycle.feedback_requests.reduce(
     (acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 
     0
@@ -165,7 +196,12 @@ export function DashboardPage(): JSX.Element {
             totalRequests,
             completedRequests,
             employeesWithStatus
-          } = mapFeedbackRequestsToDashboard(cycleToShow, employeesData);
+          } = mapFeedbackRequestsToDashboard({
+            id: cycleToShow.id,
+            title: cycleToShow.title,
+            review_by_date: cycleToShow.review_by_date,
+            feedback_requests: cycleToShow.feedback_requests
+          }, employeesData);
 
           setActiveReviewCycle({
             id: cycleToShow.id,
@@ -204,7 +240,12 @@ export function DashboardPage(): JSX.Element {
         totalRequests,
         completedRequests,
         employeesWithStatus
-      } = mapFeedbackRequestsToDashboard(selectedCycle, employeesData);
+      } = mapFeedbackRequestsToDashboard({
+        id: selectedCycle.id,
+        title: selectedCycle.title,
+        review_by_date: selectedCycle.review_by_date,
+        feedback_requests: selectedCycle.feedback_requests
+      }, employeesData);
 
       setActiveReviewCycle({
         id: selectedCycle.id,
