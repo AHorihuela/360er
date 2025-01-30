@@ -24,6 +24,65 @@ import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
 import { type DashboardCompetency } from '@/types/feedback/dashboard';
 
+function mapFeedbackRequestsToDashboard(
+  reviewCycle: any,
+  employeesData: DashboardEmployee[] | null
+): {
+  mappedRequests: DashboardFeedbackRequest[];
+  totalRequests: number;
+  completedRequests: number;
+  employeesWithStatus: DashboardEmployee[] | undefined;
+} {
+  const totalRequests = reviewCycle.feedback_requests.reduce(
+    (acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 
+    0
+  );
+  
+  const completedRequests = reviewCycle.feedback_requests.reduce(
+    (acc: number, fr: FeedbackRequest) => acc + (fr.feedback_responses?.length ?? 0), 
+    0
+  );
+
+  const mappedRequests = reviewCycle.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
+    ...fr,
+    employee: Array.isArray(fr.employee) ? fr.employee[0] : fr.employee,
+    feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
+      ...response,
+      feedback_request_id: fr.id,
+      status: response.status as FeedbackStatus,
+      relationship: response.relationship as RelationshipType
+    })),
+    analytics: fr.analytics ? {
+      id: fr.analytics.id,
+      insights: fr.analytics.insights.map(insight => ({
+        ...insight,
+        competencies: insight.competencies.map((comp: DashboardCompetency) => ({
+          ...comp,
+          evidenceQuotes: comp.evidenceQuotes || []
+        }))
+      }))
+    } : undefined
+  }));
+
+  const employeesWithStatus = employeesData?.map((employee: DashboardEmployee) => {
+    const employeeRequest = reviewCycle.feedback_requests?.find(
+      (fr: FeedbackRequest) => fr.employee_id === employee.id
+    );
+    return {
+      ...employee,
+      completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
+      total_reviews: employeeRequest?.target_responses ?? 0
+    };
+  });
+
+  return {
+    mappedRequests,
+    totalRequests,
+    completedRequests,
+    employeesWithStatus
+  };
+}
+
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -101,51 +160,23 @@ export function DashboardPage(): JSX.Element {
           : reviewCycles[0];
 
         if (cycleToShow && cycleToShow.feedback_requests) {
-          const totalRequests = cycleToShow.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 0);
-          const completedRequests = cycleToShow.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
-            acc + (fr.feedback_responses?.length ?? 0), 0);
-
-          // Map feedback requests to match DashboardFeedbackRequest type
-          const mappedFeedbackRequests = cycleToShow.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
-            ...fr,
-            employee: Array.isArray(fr.employee) ? fr.employee[0] : fr.employee,
-            feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
-              ...response,
-              feedback_request_id: fr.id,
-              status: response.status as FeedbackStatus,
-              relationship: response.relationship as RelationshipType
-            })),
-            analytics: fr.analytics ? {
-              id: fr.analytics.id,
-              insights: fr.analytics.insights.map(insight => ({
-                ...insight,
-                competencies: insight.competencies.map((comp: DashboardCompetency) => ({
-                  ...comp,
-                  evidenceQuotes: comp.evidenceQuotes || []
-                }))
-              }))
-            } : undefined
-          }));
+          const {
+            mappedRequests,
+            totalRequests,
+            completedRequests,
+            employeesWithStatus
+          } = mapFeedbackRequestsToDashboard(cycleToShow, employeesData);
 
           setActiveReviewCycle({
             id: cycleToShow.id,
             title: cycleToShow.title,
             review_by_date: cycleToShow.review_by_date,
-            feedback_requests: mappedFeedbackRequests,
+            feedback_requests: mappedRequests,
             total_requests: totalRequests,
             completed_requests: completedRequests
           });
 
-          // Update employees with their review status
-          if (employeesData) {
-            const employeesWithStatus = employeesData.map((employee: DashboardEmployee) => {
-              const employeeRequest = cycleToShow.feedback_requests?.find((fr: FeedbackRequest) => fr.employee_id === employee.id);
-              return {
-                ...employee,
-                completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
-                total_reviews: employeeRequest?.target_responses ?? 0
-              };
-            });
+          if (employeesWithStatus) {
             setEmployees(employeesWithStatus);
           }
         }
@@ -163,56 +194,28 @@ export function DashboardPage(): JSX.Element {
   };
 
   const handleCycleChange = (cycleId: string) => {
-    // Save to localStorage when cycle changes
     localStorage.setItem('selectedCycleId', cycleId);
     setSelectedCycleId(cycleId);
     const selectedCycle = allReviewCycles.find(c => c.id === cycleId);
+    
     if (selectedCycle && selectedCycle.feedback_requests) {
-      const totalRequests = selectedCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => acc + fr.target_responses, 0);
-      const completedRequests = selectedCycle.feedback_requests.reduce((acc: number, fr: FeedbackRequest) => 
-        acc + (fr.feedback_responses?.length ?? 0), 0);
-
-      // Map feedback requests to match DashboardFeedbackRequest type
-      const mappedFeedbackRequests = selectedCycle.feedback_requests.map((fr: FeedbackRequest): DashboardFeedbackRequest => ({
-        ...fr,
-        employee: Array.isArray(fr.employee) ? fr.employee[0] : fr.employee,
-        feedback_responses: fr.feedback_responses?.map((response: FeedbackResponse): DashboardFeedbackResponse => ({
-          ...response,
-          feedback_request_id: fr.id,
-          status: response.status as FeedbackStatus,
-          relationship: response.relationship as RelationshipType
-        })),
-        analytics: fr.analytics ? {
-          id: fr.analytics.id,
-          insights: fr.analytics.insights.map(insight => ({
-            ...insight,
-            competencies: insight.competencies.map((comp: DashboardCompetency) => ({
-              ...comp,
-              evidenceQuotes: comp.evidenceQuotes || []
-            }))
-          }))
-        } : undefined
-      }));
+      const {
+        mappedRequests,
+        totalRequests,
+        completedRequests,
+        employeesWithStatus
+      } = mapFeedbackRequestsToDashboard(selectedCycle, employeesData);
 
       setActiveReviewCycle({
         id: selectedCycle.id,
         title: selectedCycle.title,
         review_by_date: selectedCycle.review_by_date,
-        feedback_requests: mappedFeedbackRequests,
+        feedback_requests: mappedRequests,
         total_requests: totalRequests,
         completed_requests: completedRequests
       });
 
-      // Update employees with their review status
-      if (employeesData) {
-        const employeesWithStatus = employeesData.map((employee: DashboardEmployee) => {
-          const employeeRequest = selectedCycle.feedback_requests?.find((fr: FeedbackRequest) => fr.employee_id === employee.id);
-          return {
-            ...employee,
-            completed_reviews: employeeRequest?.feedback_responses?.length ?? 0,
-            total_reviews: employeeRequest?.target_responses ?? 0
-          };
-        });
+      if (employeesWithStatus) {
         setEmployees(employeesWithStatus);
       }
     }
