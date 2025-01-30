@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "./sidebar";
-import { LayoutDashboard, Users, ClipboardList, Settings, LogOut, BarChart } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, Settings, LogOut, BarChart, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -65,6 +65,15 @@ export function SidebarDemo() {
             </div>
           </div>
           <div className="flex flex-col gap-2">
+            <SidebarLink
+              link={{
+                label: "Methodology",
+                href: "/methodology",
+                icon: (
+                  <BookOpen className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+                ),
+              }}
+            />
             <SidebarLink
               link={{
                 label: "Settings",

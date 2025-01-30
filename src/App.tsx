@@ -22,6 +22,7 @@ import { AccountPage } from '@/pages/account/AccountPage';
 import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 import UpdatePasswordPage from '@/pages/auth/UpdatePasswordPage';
 import AnalyticsPage from '@/pages/analytics';
+import { MethodologyExplanation } from '@/components/methodology/MethodologyExplanation';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -488,6 +489,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/methodology" element={<MainLayout><MethodologyExplanation /></MainLayout>} />
           <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
         </Routes>
       </Router>
