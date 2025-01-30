@@ -4,53 +4,69 @@ This document serves as a catalog of reusable components across the application.
 
 ## UI Components
 
-### CompetencyCard
-**Location**: `src/components/analytics/CompetencyAnalysis/components/CompetencyCard.tsx`
-**Purpose**: Displays detailed information about a single competency.
+### CompetencySummaryCard
+**Location**: `src/components/dashboard/CompetencySummaryCard.tsx`
+**Purpose**: Displays a summary view of a competency with score and confidence metrics.
 **Features**:
-- Displays average score with a progress bar
-- Shows confidence level with detailed metrics
-- Visualizes score distribution
-- Shows breakdown of feedback sources
-- Displays supporting evidence quotes
+- Shows weighted average score
+- Displays confidence level
+- Shows evidence count
+- Expandable for detailed view
+- Handles outlier indicators
 
 **Props**:
 ```typescript
-interface CompetencyCardProps {
-  name: string;
-  scores: CompetencyScore[];
-  description?: string;
+interface CompetencySummaryCardProps {
+  score: ScoreWithOutlier;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 ```
 
-**Usage Example**:
-```tsx
-<CompetencyCard
-  name="Technical Skills"
-  scores={competencyScores}
-  description="Ability to apply technical knowledge effectively"
-/>
+### CompetencyDetails
+**Location**: `src/components/dashboard/CompetencyDetails.tsx`
+**Purpose**: Shows detailed analysis of a competency when expanded.
+**Features**:
+- Score distribution visualization
+- Relationship breakdown
+- Evidence quotes display
+- Team score comparison
+- Outlier analysis
+
+**Props**:
+```typescript
+interface CompetencyDetailsProps {
+  score: ScoreWithOutlier & { teamScores: ScoreWithOutlier[] };
+  feedbackRequests: DashboardFeedbackRequest[];
+}
 ```
 
-### ScoreDistribution
-**Location**: `src/components/analytics/CompetencyAnalysis/components/ScoreDistribution.tsx`
+### ScoreDistributionCard
+**Location**: `src/components/dashboard/cards/ScoreDistributionCard.tsx`
 **Purpose**: Visualizes the distribution of scores for a competency.
+**Features**:
+- Bar chart visualization
+- Score frequency display
+- Response count summary
+- Distribution analysis
 
 ## Analytics Components
 
 ### CompetencyAnalysis
-**Location**: `src/components/analytics/CompetencyAnalysis/index.tsx`
+**Location**: `src/components/competency/CompetencyAnalysis.tsx`
 **Purpose**: Main container for competency analysis visualization.
 **Features**:
-- Displays team coverage metrics
-- Shows competency scores and distributions
-- Handles relationship filtering
-- Calculates confidence metrics
+- Team-wide competency analysis
+- Relationship-based filtering
+- Employee filtering
+- Statistical outlier detection
+- Confidence calculation
+- Evidence aggregation
 
 **Props**:
 ```typescript
 interface CompetencyAnalysisProps {
-  feedbackRequests: FeedbackRequest[];
+  feedbackRequests: DashboardFeedbackRequest[];
   title?: string;
   subtitle?: string;
   showTeamStats?: boolean;
@@ -58,26 +74,17 @@ interface CompetencyAnalysisProps {
 }
 ```
 
-### AnalyticsSummary
-**Location**: `src/components/analytics/AnalyticsSummary/index.tsx`
-**Purpose**: Provides a high-level summary of analytics data.
+### TeamSummaryStats
+**Location**: `src/components/dashboard/TeamSummaryStats.tsx`
+**Purpose**: Provides team-level analytics summary.
+**Features**:
+- Employee coverage metrics
+- Review completion stats
+- Evidence distribution
+- Confidence aggregation
+- Team-wide score analysis
 
 ## Hooks
-
-### useConfidenceMetrics
-**Location**: `src/components/analytics/CompetencyAnalysis/hooks/useConfidenceMetrics.ts`
-**Purpose**: Calculates confidence metrics for competency scores.
-**Features**:
-- Calculates evidence quantity
-- Assesses relationship coverage
-- Evaluates score consistency
-- Determines distribution quality
-
-**Usage Example**:
-```typescript
-const confidence = useConfidenceMetrics(scores);
-console.log(confidence.level); // 'high', 'medium', or 'low'
-```
 
 ### useAIReportManagement
 **Location**: `src/hooks/useAIReportManagement.ts`
@@ -123,9 +130,10 @@ console.log(confidence.level); // 'high', 'medium', or 'low'
 
 This section tracks recently added components that should be considered for reuse:
 
-1. CompetencyCard (Added: Jan 21, 2024)
-2. ScoreDistribution (Added: Jan 21, 2024)
-3. AnalyticsSummary (Added: Jan 21, 2024)
+1. CompetencySummaryCard (Added: Jan 30, 2024)
+2. CompetencyDetails (Added: Jan 30, 2024)
+3. ScoreDistributionCard (Added: Jan 30, 2024)
+4. TeamSummaryStats (Added: Jan 30, 2024)
 
 ## Component Roadmap
 
@@ -141,9 +149,9 @@ Components planned for development:
 src/
 ├── components/
 │   ├── ui/           # Shadcn UI components
-│   ├── analytics/    # Analytics components
 │   ├── competency/   # Competency components
 │   ├── dashboard/    # Dashboard components
+│   │   ├── cards/    # Card components
 │   ├── employee-review/
 │   ├── layout/
 │   ├── account/
