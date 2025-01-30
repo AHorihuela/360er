@@ -73,14 +73,15 @@ export function AIReport({
 
   // Auto-expand when a new report is generated
   useEffect(() => {
-    if (feedbackRequest.ai_reports?.[0] && !isGeneratingReport) {
+    if (feedbackRequest.ai_reports?.[0]) {
       setIsReportOpen(true);
+      const latestReport = feedbackRequest.ai_reports[0];
       setAiReport({
-        content: feedbackRequest.ai_reports[0].content,
-        created_at: feedbackRequest.ai_reports[0].updated_at
+        content: latestReport.content,
+        created_at: latestReport.updated_at
       });
     }
-  }, [feedbackRequest.ai_reports, isGeneratingReport]);
+  }, [feedbackRequest.ai_reports]);
 
   const handleReportChange = debounce(async (newContent: string) => {
     if (!feedbackRequest?.id) return;
