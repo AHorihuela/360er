@@ -129,31 +129,6 @@ By refining their **communication approach and enhancing leadership presence**, 
 - Maintain consistent header levels
 - Ensure every major point has supporting quotes`;
 
-const USER_PROMPT_TEMPLATE = `Generate a comprehensive feedback report using the following data:
-
-{feedbackData}
-
-Key Requirements:
-1. Data Integration
-   - Support key points with specific evidence
-   - Use precise language when describing patterns
-   - Integrate conflicting viewpoints with context
-   - Balance qualitative and quantitative insights
-
-2. Narrative Flow
-   - Connect themes naturally
-   - Blend quotes seamlessly
-   - Maintain clear progression
-   - Focus on impact and outcomes
-
-3. Actionable Insights
-   - Link feedback to specific behaviors
-   - Provide contextual recommendations
-   - Address root causes
-   - Consider organizational context
-
-Format in clear, professional markdown with logical flow between sections.`;
-
 export async function generateAIReport(
   employeeName: string,
   employeeRole: string,
