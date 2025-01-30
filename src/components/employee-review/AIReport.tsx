@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Sparkles, RefreshCw, FileDown, ChevronDown } from 'lucide-react';
@@ -71,6 +71,17 @@ export function AIReport({
     return hasEnoughReviews && hasNoReport;
   });
 
+  // Auto-expand when a new report is generated
+  useEffect(() => {
+    if (feedbackRequest.ai_reports?.[0] && !isGeneratingReport) {
+      setIsReportOpen(true);
+      setAiReport({
+        content: feedbackRequest.ai_reports[0].content,
+        created_at: feedbackRequest.ai_reports[0].updated_at
+      });
+    }
+  }, [feedbackRequest.ai_reports, isGeneratingReport]);
+
   const handleReportChange = debounce(async (newContent: string) => {
     if (!feedbackRequest?.id) return;
 
@@ -89,6 +100,10 @@ export function AIReport({
         ...prev,
         content: newContent
       } : null);
+
+      if (onReportChange) {
+        onReportChange(newContent);
+      }
 
     } catch (error) {
       console.error('Error saving report:', error);

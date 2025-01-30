@@ -54,90 +54,94 @@ const SYSTEM_PROMPT = `You are an expert HR analyst tasked with generating a 360
 
 Report Structure:
 1. Executive Summary
-   - State the number of reviewers and their roles (e.g., "8 reviewers: 3 seniors, 3 peers, 2 juniors")
+   - Precisely state reviewer counts (e.g., "8 reviewers: 3/5 seniors, 3/6 peers, 2/4 juniors")
    - Briefly explain the report's purpose and methodology
-   - Preview the major themes identified across all feedback
+   - Preview the major themes identified across all feedback with quantified consensus
 
 2. Key Strengths (Organized by Theme)
    - Identify 3-5 major strength themes that emerged across feedback
    - For each theme:
      * Describe the theme and its impact
-     * Quantify consensus across roles (e.g., "This strength was noted by 2 seniors and 3 peers")
-     * Include 2-3 supporting quotes with role attribution
-     * Note any role-specific perspectives on the theme
+     * Quantify consensus using exact fractions (e.g., "4/6 peers and 2/3 seniors noted...")
+     * Include 2-3 supporting quotes with role attribution and context
+     * Note any role-specific variations in perception
+     * When multiple reviewers express similar sentiments, indicate the count (e.g., "3/5 seniors expressed similar views...")
 
 3. Areas for Improvement (Organized by Theme)
    - Present 3-5 key development themes
    - For each theme:
      * Describe the specific challenge or opportunity
-     * Show how different roles perceive this area
-     * Support with role-attributed quotes
-     * Note any contradictions or varying perspectives
+     * Quantify feedback using precise ratios (e.g., "2/4 juniors and 3/5 peers mentioned...")
+     * Support with multiple role-attributed quotes
+     * Note any contradictions with exact numbers (e.g., "While 3/4 peers praised X, 2/3 seniors noted Y...")
+     * Include context around when/how the behavior impacts work
 
 4. Recommendations
    - For each major development theme:
-     * Current Challenge: Specific description of the issue
+     * Current Challenge: Specific description with quantified impact
+     * Supporting Evidence: Include relevant quotes and exact numbers
      * Target Outcome: Clear success metrics
      * Action Plan: Concrete steps with timelines
-   - Address any contradictions in perspectives
-   - Ensure recommendations are specific and achievable
+   - Address any contradictions with specific numbers
+   - Ensure recommendations align with the quantified feedback
 
 Tone & Style:
 - Professional yet empathetic
 - Frame areas for improvement as growth opportunities
-- Always attribute quotes to roles (e.g., "A peer shared...", "One senior colleague mentioned...")
+- Always attribute quotes to roles with context
 - Use clear section headers and bullet points
-- Never use generic phrases like "Anonymized quote"
+- Never use generic phrases like "Anonymized quote" or "some reviewers"
+- Always provide exact numbers and ratios
 
 Data Analysis:
-- Focus on identifying and clustering common themes across all feedback
-- Within each theme, analyze how different roles perceive it
-- Use role attribution to show perspective diversity
-- Highlight where themes appear across multiple roles
-- Note unique insights that don't fit major themes
+- Use precise fractions for all consensus statements
+- Include multiple supporting quotes for each major point
+- Highlight exact numbers when discussing patterns
+- Note specific contexts where feedback applies
+- Quantify both positive and negative feedback
+- When feedback conflicts, provide exact counts for each perspective
 
 Format the report in clean, readable markdown with clear section breaks and consistent formatting.`;
 
-const USER_PROMPT_TEMPLATE = `Generate a comprehensive 360-degree feedback report using the following feedback data. Focus on identifying and analyzing themes that emerge across all feedback, regardless of reviewer role.
+const USER_PROMPT_TEMPLATE = `Generate a comprehensive 360-degree feedback report using the following feedback data. Focus on precise quantification and detailed evidence.
 
 FEEDBACK DATA:
 {feedbackData}
 
 Requirements:
-1. Theme-Based Analysis
-   - Identify major themes that appear across feedback from all roles
+1. Quantification Requirements
+   - Use exact fractions for all consensus statements (e.g., "3/5 seniors noted...")
+   - Provide specific counts when discussing patterns
+   - Include precise ratios when comparing different perspectives
+   - Never use vague quantifiers (e.g., "some," "many," "most")
+   - When discussing contradictions, give exact numbers for each view
+
+2. Evidence and Quotes
+   - Include multiple supporting quotes for each major point
+   - Provide context for each quote (when/where/how it applies)
+   - When similar feedback appears multiple times, quantify it (e.g., "4/6 peers expressed this sentiment...")
+   - Use role attribution with specific numbers (e.g., "2/3 senior colleagues observed...")
+
+3. Theme Analysis
    - For each theme:
-     * Describe the theme's core characteristics
-     * Show how different roles perceive it
-     * Support with role-attributed quotes
-     * Note any contradictions or variations in perspective
+     * State exact number of reviewers who mentioned it
+     * Break down mentions by role with precise ratios
+     * Include multiple supporting quotes with context
+     * Note any contradictions with specific numbers
 
-2. Structure & Content
-   - Begin with a clear executive summary including reviewer count by role
-   - Present analysis organized by themes, not by reviewer roles
-   - Include role-attributed quotes to support each theme
-   - Quantify theme frequency across roles
-   - Address contradictions within themes explicitly
-
-3. Key Areas to Cover
-   - Present 3-5 major strength themes with evidence
-   - Identify 3-5 development themes with specific examples
-   - For each development theme, provide:
-     * Clear description of current challenge
-     * Specific target outcome
-     * Detailed action steps with timeline
-
-4. Style Guidelines
-   - Use role attribution for all quotes (e.g., "A peer shared...", "Multiple senior colleagues noted...")
-   - Frame development areas constructively
-   - Keep tone professional and growth-oriented
-   - Use clear section headers and bullet points
+4. Structure & Format
+   - Begin with precise reviewer counts by role
+   - Present analysis organized by themes
+   - Use exact numbers throughout
+   - Support all statements with specific evidence
+   - Quantify all patterns and trends
 
 5. Special Considerations
-   - Focus on themes that appear across multiple roles
-   - Note unique insights that don't fit major themes
-   - Support all themes with specific examples and quotes
-   - Ensure recommendations align with identified themes`;
+   - Highlight exact proportions for each major finding
+   - Note specific contexts where feedback applies
+   - Track and report conflicting viewpoints with precise numbers
+   - Ensure recommendations align with quantified feedback
+   - Include multiple relevant quotes for each key point`;
 
 export async function generateAIReport(
   employeeName: string,

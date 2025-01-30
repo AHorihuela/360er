@@ -92,17 +92,6 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
         return;
       }
 
-      // First check if we have a recent analysis
-      const { data: existingReport } = await supabase
-        .from('ai_reports')
-        .select('content, updated_at, status')
-        .eq('feedback_request_id', feedbackRequest.id)
-        .eq('is_final', true)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      // Remove the time check and always generate a new report
       setGenerationStep(1);
 
       // Create or update the report entry
@@ -148,7 +137,7 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
       const currentTime = new Date().toISOString();
       const formattedReport = reportContent.trim();
 
-      // Update state
+      // Update state first to ensure immediate UI update
       setAiReport({
         content: formattedReport,
         created_at: currentTime
@@ -167,15 +156,16 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
 
       if (finalizeError) throw finalizeError;
 
-      toast({
-        title: "Report generated successfully",
-        description: "The AI report has been generated and saved.",
-        variant: "default"
-      });
-
       // Only reset states after successful completion
       setIsGeneratingReport(false);
       setStartTime(null);
+
+      // Show success toast after UI is updated
+      toast({
+        title: "Report generated successfully",
+        description: "The AI report has been generated and is now visible below.",
+        variant: "default"
+      });
 
     } catch (error) {
       console.error('Error generating report:', error);
