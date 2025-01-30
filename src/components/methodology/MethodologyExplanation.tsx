@@ -121,43 +121,63 @@ export function MethodologyExplanation() {
             <div className="p-3 rounded-lg bg-primary/10">
               <Layers className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">3. Aggregating & Weighting Feedback</h3>
-              <p className="text-muted-foreground">We process feedback using a sophisticated weighting system:</p>
-              <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Relationship Weighting</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-blue-500/10 text-blue-700 border-blue-200">Senior (40%)</Badge>
-                      <span>Manager & mentor feedback</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-green-500/10 text-green-700 border-green-200">Peer (35%)</Badge>
-                      <span>Team member feedback</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-yellow-500/10 text-yellow-700 border-yellow-200">Junior (25%)</Badge>
-                      <span>Direct report feedback</span>
-                    </li>
-                  </ul>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">3. Aggregating & Weighting Feedback</h3>
+                <p className="text-muted-foreground">Our sophisticated weighting system ensures balanced and reliable feedback analysis:</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <h4 className="font-medium text-base mb-4">Relationship Weighting</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-blue-500/10 text-blue-700 border-blue-200 font-medium">Senior (40%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Manager & mentor feedback</p>
+                        <p className="text-xs text-muted-foreground">Strategic oversight and experience</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-green-500/10 text-green-700 border-green-200 font-medium">Peer (35%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Team member feedback</p>
+                        <p className="text-xs text-muted-foreground">Day-to-day collaboration insights</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-yellow-500/10 text-yellow-700 border-yellow-200 font-medium">Junior (25%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Direct report feedback</p>
+                        <p className="text-xs text-muted-foreground">Upward management perspective</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Confidence Weighting</h4>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-green-500/10 text-green-700 border-green-200">High (100%)</Badge>
-                      <span>Direct observation</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-yellow-500/10 text-yellow-700 border-yellow-200">Med (75%)</Badge>
-                      <span>Indirect observation</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline" className="w-24 text-center bg-red-500/10 text-red-700 border-red-200">Low (50%)</Badge>
-                      <span>Limited interaction</span>
-                    </li>
-                  </ul>
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <h4 className="font-medium text-base mb-4">Confidence Weighting</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-green-500/10 text-green-700 border-green-200 font-medium">High (100%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Direct observation</p>
+                        <p className="text-xs text-muted-foreground">First-hand experience with behavior</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-yellow-500/10 text-yellow-700 border-yellow-200 font-medium">Med (75%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Indirect observation</p>
+                        <p className="text-xs text-muted-foreground">Second-hand or occasional interaction</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[100px] text-center bg-red-500/10 text-red-700 border-red-200 font-medium">Low (50%)</Badge>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Limited interaction</p>
+                        <p className="text-xs text-muted-foreground">Minimal direct experience</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -169,29 +189,55 @@ export function MethodologyExplanation() {
             <div className="p-3 rounded-lg bg-primary/10">
               <Brain className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">4. AI Analysis & Pattern Recognition</h3>
-              <p className="text-muted-foreground">Our AI system processes the aggregated feedback to provide insights:</p>
-              <div className="grid gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <ul className="space-y-4 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Patterns</Badge>
-                      <span>Identifying recurring themes and behaviors across different feedback sources</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Sentiment</Badge>
-                      <span>Analyzing the tone and context of feedback to understand nuances</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
-                      <span>Generating specific, actionable recommendations for improvement</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Trends</Badge>
-                      <span>Tracking progress and development over time across review cycles</span>
-                    </li>
-                  </ul>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">4. AI Analysis & Pattern Recognition</h3>
+                <p className="text-muted-foreground">Our AI system processes the aggregated feedback to provide comprehensive insights:</p>
+              </div>
+              <div className="grid gap-4">
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Patterns</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Theme Identification</p>
+                          <p className="text-sm text-muted-foreground">Identifying recurring behaviors and feedback patterns across different sources and time periods</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Sentiment</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Context Analysis</p>
+                          <p className="text-sm text-muted-foreground">Understanding the tone, impact, and circumstances of each piece of feedback</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Action Planning</p>
+                          <p className="text-sm text-muted-foreground">Converting feedback into specific, actionable development recommendations</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Trends</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Progress Tracking</p>
+                          <p className="text-sm text-muted-foreground">Monitoring development and improvement across multiple review cycles</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,11 +281,19 @@ export function MethodologyExplanation() {
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Industry and domain expertise
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                                 Technical proficiency
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                                 Knowledge sharing
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Problem-solving capabilities
                               </li>
                             </ul>
                           </div>
@@ -257,15 +311,23 @@ export function MethodologyExplanation() {
                             <ul className="space-y-2 text-sm text-muted-foreground">
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Vision communication
+                                Taking initiative and ownership
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Mentoring & guidance
+                                Guiding and inspiring others
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Initiative & ownership
+                                Influencing outcomes positively
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Mentoring and role modeling
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Creating and communicating vision
                               </li>
                             </ul>
                           </div>
@@ -283,15 +345,23 @@ export function MethodologyExplanation() {
                             <ul className="space-y-2 text-sm text-muted-foreground">
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Team collaboration
+                                Clear and effective communication
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Clear communication
+                                Cross-team collaboration
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                                 Stakeholder management
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Conflict resolution
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Team cohesion building
                               </li>
                             </ul>
                           </div>
@@ -309,15 +379,23 @@ export function MethodologyExplanation() {
                             <ul className="space-y-2 text-sm text-muted-foreground">
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Creative solutions
+                                Creative problem-solving
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Analytical thinking
+                                Adaptability to change
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Adaptability
+                                Process improvement
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Strategic thinking
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Innovation initiatives
                               </li>
                             </ul>
                           </div>
@@ -335,15 +413,23 @@ export function MethodologyExplanation() {
                             <ul className="space-y-2 text-sm text-muted-foreground">
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Project delivery
+                                Meeting commitments
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Quality standards
+                                Quality of deliverables
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Reliability
+                                Project ownership
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Time management
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Problem resolution
                               </li>
                             </ul>
                           </div>
@@ -365,11 +451,19 @@ export function MethodologyExplanation() {
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Empathy
+                                Empathy and respect
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Relationship building
+                                Cultural alignment
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Interpersonal dynamics
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Emotional regulation
                               </li>
                             </ul>
                           </div>
@@ -391,11 +485,19 @@ export function MethodologyExplanation() {
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Feedback receptiveness
+                                Skill development
                               </li>
                               <li className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                Professional development
+                                Feedback receptivity
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Knowledge sharing
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Career progression
                               </li>
                             </ul>
                           </div>
