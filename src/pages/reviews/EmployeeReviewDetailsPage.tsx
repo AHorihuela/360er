@@ -26,10 +26,24 @@ import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytic
 import { AIReport } from '@/components/employee-review/AIReport';
 import { cn } from '@/lib/utils';
 import { ReviewCycle, FeedbackRequest } from '@/types/reviews/employee-review';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { getFeedbackDate } from '@/utils/report';
 import { exportToPDF } from '@/utils/pdf';
 import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
+
+function getStatusVariant(status?: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case 'completed':
+      return 'default';
+    case 'in_progress':
+      return 'secondary';
+    case 'exceeded':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+}
 
 export function EmployeeReviewDetailsPage() {
   const params = useParams<{ cycleId: string; employeeId: string }>();
@@ -90,6 +104,27 @@ export function EmployeeReviewDetailsPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCopyResponses = async () => {
+    if (!feedbackRequest?.feedback) return;
+    
+    const responsesText = feedbackRequest.feedback
+      .filter((response: CoreFeedbackResponse) => response.submitted_at)
+      .map((response: CoreFeedbackResponse) => {
+        return `Relationship: ${response.relationship}
+Strengths: ${response.strengths || 'None provided'}
+Areas for Improvement: ${response.areas_for_improvement || 'None provided'}
+Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDateString() : 'Not available'}
+----------------------------------------`;
+      })
+      .join('\n\n');
+
+    await navigator.clipboard.writeText(responsesText);
+    toast({
+      title: "Copied",
+      description: "All feedback responses have been copied to your clipboard",
+    });
   };
 
   useEffect(() => {
@@ -318,17 +353,28 @@ export function EmployeeReviewDetailsPage() {
                       className="h-2"
                     />
                     <p className="text-xs text-muted-foreground">
-                      {feedbackRequest?._count?.responses || 0} of {feedbackRequest?.target_responses || 0} responses
+                      {feedbackRequest?._count?.responses} of {feedbackRequest?.target_responses} responses
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-                  <Badge variant="secondary" className="text-xs capitalize">
-                    {(feedbackRequest?.status || 'pending').replace('_', ' ')}
+                  <Badge variant={getStatusVariant(feedbackRequest?.status)}>
+                    {feedbackRequest?.status}
                   </Badge>
                 </div>
+
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-4"
+                  onClick={handleCopyResponses}
+                  disabled={!feedbackRequest?.feedback?.length}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy All Responses
+                </Button>
               </CardContent>
             </Card>
           </div>
