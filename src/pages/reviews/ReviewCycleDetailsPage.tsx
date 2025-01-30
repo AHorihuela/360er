@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
-import { FeedbackRequest } from '@/types/review';
+import { FeedbackRequest, Employee } from '@/types/review';
 import { CycleAnalytics } from '@/components/review-cycle/CycleAnalytics';
 import { FeedbackRequestCard } from '@/components/review-cycle/FeedbackRequestCard';
 import { AddEmployeesDialog } from '@/components/review-cycle/AddEmployeesDialog';
@@ -16,10 +16,10 @@ export function ReviewCycleDetailsPage() {
   const { cycleId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const {
+  const { 
     isLoading,
     reviewCycle,
-    feedbackRequests,
+    feedbackRequests, 
     updateTitle,
     removeEmployee,
     setFeedbackRequests
@@ -30,6 +30,12 @@ export function ReviewCycleDetailsPage() {
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [employeeToRemove, setEmployeeToRemove] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (showAddEmployeesDialog) {
+      fetchAvailableEmployees();
+    }
+  }, [showAddEmployeesDialog]);
 
   async function fetchAvailableEmployees() {
     setIsFetchingEmployees(true);
@@ -73,29 +79,16 @@ export function ReviewCycleDetailsPage() {
   if (!reviewCycle) return null;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            onClick={() => navigate('/reviews')}
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <EditableTitle
-            title={reviewCycle.title}
-            dueDate={reviewCycle.review_by_date}
-            onSave={updateTitle}
-          />
-        </div>
-        <Button 
-          onClick={() => setShowAddEmployeesDialog(true)}
-          className="w-full sm:w-auto gap-2"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add Employees
+    <div className="container mx-auto py-6 space-y-8">
+      <div className="flex justify-between items-center">
+        <EditableTitle
+          title={reviewCycle.title}
+          dueDate={reviewCycle.review_by_date}
+          onSave={updateTitle}
+        />
+        <Button onClick={() => setShowAddEmployeesDialog(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Add Employee
         </Button>
       </div>
 
@@ -108,7 +101,9 @@ export function ReviewCycleDetailsPage() {
             onDelete={(request) => {
               setEmployeeToRemove({
                 id: request.id,
-                name: request.employee?.name || ''
+                name: Array.isArray(request.employee) 
+                  ? request.employee[0]?.name || ''
+                  : request.employee?.name || ''
               });
               setShowRemoveDialog(true);
             }}
@@ -154,6 +149,7 @@ export function ReviewCycleDetailsPage() {
 
             if (insertError) throw insertError;
 
+            // Fetch the complete data after insert
             const { data: newRequests, error: selectError } = await supabase
               .from('feedback_requests')
               .select(`
@@ -171,24 +167,43 @@ export function ReviewCycleDetailsPage() {
                   name,
                   role,
                   user_id
+                ),
+                feedback_responses (
+                  id,
+                  submitted_at,
+                  relationship
                 )
               `)
               .eq('review_cycle_id', cycleId)
-              .in('employee_id', selectedIds)
-              .order('created_at', { ascending: false });
+              .in('employee_id', selectedIds);
 
             if (selectError) throw selectError;
 
-            const typedRequests = (newRequests || []).map(req => ({
-              ...req,
-              employee: req.employee?.[0]
-            })) as FeedbackRequest[];
+            const typedRequests = (newRequests || []).map(req => {
+              const responseCount = req.feedback_responses?.length || 0;
+              return {
+                ...req,
+                employee: Array.isArray(req.employee) ? req.employee[0] : req.employee,
+                feedback_responses: req.feedback_responses?.map(response => ({
+                  id: response.id,
+                  status: 'completed',
+                  submitted_at: response.submitted_at,
+                  relationship: response.relationship,
+                  strengths: null,
+                  areas_for_improvement: null
+                })) || [],
+                _count: {
+                  responses: responseCount
+                }
+              } satisfies FeedbackRequest;
+            }) as FeedbackRequest[];
 
             setFeedbackRequests(prev => [...prev, ...typedRequests]);
             toast({
               title: "Success",
               description: `Added ${typedRequests.length} employee(s) to the review cycle`,
             });
+            setShowAddEmployeesDialog(false);
           } catch (error) {
             console.error('Error adding employees:', error);
             toast({
@@ -225,20 +240,56 @@ export function ReviewCycleDetailsPage() {
                 status: 'pending',
                 target_responses: 10
               }])
-              .select('*, employee:employees(*)');
+              .select(`
+                id,
+                review_cycle_id,
+                employee_id,
+                unique_link,
+                status,
+                target_responses,
+                manually_completed,
+                created_at,
+                updated_at,
+                employee:employees!inner (
+                  id,
+                  name,
+                  role,
+                  user_id
+                ),
+                feedback_responses (
+                  id,
+                  submitted_at,
+                  relationship
+                )
+              `);
 
             if (requestError) throw requestError;
 
-            const typedRequests = (requestData || []).map(req => ({
-              ...req,
-              employee: req.employee?.[0]
-            })) as FeedbackRequest[];
+            const typedRequests = (requestData || []).map(req => {
+              const responseCount = req.feedback_responses?.length || 0;
+              return {
+                ...req,
+                employee: Array.isArray(req.employee) ? req.employee[0] : req.employee,
+                feedback_responses: req.feedback_responses?.map(response => ({
+                  id: response.id,
+                  status: 'completed',
+                  submitted_at: response.submitted_at,
+                  relationship: response.relationship,
+                  strengths: null,
+                  areas_for_improvement: null
+                })) || [],
+                _count: {
+                  responses: responseCount
+                }
+              } satisfies FeedbackRequest;
+            }) as FeedbackRequest[];
 
             setFeedbackRequests(prev => [...prev, ...typedRequests]);
             toast({
               title: "Success",
               description: "New employee added to review cycle",
             });
+            setShowAddEmployeesDialog(false);
           } catch (error) {
             console.error('Error creating employee:', error);
             toast({

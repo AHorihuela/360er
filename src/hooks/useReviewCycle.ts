@@ -64,10 +64,13 @@ export function useReviewCycle(cycleId: string | undefined) {
           status = REQUEST_STATUS.PENDING
         }
 
+        // Ensure employee data is properly structured
+        const employee = Array.isArray(request.employee) ? request.employee[0] : request.employee
+        
         return {
           ...request,
           status,
-          employee: request.employee?.[0] || request.employee,
+          employee,
           _count: {
             responses: responseCount
           }
@@ -88,7 +91,7 @@ export function useReviewCycle(cycleId: string | undefined) {
     }
   }, [cycleId, toast])
 
-  const updateTitle = async (newTitle: string) => {
+  const updateTitle = async (newTitle: string): Promise<void> => {
     try {
       const { error } = await supabase
         .from('review_cycles')
@@ -97,7 +100,6 @@ export function useReviewCycle(cycleId: string | undefined) {
 
       if (error) throw error
       setReviewCycle(prev => prev ? { ...prev, title: newTitle } : null)
-      return true
     } catch (error) {
       console.error('Error updating title:', error)
       toast({
@@ -105,7 +107,7 @@ export function useReviewCycle(cycleId: string | undefined) {
         description: "Failed to update review cycle title",
         variant: "destructive",
       })
-      return false
+      throw error
     }
   }
 
