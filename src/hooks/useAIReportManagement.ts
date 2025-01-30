@@ -13,11 +13,28 @@ interface UseAIReportManagementProps {
 export function useAIReportManagement({ feedbackRequest }: UseAIReportManagementProps) {
   const { toast } = useToast();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [aiReport, setAiReport] = useState<AIReportType | null>(null);
+  const [aiReport, setAiReport] = useState<AIReportType | null>(() => {
+    // Initialize with existing report if available
+    const existingReport = feedbackRequest?.ai_reports?.[0];
+    return existingReport ? {
+      content: existingReport.content,
+      created_at: existingReport.updated_at
+    } : null;
+  });
   const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [abortController] = useState(() => new AbortController());
+
+  // Update aiReport when feedbackRequest.ai_reports changes
+  useEffect(() => {
+    if (feedbackRequest?.ai_reports?.[0]) {
+      setAiReport({
+        content: feedbackRequest.ai_reports[0].content,
+        created_at: feedbackRequest.ai_reports[0].updated_at
+      });
+    }
+  }, [feedbackRequest?.ai_reports]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -158,6 +175,7 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
 
       // Only reset states after successful completion
       setIsGeneratingReport(false);
+      setGenerationStep(0);
       setStartTime(null);
 
       // Show success toast after UI is updated
@@ -171,12 +189,13 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
       console.error('Error generating report:', error);
       setGenerationStep(0);
       setIsGeneratingReport(false);
+      setStartTime(null);
       toast({
         title: "Error",
         description: "Failed to generate AI report",
         variant: "destructive",
       });
-      throw error; // Re-throw to allow test to catch it
+      throw error;
     }
   };
 

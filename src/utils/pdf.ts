@@ -36,67 +36,96 @@ export async function exportToPDF(content: string, filename: string) {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #111827;
+      max-width: 100%;
+      word-wrap: break-word;
     }
     h1 { 
       font-size: 24px; 
-      margin-bottom: 16px; 
+      margin: 24px 0 16px 0; 
       font-weight: bold;
       page-break-after: avoid;
+      line-height: 1.3;
     }
     h2 { 
       font-size: 20px; 
-      margin: 24px 0 12px 0; 
+      margin: 20px 0 12px 0; 
       font-weight: bold;
       page-break-after: avoid;
+      line-height: 1.3;
     }
     h3 { 
       font-size: 16px; 
       margin: 16px 0 8px 0; 
       font-weight: bold;
       page-break-after: avoid;
+      line-height: 1.3;
     }
     p { 
       margin: 0 0 12px 0;
       line-height: 1.6;
       orphans: 3;
       widows: 3;
+      max-width: 100%;
+      word-wrap: break-word;
     }
     ul, ol { 
-      margin: 0 0 12px 0;
-      padding-left: 24px;
+      margin: 8px 0 16px 0;
+      padding-left: 32px;
       page-break-inside: avoid;
     }
     li { 
-      margin: 0 0 6px 0;
+      margin: 4px 0;
       line-height: 1.6;
+      position: relative;
+      max-width: calc(100% - 24px);
     }
     strong { 
       font-weight: 600;
     }
     /* Bullet points styling */
     ul { 
-      list-style-type: disc;
-      margin-left: 0;
+      list-style-type: none;
     }
     ul li {
-      padding-left: 8px;
+      padding-left: 16px;
+      position: relative;
     }
-    ul li::marker { 
+    ul li::before { 
       content: "•";
-      font-size: 1.2em;
+      position: absolute;
+      left: -4px;
+      font-size: 16px;
+      line-height: 1.6;
       color: #111827;
     }
     /* Numbered list styling */
     ol {
       list-style-type: decimal;
-      margin-left: 0;
+      counter-reset: item;
     }
     ol li {
       padding-left: 8px;
+      counter-increment: item;
+    }
+    ol li::marker {
+      font-weight: 400;
     }
     /* Preserve bold text */
     strong, b { 
       font-weight: 600 !important;
+    }
+    /* Theme sections */
+    h2 + p {
+      margin-top: 8px;
+    }
+    /* Executive Summary spacing */
+    h1 + p {
+      margin-top: 12px;
+    }
+    /* Ensure content doesn't overflow page margins */
+    div {
+      max-width: 100%;
+      word-wrap: break-word;
     }
   `;
   tempDiv.appendChild(style);
@@ -123,7 +152,7 @@ export async function exportToPDF(content: string, filename: string) {
       mode: ['avoid-all', 'css', 'legacy'],
       before: ['#page-break-before'],
       after: ['#page-break-after'],
-      avoid: ['li', 'img']
+      avoid: ['li', 'img', 'table', 'tr']
     }
   };
 
