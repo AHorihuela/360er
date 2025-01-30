@@ -316,7 +316,11 @@ export default function AnalyticsPage() {
                           {selectedEmployeeIds.includes(request.employee_id) && (
                             <Check className="h-3.5 w-3.5 text-orange-500" />
                           )}
-                          <span>{request.employee?.name}</span>
+                          <span>
+                            {Array.isArray(request.employee) 
+                              ? request.employee[0]?.name 
+                              : request.employee?.name}
+                          </span>
                         </div>
                       </Button>
                     ))}

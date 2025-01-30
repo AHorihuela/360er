@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
-import { FeedbackRequest, Employee } from '@/types/review';
+import { FeedbackRequest } from '@/types/review';
 import { CycleAnalytics } from '@/components/review-cycle/CycleAnalytics';
 import { FeedbackRequestCard } from '@/components/review-cycle/FeedbackRequestCard';
 import { AddEmployeesDialog } from '@/components/review-cycle/AddEmployeesDialog';
@@ -14,7 +14,6 @@ import { useReviewCycle } from '@/hooks/useReviewCycle';
 
 export function ReviewCycleDetailsPage() {
   const { cycleId } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { 
     isLoading,
