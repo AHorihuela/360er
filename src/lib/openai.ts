@@ -171,7 +171,7 @@ export async function generateAIReport(
     // Replace the title with the correct employee name
     const updatedMarkdown = markdownContent.replace(
       /# [\s\S]*?(?=##)/,
-      `# 360-Degree Feedback Analysis Report for ${employeeName} (${employeeRole})\n\n`
+      `# 360-Degree Feedback Report for ${employeeName} (${employeeRole})\n\n`
     );
     
     console.log('Final markdown:', updatedMarkdown.substring(0, 200) + '...');
