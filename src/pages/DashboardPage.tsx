@@ -58,7 +58,7 @@ function mapFeedbackRequestsToDashboard(
         ...insight,
         competencies: insight.competencies.map((comp: DashboardCompetency) => ({
           ...comp,
-          evidenceQuotes: comp.evidenceQuotes || []
+          evidenceQuotes: comp.evidenceQuotes ?? []
         }))
       }))
     } : undefined
