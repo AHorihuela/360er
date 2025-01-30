@@ -94,19 +94,19 @@ export function MethodologyExplanation() {
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <ul className="space-y-4 text-sm text-muted-foreground">
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Examples</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Examples</Badge>
                       <span>Prompting for specific situations where the behavior was observed</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Context</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Context</Badge>
                       <span>Asking about the setting and circumstances of the feedback</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Impact</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Impact</Badge>
                       <span>Understanding how the behavior affected the team or project outcomes</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Growth</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
                       <span>Suggesting specific ways the person could improve or develop further</span>
                     </li>
                   </ul>
@@ -176,19 +176,19 @@ export function MethodologyExplanation() {
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <ul className="space-y-4 text-sm text-muted-foreground">
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Patterns</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Patterns</Badge>
                       <span>Identifying recurring themes and behaviors across different feedback sources</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Sentiment</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Sentiment</Badge>
                       <span>Analyzing the tone and context of feedback to understand nuances</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Growth</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Growth</Badge>
                       <span>Generating specific, actionable recommendations for improvement</span>
                     </li>
                     <li className="flex items-start gap-3">
-                      <Badge className="mt-1 bg-primary/10 text-primary border-primary/20">Trends</Badge>
+                      <Badge className="mt-1 bg-primary/20 hover:bg-primary/30 text-primary font-medium">Trends</Badge>
                       <span>Tracking progress and development over time across review cycles</span>
                     </li>
                   </ul>
