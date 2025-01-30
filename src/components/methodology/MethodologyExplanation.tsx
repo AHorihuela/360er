@@ -1,19 +1,8 @@
-import React from 'react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Users, 
-  ClipboardList, 
-  Brain, 
-  Scale, 
-  Target, 
-  Shield, 
-  BarChart2,
+  Users,
+  Brain,
+  Shield,
   MessagesSquare,
   Layers,
   LineChart
