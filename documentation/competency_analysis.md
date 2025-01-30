@@ -52,153 +52,110 @@ We address these challenges through:
 ## Overview
 Our 360-degree feedback system aggregates individual employee feedback into a team-wide competency analysis. This document outlines our methodology for calculating, aggregating, and displaying team competency scores and confidence levels.
 
-## Core Concepts
+## Core Components
 
-### 1. Feedback Analysis Process
-- Each employee receives written feedback from multiple reviewers (peers, managers, direct reports)
-- The feedback is processed by OpenAI's GPT model to:
-  1. Extract specific examples and evidence of behaviors
-  2. Analyze the sentiment and impact of the feedback
-  3. Map feedback to our core competency framework
-  4. Generate quantitative scores (0-5) based on the analysis
-  5. Determine confidence levels based on specificity and context
+### 1. Scoring System
+- Scores range from 1.0 to 5.0 with one decimal precision
+- Minimum 5 reviews required for analysis (MIN_REVIEWS_REQUIRED)
+- Relationship-weighted scoring:
+  ```typescript
+  const RELATIONSHIP_WEIGHTS = {
+    senior: 0.4,   // 40%
+    peer: 0.35,    // 35%
+    junior: 0.25,  // 25%
+    aggregate: 1   // Used for already aggregated scores
+  };
+  ```
 
-### 2. Analysis Framework
-Each piece of feedback is analyzed against specific aspects of our core competencies:
+### 2. Confidence Calculation
+Our confidence system uses a weighted multi-factor approach:
 
-#### Technical/Functional Expertise
-- Role-specific skills and knowledge
-- Industry and domain expertise
-- Technical proficiency and best practices
-- Knowledge sharing and documentation
-- Problem-solving capabilities
+1. **Evidence Quantity (40% weight)**
+   - Tracks unique pieces of evidence with diminishing returns per reviewer
+   - First piece: 1.0
+   - Additional pieces: 0.5^n (n = piece number - 1)
+   - Normalized against maximum of 15 effective pieces
 
-#### Leadership & Influence
-- Taking initiative and ownership
-- Guiding and inspiring others
-- Influencing outcomes positively
-- Mentoring and role modeling
-- Creating and communicating vision
+2. **Score Consistency (30% weight)**
+   - Analyzes variance in scores
+   - Score = max(0, 1 - variance/2.0)
+   - Perfect consistency (0 variance) = 1.0
+   - High variance (≥2.0) = 0.0
 
-#### Collaboration & Communication
-- Information sharing effectiveness
-- Cross-team collaboration
-- Clarity of communication
-- Stakeholder management
-- Conflict resolution skills
+3. **Relationship Coverage (20% weight)**
+   - Base score:
+     - 1 relationship type: 0.3
+     - 2 relationship types: 0.7
+     - 3 relationship types: 0.9
+   - Bonus +0.1 if any relationship has ≥3 reviews
 
-#### Innovation & Problem-Solving
-- Creative solution generation
-- Adaptability to change
-- Initiative in improvements
-- Collaborative ideation
-- Impact of implemented solutions
+4. **Distribution Quality (10% weight)**
+   - Measures evenness of feedback distribution
+   - Compares actual vs ideal distribution
+   - Score = max(0, 1 - (maxSkew - 1)/1.5)
 
-#### Execution & Accountability
-- Meeting deadlines and commitments
-- Quality of deliverables
-- Ownership of outcomes
-- Problem resolution
-- Project completion track record
+### 3. Confidence Levels
+Determined by both weighted score and specific thresholds:
 
-#### Emotional Intelligence & Culture Fit
-- Self-awareness
-- Empathy and respect
-- Cultural alignment
-- Interpersonal effectiveness
-- Conflict management
+```typescript
+const CONFIDENCE_THRESHOLDS = {
+  high: {
+    minScore: 0.65,
+    minEvidence: 12,
+    minConsistency: 0.5
+  },
+  medium: {
+    minScore: 0.55,
+    minEvidence: 8,
+    minConsistency: 0.3
+  }
+};
+```
 
-#### Growth & Development
-- Continuous learning mindset
-- Skill development progress
-- Feedback receptiveness
-- Knowledge sharing
-- Goal setting and achievement
+### 4. Outlier Detection
+Sophisticated outlier detection using multiple methods:
 
-### 3. AI Analysis Process
-For each piece of feedback:
-1. **Text Analysis**
-   - Natural language processing to understand context and sentiment
-   - Identification of specific examples and behaviors
-   - Recognition of impact and outcomes
+```typescript
+const OUTLIER_THRESHOLDS = {
+  minZScore: -2,    // Scores more than 2 standard deviations below mean
+  maxZScore: 2,     // Scores more than 2 standard deviations above mean
+  varianceThreshold: 1.5,  // Maximum acceptable variance
+  maxReduction: 0.5,      // Maximum 50% reduction for extreme outliers
+  moderateReduction: 0.75, // 25% reduction for moderate outliers
+  minSampleSize: 3,       // Minimum samples needed for outlier detection
+  relationshipMinSamples: 2, // Minimum samples per relationship type
+  iqrMultiplier: 1.5,    // IQR multiplier for boxplot method
+  contextualThresholds: {
+    technical: { min: 1.5, max: 5.0 },   // Technical skills rarely below 1.5
+    leadership: { min: 1.0, max: 5.0 },  // Leadership can have wider range
+    collaboration: { min: 2.0, max: 5.0 } // Collaboration rarely very low
+  },
+  confidenceWeights: {
+    high: 1.0,    // Full weight for high confidence scores
+    medium: 0.85, // Slightly reduced weight for medium confidence
+    low: 0.7      // More reduced weight for low confidence scores
+  }
+};
+```
 
-2. **Competency Mapping**
-   - Matching feedback content to relevant competencies
-   - Identifying which aspects of each competency are evidenced
-   - Determining the strength of evidence for each competency
+### 5. Core Competencies
+1. **Technical/Functional Expertise**
+   - Role-specific skills and knowledge
+   - Industry and domain expertise
+   - Technical proficiency and best practices
+   - Knowledge sharing and documentation
+   - Problem-solving capabilities
 
-3. **Score Generation and Display**
-   - Scores are displayed with one decimal precision (e.g., 4.2/5.0)
-   - Progress bars visualize scores with quarter segments
-   - Benchmark of 3.5 represents meeting expectations:
-     - Below 3.0: Needs improvement
-     - 3.0-3.5: Approaching expectations
-     - 3.5: Meeting expectations
-     - 3.5-4.0: Exceeding expectations
-     - 4.0+: Significantly exceeding expectations
+2. **Leadership & Influence**
+   - Taking initiative and ownership
+   - Guiding and inspiring others
+   - Influencing outcomes positively
+   - Mentoring and role modeling
+   - Creating and communicating vision
 
-4. **Outlier Management**
-   Our sophisticated outlier detection system uses multiple methods to ensure fair and accurate score adjustments:
+[Continue with other competencies...]
 
-   1. **Multi-Method Detection**
-      - Z-score Analysis: Identifies statistical deviations from mean
-      - Boxplot Method: Uses interquartile range (IQR) for outlier boundaries
-      - Contextual Validation: Applies domain-specific thresholds by competency type
-
-   2. **Relationship-Aware Processing**
-      - Groups scores by relationship type (senior, peer, junior)
-      - Requires minimum sample size per relationship (default: 2)
-      - Considers both global and relationship-specific outliers
-      - Only applies adjustments if score is outlier in both contexts
-
-   3. **Confidence-Based Weighting**
-      Incorporates feedback confidence in outlier calculations:
-      - High confidence scores: 100% of base weight
-      - Medium confidence: 85% of base weight
-      - Low confidence: 70% of base weight
-
-   4. **Contextual Thresholds**
-      Different valid ranges for different competency types:
-      - Technical skills: 1.5 - 5.0 (rarely below intermediate level)
-      - Leadership: 1.0 - 5.0 (wider acceptable range)
-      - Collaboration: 2.0 - 5.0 (higher minimum threshold)
-
-   5. **Graduated Adjustment System**
-      Three-tier adjustment based on severity:
-      - Extreme outliers: 
-        - Beyond 3σ from mean
-        - Outside IQR bounds with high z-score
-        - Violating contextual thresholds
-        - Result: 50% weight reduction
-      - Moderate outliers:
-        - Beyond 2σ from mean
-        - Outside IQR bounds
-        - Result: 25% weight reduction
-      - Normal scores:
-        - Within acceptable statistical bounds
-        - Result: No adjustment
-
-   6. **Implementation Details**
-      - Minimum 3 samples required for outlier detection
-      - Uses IQR multiplier of 1.5 for boxplot boundaries
-      - Preserves original scores while adjusting weights
-      - Maintains detailed adjustment audit trail
-      - Provides visual indicators for adjusted scores
-
-   This comprehensive approach ensures that:
-   - Extreme feedback doesn't disproportionately impact scores
-   - Different competency types are evaluated appropriately
-   - Relationship context is properly considered
-   - Confidence levels influence score impact
-   - Adjustments are transparent and traceable
-
-5. **Evidence Organization**
-   Evidence is collected and displayed in three key areas:
-   - Supporting quotes from feedback
-   - Specific examples of impact
-   - Context for score adjustments
-
-### UI Components and Visualization
+### 6. UI Components and Visualization
 
 1. **Competency Summary Cards**
    - Competency name with confidence badge
@@ -208,96 +165,26 @@ For each piece of feedback:
    - Progress bar with quarter segments
    - Expand/collapse functionality for details
 
-2. **Expanded View Details**
-   - Current level performance description
-   - Growth opportunities
-   - Supporting evidence quotes
-   - Analysis details including:
-     - Evidence base metrics
-     - Score consistency indicators
-     - Calculation methodology
+2. **Progress Bar Color Scheme**
+   - Green (≥4.0): Significantly exceeding expectations
+   - Blue (≥3.5): Exceeding expectations
+   - Yellow (≥3.0): Meeting expectations
+   - Orange (≥2.5): Approaching expectations
+   - Red (<2.5): Needs improvement
 
-3. **Confidence Visualization**
-   Confidence levels are indicated through:
-   - Color-coded badges (green/yellow/red)
-   - Progress bar styling
-   - Detailed tooltips explaining confidence factors
+   Confidence levels reflected through opacity:
+   - High confidence: 100% opacity
+   - Medium confidence: 70% opacity
+   - Low confidence: 40% opacity
 
-### 4. Confidence Calculation
-Our confidence calculation system uses a comprehensive, multi-factor approach to determine the reliability of competency scores:
-
-#### Confidence Factors
-
-1. **Evidence Quantity (35% weight)**
-   - Measures unique pieces of evidence across all reviews with diminishing returns
-   - Evidence is tracked per reviewer per competency using a unique identifier (relationship + reviewerId)
-   - First piece of evidence from each reviewer counts fully (1.0)
-   - Additional pieces from the same reviewer for the same competency follow diminishing returns:
-     ```
-     2nd piece: 0.5
-     3rd piece: 0.25
-     4th piece: 0.125
-     5th piece: 0.0625
-     ...and so on
-     ```
-   - Formula: effectiveCount = 1 + sum(0.5^n) for n = 1 to (totalPieces - 1)
-   - Normalized score (0-1) with maximum at 15 unique effective pieces
-   - Formula: `min(1, totalEffectiveEvidence / 15)`
-   - Prevents over-inflation from repeated mentions by the same reviewer
-   - Each reviewer's contributions are calculated independently
-
-2. **Score Consistency (25% weight)**
-   - Analyzes variance in scores across all feedback
-   - Perfect consistency (0 variance) = 1.0 score
-   - High variance (≥2.0) = 0.0 score
-   - Formula: `max(0, 1 - (variance / 2))`
-
-3. **Relationship Coverage (25% weight)**
-   - Evaluates diversity of feedback sources
-   - Based on number of relationship types represented (senior, peer, junior)
-   - Maximum score requires all three types
-   - Formula: `relationshipCount / 3`
-
-4. **Distribution Quality (15% weight)**
-   - Measures how evenly feedback is distributed across relationships
-   - Compares actual vs. ideal distribution
-   - Perfect distribution = equal representation from each relationship
-   - Formula: `1 - Σ|actualCount - idealCount| / (totalScores * 2)`
-
-#### Confidence Level Determination
-
-The final confidence level is determined by both the weighted score and specific thresholds:
-
-1. **High Confidence** requires ALL of:
-   - 12+ effective evidence pieces
-   - Consistency score ≥ 0.5
-   - Final weighted score ≥ 0.65
-
-2. **Medium Confidence** requires EITHER:
-   - 8+ effective evidence pieces AND consistency score ≥ 0.3
-   - OR consistency score ≥ 0.5 AND final weighted score ≥ 0.55
-
-3. **Low Confidence**:
-   - Assigned when neither high nor medium criteria are met
-
-#### Final Score Calculation
-```typescript
-finalScore = (evidenceScore * 0.35) +
-             (consistencyScore * 0.25) +
-             (relationshipScore * 0.25) +
-             (distributionQuality * 0.15)
-```
-
-This comprehensive scoring system ensures that confidence levels accurately reflect both the quantity and quality of feedback, while considering the diversity and distribution of feedback sources.
-
-### 5. Data Requirements
+### 7. Data Requirements
 - Minimum 5 reviews per employee for inclusion
 - Reviews must span multiple relationship types
 - Each review must provide specific examples
 - Regular review cycles for current data
 - Consistent scoring across all competencies
 - Proper relationship tagging for weighting
-- Complete competency coverage in feedback 
+- Complete competency coverage in feedback
 
 ## Aggregation Methodology
 
