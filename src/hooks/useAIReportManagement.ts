@@ -102,20 +102,7 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
         .limit(1)
         .single();
 
-      // If we have a recent report (less than 1 hour old) and it's completed, use it
-      if (existingReport?.status === 'completed' && 
-          existingReport?.content &&
-          new Date(existingReport.updated_at).getTime() > Date.now() - 3600000) {
-        console.log('Using existing recent report');
-        setAiReport({
-          content: existingReport.content,
-          created_at: existingReport.updated_at
-        });
-        setIsGeneratingReport(false);
-        setStartTime(null);
-        return;
-      }
-
+      // Remove the time check and always generate a new report
       setGenerationStep(1);
 
       // Create or update the report entry
