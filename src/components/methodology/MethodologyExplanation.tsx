@@ -205,43 +205,254 @@ export function MethodologyExplanation() {
             </div>
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">5. Competency Assessment</h3>
-              <p className="text-muted-foreground">We evaluate performance across six core competencies:</p>
+              <p className="text-muted-foreground">We evaluate performance across seven core competencies:</p>
               <div className="grid gap-4 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium mb-3">Leadership & Communication</h4>
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Vision communication
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Team influence
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Stakeholder management
-                        </li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-3">Execution & Innovation</h4>
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Project delivery
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Problem-solving
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          Initiative & creativity
-                        </li>
-                      </ul>
+                <div className="bg-muted/50 p-6 rounded-lg">
+                  <div className="grid grid-cols-1 gap-8">
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="font-medium text-lg mb-2">How We Evaluate</h4>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Each competency is evaluated on a scale of 1.0 to 5.0, using specific evidence and examples from feedback. 
+                          Scores are weighted based on the reviewer's relationship and confidence level.
+                        </p>
+                      </div>
+                      
+                      <div className="grid sm:grid-cols-2 gap-x-8 gap-y-10">
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Technical/Functional Expertise
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Measures proficiency in role-specific technical skills and knowledge sharing capabilities.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Role-specific skills
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Technical proficiency
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Knowledge sharing
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Leadership & Influence
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Evaluates ability to guide teams, communicate vision, and take ownership of initiatives.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Vision communication
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Mentoring & guidance
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Initiative & ownership
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Collaboration & Communication
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Assesses effectiveness in team collaboration and stakeholder communication.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Team collaboration
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Clear communication
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Stakeholder management
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Innovation & Problem-Solving
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Measures ability to find creative solutions and adapt to challenges.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Creative solutions
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Analytical thinking
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Adaptability
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Execution & Accountability
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Evaluates reliability in delivering quality work and meeting commitments.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Project delivery
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Quality standards
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Reliability
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Emotional Intelligence
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Assesses self-awareness and ability to build strong relationships.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Self-awareness
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Empathy
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Relationship building
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-base mb-2 flex items-center gap-2">
+                              Growth & Development
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">1.0 - 5.0</Badge>
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Measures commitment to continuous learning and professional development.
+                            </p>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Continuous learning
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Feedback receptiveness
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Professional development
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <h4 className="font-medium text-base mb-3">Scoring Guidelines</h4>
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">Score Ranges</h5>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200">4.5 - 5.0</Badge>
+                                <span>Exceptional performance</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">3.5 - 4.4</Badge>
+                                <span>Exceeding expectations</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-200">2.5 - 3.4</Badge>
+                                <span>Meeting expectations</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-200">1.5 - 2.4</Badge>
+                                <span>Development needed</span>
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-200">1.0 - 1.4</Badge>
+                                <span>Significant improvement required</span>
+                              </li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">Evidence Requirements</h5>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Minimum 3 specific examples per score
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Feedback from multiple relationships
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Recent examples (within review period)
+                              </li>
+                              <li className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                Impact-focused observations
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -265,32 +476,32 @@ export function MethodologyExplanation() {
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                All feedback is submitted anonymously
+                Anonymous access through unique feedback links
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                Individual responses are never revealed
+                Session-based response tracking
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                Minimum response thresholds protect identity
+                Relationship-based aggregation (senior/peer/junior)
               </li>
             </ul>
           </div>
           <div className="space-y-4">
-            <h3 className="font-medium text-lg">Data Protection</h3>
+            <h3 className="font-medium text-lg">Data Security</h3>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                End-to-end encryption for all feedback
+                Row-level security policies
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                Secure access controls
+                Secure credential storage with Supabase Vault
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                Regular security audits
+                Cryptographic functions for data protection
               </li>
             </ul>
           </div>
