@@ -3,7 +3,7 @@ import { type DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { RELATIONSHIP_WEIGHTS, CONFIDENCE_WEIGHTS, COMPETENCY_ORDER } from '@/components/dashboard/constants';
 import { detectOutliers, calculateConfidence } from '@/components/dashboard/utils';
 import { type ScoreWithOutlier } from '@/components/dashboard/types';
-import { type CompetencyFilters } from '@/components/analytics/CompetencyAnalysis/types';
+import { type CompetencyFilters } from '@/types/analytics';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 
 interface UseCompetencyScoresResult {

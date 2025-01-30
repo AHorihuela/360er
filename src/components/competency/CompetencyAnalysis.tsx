@@ -17,7 +17,7 @@ import { TeamSummaryStats } from '@/components/dashboard/TeamSummaryStats';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
 import { cn } from "@/lib/utils";
 import { type ScoreWithOutlier } from '@/components/dashboard/types';
-import { type CompetencyFilters } from '@/components/analytics/CompetencyAnalysis/types';
+import { type CompetencyFilters } from '@/types/analytics';
 
 interface CompetencyAnalysisProps {
   feedbackRequests: DashboardFeedbackRequest[];

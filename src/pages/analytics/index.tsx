@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type CompetencyFilters, type RelationshipType as AnalyticsRelationshipType } from "@/components/analytics/CompetencyAnalysis/types";
+import { type CompetencyFilters, type RelationshipType as AnalyticsRelationshipType } from "@/types/analytics";
 import { CompetencyAnalysis } from "@/components/competency/CompetencyAnalysis";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
