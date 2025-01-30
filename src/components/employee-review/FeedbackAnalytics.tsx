@@ -4,17 +4,16 @@ import { type RelationshipInsight, type AnalyticsMetadata } from "@/types/feedba
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { RELATIONSHIP_ORDER, MINIMUM_REVIEWS_REQUIRED } from "@/constants/feedback";
 import { normalizeRelationship, createFeedbackHash } from '@/utils/feedback';
-import { processAnalysis, type AnalysisSubstep, type RelationshipType } from '@/utils/analysisProcessor';
+import { processAnalysis, type AnalysisSubstep } from '@/utils/analysisProcessor';
 import { MinimumReviewsMessage } from './MinimumReviewsMessage';
 import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { AnalysisHeader } from './AnalysisHeader';
 import { EmptyAnalysisState } from './EmptyAnalysisState';
 import { AnalysisSection } from './AnalysisSection';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-type ExpandedSections = Record<RelationshipType, boolean>;
+type NormalizedRelationshipType = 'senior' | 'peer' | 'junior' | 'aggregate';
+type ExpandedSections = Record<NormalizedRelationshipType, boolean>;
 
 interface Props {
   feedbackResponses: CoreFeedbackResponse[];
@@ -47,12 +46,12 @@ export function FeedbackAnalytics({
     isLoading: true
   });
 
-  const [expandedSections, setExpandedSections] = useState<ExpandedSections>(() => ({
+  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
     aggregate: true,
     senior: false,
     peer: false,
     junior: false
-  }));
+  });
 
   const cleanupRef = useRef<(() => void) | undefined>();
 
@@ -93,7 +92,7 @@ export function FeedbackAnalytics({
     };
   }, [feedbackResponses, state]);
 
-  const toggleSection = useCallback((relationship: RelationshipType) => {
+  const toggleSection = useCallback((relationship: NormalizedRelationshipType) => {
     setExpandedSections(prev => ({
       ...prev,
       [relationship]: !prev[relationship]
@@ -298,7 +297,7 @@ export function FeedbackAnalytics({
                   insight={insightMap.get(relationshipType)}
                   responseCount={responseCount}
                   isExpanded={expandedSections[relationshipType]}
-                  onToggle={() => toggleSection(relationshipType)}
+                  onToggle={() => toggleSection(relationshipType as NormalizedRelationshipType)}
                 />
               );
             })}
