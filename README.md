@@ -18,92 +18,44 @@
 
 ## How It Works 🚀
 
-### Step 1: Create Your Team 👥
-![Step 1 - Team Setup](/public/images/step-1.png)
-Add your team members and organize them into review cycles. Each employee gets a unique profile where their feedback and growth can be tracked over time.
+### 1. Anonymous Feedback Collection
+![Feedback Form](/public/images/feedback-form.png)
+Each employee receives a unique feedback link that can be shared with peers, reports, and managers. The feedback is completely anonymous - not even administrators can see who provided specific feedback.
 
-### Step 2: Generate Feedback Links 🔗
-![Step 2 - Generate Links](/public/images/step-2.png)
-Generate anonymous feedback links for each team member. These links can be shared with peers, managers, and direct reports, ensuring complete anonymity in the feedback process.
+### 2. AI-Enhanced Quality Review ✨
+![Sample AI Review](/public/images/sample-ai-review.png)
+Before submission, feedback is processed through an AI review system that:
+- Ensures specific examples are included
+- Follows feedback best practices
+- Enhances clarity and actionability
 
-### Step 3: AI-Enhanced Feedback Collection 📝
-![Step 3 - Feedback Collection](/public/images/step-3.png)
-Reviewers provide detailed feedback through a guided form. Our AI system helps ensure feedback is:
-- Specific and actionable
-- Balanced between strengths and areas for growth
-- Supported by concrete examples
-- Professional and constructive
+### 3. Comprehensive Analysis 📊
+![Feedback Analysis](/public/images/feedback-analysis.png)
+The platform aggregates feedback across seven key performance indicators, providing:
+- Detailed performance insights
+- Pattern recognition across feedback sources
+- Visual breakdown of feedback trends
 
-### Step 4: Real-time Analysis 🔄
-![Step 4 - Analysis](/public/images/step-4.png)
-As feedback comes in, our system:
-- Processes responses in real-time
-- Maps feedback to core competencies
-- Identifies patterns and trends
-- Calculates confidence scores
-- Aggregates insights across relationship types
-
-### Step 5: Comprehensive Insights 📊
-![Step 5 - Insights](/public/images/step-5.png)
-Access detailed analytics that provide:
-- Team-wide competency analysis
-- Individual performance insights
-- Evidence-based scoring
-- Relationship-weighted evaluations
-- Growth recommendations
+### 4. Quantitative Assessment 📈
+![Overall Analysis](/public/images/overall-analysis.png)
+Each review generates:
+- Confidence-scored evaluations (High/Medium/Low)
+- Evidence-based competency ratings
+- Actionable growth recommendations
 
 ## Competency Framework 🎯
 
-Our platform evaluates seven core competencies:
+Our platform evaluates seven core competencies across key aspects:
 
-1. **Leadership & Influence** 👑
-   - Taking initiative
-   - Guiding and inspiring others
-   - Influencing outcomes positively
-   - Mentoring and role modeling
-   - Unifying vision
-
-2. **Execution & Accountability** ⚡
-   - Meeting deadlines
-   - Quality of deliverables
-   - Taking ownership
-   - Problem resolution
-   - Project completion
-
-3. **Collaboration & Communication** 🤝
-   - Information sharing
-   - Cross-team effectiveness
-   - Clarity of communication
-   - Stakeholder management
-   - Conflict resolution
-
-4. **Innovation & Problem-Solving** 💡
-   - Creative solutions
-   - Adaptability to change
-   - Initiative in improvements
-   - Collaborative ideation
-   - Impact of solutions
-
-5. **Growth & Development** 📈
-   - Continuous learning
-   - Skill development
-   - Feedback receptiveness
-   - Knowledge sharing
-   - Goal setting
-
-6. **Technical/Functional Expertise** 💻
-   - Role-specific skills
-   - Industry knowledge
-   - Technical proficiency
-   - Best practices
-   - Knowledge sharing
-
-7. **Emotional Intelligence & Culture Fit** 🫂
-   - Self-awareness
-   - Empathy and respect
-   - Cultural alignment
-   - Interpersonal effectiveness
-   - Conflict management
+| Competency | Key Aspects |
+|------------|-------------|
+| **Leadership & Influence** 👑 | • Taking initiative<br>• Guiding and inspiring others<br>• Influencing outcomes positively<br>• Mentoring and role modeling<br>• Unifying vision |
+| **Execution & Accountability** ⚡ | • Meeting deadlines<br>• Quality of deliverables<br>• Taking ownership<br>• Problem resolution<br>• Project completion |
+| **Collaboration & Communication** 🤝 | • Information sharing<br>• Cross-team effectiveness<br>• Clarity of communication<br>• Stakeholder management<br>• Conflict resolution |
+| **Innovation & Problem-Solving** 💡 | • Creative solutions<br>• Adaptability to change<br>• Initiative in improvements<br>• Collaborative ideation<br>• Impact of solutions |
+| **Growth & Development** 📈 | • Continuous learning<br>• Skill development<br>• Feedback receptiveness<br>• Knowledge sharing<br>• Goal setting |
+| **Technical/Functional Expertise** 💻 | • Role-specific skills<br>• Industry knowledge<br>• Technical proficiency<br>• Best practices<br>• Knowledge sharing |
+| **Emotional Intelligence & Culture Fit** 🫂 | • Self-awareness<br>• Empathy and respect<br>• Cultural alignment<br>• Interpersonal effectiveness<br>• Conflict management |
 
 ## Analysis Methodology 📊
 
