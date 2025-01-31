@@ -18,30 +18,39 @@
 
 ## How It Works 🚀
 
-### 1. Anonymous Feedback Collection
-![Feedback Form](/public/images/feedback-form.png)
-Each employee receives a unique feedback link that can be shared with peers, reports, and managers. The feedback is completely anonymous - not even administrators can see who provided specific feedback.
+### Step 1: Create Your Team 👥
+![Step 1 - Team Setup](/public/images/step-1.png)
+Add your team members and organize them into review cycles. Each employee gets a unique profile where their feedback and growth can be tracked over time.
 
-### 2. AI-Enhanced Quality Review ✨
-![Sample AI Review](/public/images/sample-ai-review.png)
-Before submission, feedback is processed through an AI review system that:
-- Ensures specific examples are included
-- Follows feedback best practices
-- Enhances clarity and actionability
+### Step 2: Generate Feedback Links 🔗
+![Step 2 - Generate Links](/public/images/step-2.png)
+Generate anonymous feedback links for each team member. These links can be shared with peers, managers, and direct reports, ensuring complete anonymity in the feedback process.
 
-### 3. Comprehensive Analysis 📊
-![Feedback Analysis](/public/images/feedback-analysis.png)
-The platform aggregates feedback across seven key performance indicators, providing:
-- Detailed performance insights
-- Pattern recognition across feedback sources
-- Visual breakdown of feedback trends
+### Step 3: AI-Enhanced Feedback Collection 📝
+![Step 3 - Feedback Collection](/public/images/step-3.png)
+Reviewers provide detailed feedback through a guided form. Our AI system helps ensure feedback is:
+- Specific and actionable
+- Balanced between strengths and areas for growth
+- Supported by concrete examples
+- Professional and constructive
 
-### 4. Quantitative Assessment 📈
-![Overall Analysis](/public/images/overall-analysis.png)
-Each review generates:
-- Confidence-scored evaluations (High/Medium/Low)
-- Evidence-based competency ratings
-- Actionable growth recommendations
+### Step 4: Real-time Analysis 🔄
+![Step 4 - Analysis](/public/images/step-4.png)
+As feedback comes in, our system:
+- Processes responses in real-time
+- Maps feedback to core competencies
+- Identifies patterns and trends
+- Calculates confidence scores
+- Aggregates insights across relationship types
+
+### Step 5: Comprehensive Insights 📊
+![Step 5 - Insights](/public/images/step-5.png)
+Access detailed analytics that provide:
+- Team-wide competency analysis
+- Individual performance insights
+- Evidence-based scoring
+- Relationship-weighted evaluations
+- Growth recommendations
 
 ## Competency Framework 🎯
 
