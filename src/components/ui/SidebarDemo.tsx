@@ -106,7 +106,9 @@ export const Logo = () => {
       to="/dashboard"
       className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
     >
-      <div className="h-5 w-6 bg-gradient-to-br from-primary via-secondary to-accent rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+      <div className="h-5 w-6 bg-gradient-to-br from-[#D83A0C] via-[#F45D28] to-[#FF7F45] rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0 relative">
+        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white">360</span>
+      </div>
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -124,7 +126,9 @@ export const LogoIcon = () => {
       to="/dashboard"
       className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
     >
-      <div className="h-5 w-6 bg-gradient-to-br from-primary via-secondary to-accent rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+      <div className="h-5 w-6 bg-gradient-to-br from-[#D83A0C] via-[#F45D28] to-[#FF7F45] rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0 relative">
+        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white">360</span>
+      </div>
     </Link>
   );
 }; 
