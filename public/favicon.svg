@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="128" fill="url(#gradient)" />
-  <path d="M256 128C309 128 352 171 352 224C352 277 309 320 256 320C203 320 160 277 160 224C160 171 203 128 256 128ZM384 352C384 387.3 305.9 416 256 416C206.1 416 128 387.3 128 352C128 316.7 206.1 288 256 288C305.9 288 384 316.7 384 352Z" fill="white"/>
+  <text 
+    x="256" 
+    y="330" 
+    text-anchor="middle" 
+    font-size="200" 
+    font-weight="bold" 
+    font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fill="white"
+  >360</text>
   <defs>
     <linearGradient id="gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" style="stop-color:#4F46E5"/>
-      <stop offset="100%" style="stop-color:#7C3AED"/>
+      <stop offset="0%" style="stop-color:#D83A0C"/>
+      <stop offset="50%" style="stop-color:#F45D28"/>
+      <stop offset="100%" style="stop-color:#FF7F45"/>
     </linearGradient>
   </defs>
 </svg> 
