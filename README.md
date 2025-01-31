@@ -1,6 +1,16 @@
 # Squad360 🎯
 
 <div align="center">
+
+[![Stars](https://img.shields.io/github/stars/ahorihuelas/squad360?style=flat-square&logo=github)](https://github.com/ahorihuelas/squad360/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.0-blue?style=flat-square&logo=react)](https://reactjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-2.0-green?style=flat-square&logo=supabase)](https://supabase.com/)
+[![GPT-4](https://img.shields.io/badge/GPT--4-Powered-orange?style=flat-square&logo=openai)](https://openai.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?style=flat-square&logo=vercel)](https://squad360.vercel.app)
+
   <img src="public/images/og-preview.png" alt="Squad360 - AI-Powered Team Feedback Platform" width="800"/>
 
   <p>
