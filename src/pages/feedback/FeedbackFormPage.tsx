@@ -487,49 +487,38 @@ export function FeedbackFormPage() {
   // Render the appropriate form based on the review cycle type
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-6 space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          {reviewCycleType === '360_review' ? 'Share Your Feedback' : 'Manager Effectiveness Survey'}
-        </h1>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            {reviewCycleType === '360_review' 
+              ? 'Share Your Feedback' 
+              : showNames 
+                ? `Manager Effectiveness Survey: ${feedbackRequest?.employee?.name || 'Manager'}`
+                : 'Manager Effectiveness Survey'}
+          </h1>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowNames(!showNames)}
+            className="flex items-center gap-1 ml-2 px-2"
+            title={showNames ? "Hide Names" : "Show Names"}
+          >
+            {showNames ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline text-xs">{showNames ? "Hide" : "Show"}</span>
+          </Button>
+        </div>
+        
         <p className="text-muted-foreground">
           {reviewCycleType === '360_review' 
             ? 'Provide anonymous feedback to help your colleague grow and improve.'
             : 'Share your anonymous feedback about your manager to help improve team effectiveness.'}
         </p>
       </div>
-
-      <div className="mb-6 flex items-center justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowNames(!showNames)}
-          className="flex items-center gap-2"
-        >
-          {showNames ? (
-            <>
-              <EyeOff className="h-4 w-4" />
-              <span className="sm:inline">Hide Names</span>
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4" />
-              <span className="sm:inline">Show Names</span>
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Debug information */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-4 border border-yellow-500 rounded bg-yellow-50 text-sm">
-          <p><strong>Debug Info:</strong></p>
-          <ul className="list-disc pl-4">
-            <li>Review Cycle Type: {reviewCycleType}</li>
-            <li>Questions loaded: {surveyQuestions.length}</li>
-            <li>Form step: {formState.step}</li>
-          </ul>
-        </div>
-      )}
 
       {reviewCycleType === '360_review' ? (
         // Traditional 360 review form with AI analysis

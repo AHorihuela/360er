@@ -4,7 +4,7 @@ import { SurveyQuestion, StructuredResponses, ReviewCycleType } from '@/types/su
 import { LikertScaleQuestion } from './LikertScaleQuestion';
 import { OpenEndedQuestion } from './OpenEndedQuestion';
 import { ArrowLeft, ArrowRight, Send, Loader2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 interface DynamicSurveyFormProps {
@@ -28,17 +28,12 @@ export function DynamicSurveyForm({
   const [responses, setResponses] = useState<StructuredResponses>({});
   const [allValid, setAllValid] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
-
-  // Debug logging
-  console.log('DynamicSurveyForm - Received questions:', questions);
   
   // Sort questions by order property
   const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
-  console.log('DynamicSurveyForm - Sorted questions:', sortedQuestions);
   
   // Get current question
   const currentQuestion = sortedQuestions[currentStep];
-  console.log('DynamicSurveyForm - Current question:', currentQuestion);
   
   // Calculate progress
   const progress = Math.round((currentStep / sortedQuestions.length) * 100);
@@ -61,12 +56,10 @@ export function DynamicSurveyForm({
     }
     
     setAllValid(isValid);
-    console.log('Question validity check:', { questionId: currentQuestion.id, response, isValid });
   }, [responses, currentQuestion, currentStep]);
 
   // Handle question response change
   const handleResponseChange = (questionId: string, value: string | number) => {
-    console.log('Response change:', { questionId, value });
     setResponses(prev => ({
       ...prev,
       [questionId]: value
@@ -93,9 +86,19 @@ export function DynamicSurveyForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all questions have been answered
+    // Validate all questions have been answered, except the last optional one
     const allQuestionsAnswered = sortedQuestions.every(q => {
       const response = responses[q.id];
+      
+      // Check if this is the optional "additional feedback" question
+      const isOptionalQuestion = q.questionText?.includes('additional feedback you would like to share');
+      
+      // If it's the optional question, no response is fine
+      if (isOptionalQuestion) {
+        return true;
+      }
+      
+      // Otherwise, require a response
       return response !== undefined && 
              (typeof response !== 'string' || response.trim().length > 0);
     });
@@ -112,31 +115,14 @@ export function DynamicSurveyForm({
     }
   };
 
-  // Format the display name based on survey type
-  const displayName = surveyType === '360_review' 
-    ? employeeName 
-    : `your manager${employeeName ? ` (${employeeName})` : ''}`;
-
-  // Display name in the form title
-  const formTitle = surveyType === '360_review'
-    ? `Provide feedback for ${displayName}`
-    : `Share your experience with ${displayName}`;
-
-  // Display role if available
-  const roleDisplay = employeeRole ? ` - ${employeeRole}` : '';
-
   // Render the appropriate question component based on type
   const renderQuestion = (question: SurveyQuestion) => {
-    console.log('Rendering question:', question);
-    
     if (!question) {
-      console.error('Attempted to render undefined question');
       return <div>Error: Question not found</div>;
     }
     
     switch (question.questionType) {
       case 'likert':
-        console.log('Rendering likert question with options:', question.options);
         return (
           <LikertScaleQuestion
             key={question.id}
@@ -148,10 +134,8 @@ export function DynamicSurveyForm({
           />
         );
       case 'open_ended':
-        // Generate placeholder based on the question and survey type
-        const placeholder = surveyType === '360_review'
-          ? `Share your thoughts about ${employeeName}...`
-          : 'Share your thoughts and experiences...';
+        // Generate placeholder based on the question
+        const placeholder = 'Share your thoughts and experiences...';
           
         return (
           <OpenEndedQuestion
@@ -165,83 +149,91 @@ export function DynamicSurveyForm({
           />
         );
       default:
-        console.error('Unknown question type:', question.questionType);
         return <div>Unsupported question type: {question.questionType}</div>;
     }
   };
 
   // Debug UI rendering
   if (sortedQuestions.length === 0) {
-    console.error('No questions available to render');
     return <div className="p-4 border border-red-500 rounded">Error: No questions found for this survey type.</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="mb-6 space-y-2">
-            <h2 className="text-xl font-semibold">{formTitle}</h2>
-            <p className="text-muted-foreground">{roleDisplay}</p>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>Question {currentStep + 1} of {sortedQuestions.length}</span>
-                <span>{progress}% complete</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
+    <div className="space-y-4">
+      <Card className="shadow-sm">
+        <CardHeader className="pb-0 pt-3 px-3 sm:px-6 sm:pt-6">
+          {/* Show question counter and completion percentage in one row */}
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">
+              Question {currentStep + 1} of {sortedQuestions.length}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {progress}% complete
+            </span>
           </div>
+          
+          {/* Progress bar */}
+          <Progress value={progress} className="h-1.5 mt-2" />
+        </CardHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="pt-3 px-3 sm:px-6">
+          <form className="space-y-4">
             {currentQuestion ? (
               renderQuestion(currentQuestion)
             ) : (
               <div className="p-4 border border-red-500 rounded">Error: Current question not found</div>
             )}
-
-            <div className="flex justify-between pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0 || isSubmitting}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Previous
-              </Button>
-
-              {currentStep < sortedQuestions.length - 1 ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!allValid || isSubmitting}
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  disabled={!allValid || isSubmitting}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      Submit Feedback
-                      <Send className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
           </form>
         </CardContent>
       </Card>
+      
+      {/* Navigation buttons outside of card */}
+      <div className="flex justify-between mt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handlePrevious}
+          disabled={currentStep === 0 || isSubmitting}
+          size="sm"
+          className="w-24 sm:w-28"
+        >
+          <ArrowLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="text-xs sm:text-sm">Previous</span>
+        </Button>
+
+        {currentStep < sortedQuestions.length - 1 ? (
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={!allValid || isSubmitting}
+            size="sm"
+            className="w-24 sm:w-28"
+          >
+            <span className="text-xs sm:text-sm">Next</span>
+            <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!allValid || isSubmitting}
+            className="bg-green-600 hover:bg-green-700 w-24 sm:w-28"
+            size="sm"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                <span className="text-xs sm:text-sm">Submitting...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs sm:text-sm">Submit</span>
+                <Send className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+              </>
+            )}
+          </Button>
+        )}
+      </div>
     </div>
   );
 } 

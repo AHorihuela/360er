@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { validateFeedback } from '@/utils/feedbackValidation';
 
-// Import the ValidationResult interface
+// Match the ValidationResult interface from feedbackValidation.ts
 interface ValidationResult {
   isValid: boolean;
   message: string;
@@ -16,9 +17,9 @@ interface OpenEndedQuestionProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  showValidation?: boolean;
   required?: boolean;
   minLength?: number;
-  showValidation?: boolean;
 }
 
 export function OpenEndedQuestion({
@@ -26,11 +27,15 @@ export function OpenEndedQuestion({
   questionText,
   value,
   onChange,
-  placeholder = 'Please provide your detailed feedback...',
+  placeholder = 'Share your thoughts...',
+  showValidation = false,
   required = true,
-  minLength = 30,
-  showValidation = false
+  minLength = 30
 }: OpenEndedQuestionProps) {
+  // Check if this is the last question (additional feedback) which should be optional
+  const isLastFeedbackQuestion = questionText.includes('additional feedback you would like to share');
+  const isRequired = isLastFeedbackQuestion ? false : required;
+  
   const [validation, setValidation] = useState<ValidationResult>({
     isValid: true,
     message: '',
@@ -38,53 +43,50 @@ export function OpenEndedQuestion({
     showLengthWarning: false
   });
 
-  // Update validation based on input
+  // Validate the feedback when the value changes
   useEffect(() => {
-    if (value) {
-      setValidation(validateFeedback(value, showValidation));
+    if (isRequired) {
+      const result = validateFeedback(value, showValidation);
+      setValidation(result);
+    } else {
+      // For optional questions, always mark as valid
+      setValidation({
+        isValid: true,
+        message: '',
+        warnings: [],
+        showLengthWarning: false
+      });
     }
-  }, [value, showValidation]);
+  }, [value, showValidation, isRequired]);
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
-        <Label htmlFor={id} className="text-base font-medium">
-          {questionText}
-          {required && <span className="text-primary ml-1">*</span>}
-        </Label>
-      </div>
+      <h3 className="text-lg sm:text-xl font-medium">
+        {questionText} {isRequired && <span className="text-red-500">*</span>}
+      </h3>
       
-      <div className="space-y-1">
-        <textarea
-          id={id}
-          className={`min-h-[160px] w-full rounded-lg border ${
-            !validation.isValid && validation.showLengthWarning
-              ? 'border-red-500'
-              : validation.isValid && value.length > 0
-              ? validation.warnings?.length ? 'border-yellow-500' : 'border-green-500'
-              : 'border-input'
-          } bg-background px-3 py-2 text-sm sm:text-base`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          required={required}
-        />
-        
-        <div className="space-y-1">
-          {validation.showLengthWarning && (
-            <p className={`text-xs sm:text-sm ${
-              !validation.isValid ? 'text-red-500' : 'text-muted-foreground'
-            }`}>
-              {validation.message}
-            </p>
-          )}
-          {validation.warnings?.map((warning, index) => (
-            <p key={index} className="text-xs sm:text-sm text-yellow-500">
-              ⚠️ {warning}
-            </p>
-          ))}
-        </div>
-      </div>
+      <Textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className={`w-full resize-y min-h-[120px] sm:min-h-[150px] ${!validation.isValid && validation.showLengthWarning ? 'border-red-500' : ''}`}
+      />
+      
+      {validation.showLengthWarning && (
+        <p className={`text-xs ${
+          !validation.isValid ? 'text-red-500' : 'text-muted-foreground'
+        }`}>
+          {validation.message}
+        </p>
+      )}
+      
+      {validation.warnings?.map((warning: string, index: number) => (
+        <p key={index} className="text-xs text-yellow-500">
+          ⚠️ {warning}
+        </p>
+      ))}
     </div>
   );
 } 
