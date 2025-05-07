@@ -83,6 +83,7 @@ export function ReviewCycleDetailsPage() {
         <EditableTitle
           title={reviewCycle.title}
           dueDate={reviewCycle.review_by_date}
+          type={reviewCycle.type}
           onSave={updateTitle}
         />
         <Button onClick={() => setShowAddEmployeesDialog(true)}>

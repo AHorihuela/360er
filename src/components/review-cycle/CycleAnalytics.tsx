@@ -15,11 +15,18 @@ interface Props {
 }
 
 export function CycleAnalytics({ reviewCycle }: Props) {
+  // Calculate total target responses across all employees
+  const totalTargetResponses = reviewCycle.feedback_requests?.reduce((acc, req) => 
+    acc + (req.target_responses || 0), 0) || 0;
+
+  // Calculate total actual responses across all employees
   const totalResponses = reviewCycle.feedback_requests?.reduce((acc, req) => 
     acc + (req.feedback_responses?.length || 0), 0) || 0;
 
-  const totalRequests = reviewCycle.feedback_requests?.length || 0;
-  const progressPercentage = totalRequests > 0 ? (totalResponses / totalRequests) * 100 : 0;
+  // Calculate progress as a percentage of all target responses
+  const progressPercentage = totalTargetResponses > 0 
+    ? Math.min(100, (totalResponses / totalTargetResponses) * 100) 
+    : 0;
 
   const getReviewStage = () => {
     if (progressPercentage === 0) return { label: 'Not Started', variant: 'secondary' as const };
@@ -42,7 +49,7 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                   <Info className="h-4 w-4 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Shows the current stage of the review cycle</p>
+                  <p>Shows progress of received responses against target responses</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -56,7 +63,7 @@ export function CycleAnalytics({ reviewCycle }: Props) {
             />
           </div>
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {totalResponses} responses received
+            {totalResponses} of {totalTargetResponses} responses received
           </span>
         </div>
       </div>
