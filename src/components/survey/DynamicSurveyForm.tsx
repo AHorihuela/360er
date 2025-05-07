@@ -45,6 +45,15 @@ export function DynamicSurveyForm({
       return;
     }
     
+    // Check if this is the optional "additional feedback" question
+    const isOptionalQuestion = currentQuestion.questionText?.includes('additional feedback you would like to share');
+    
+    // If it's the optional question, it's always valid
+    if (isOptionalQuestion) {
+      setAllValid(true);
+      return;
+    }
+    
     const response = responses[currentQuestion.id];
     let isValid = false;
     
