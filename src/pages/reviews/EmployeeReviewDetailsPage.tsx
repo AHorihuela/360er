@@ -241,11 +241,49 @@ export function EmployeeReviewDetailsPage() {
     const responsesText = feedbackRequest.feedback
       .filter((response: CoreFeedbackResponse) => response.submitted_at)
       .map((response: CoreFeedbackResponse) => {
-        return `Relationship: ${response.relationship}
-Strengths: ${response.strengths || 'None provided'}
-Areas for Improvement: ${response.areas_for_improvement || 'None provided'}
-Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDateString() : 'Not available'}
-----------------------------------------`;
+        // Create a base text for relationship and timestamp
+        let responseText = `Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDateString() : 'Not available'}\n`;
+        
+        // Only include relationship for 360 reviews, not for manager surveys
+        if (!isManagerSurvey) {
+          responseText += `Relationship: ${response.relationship}\n`;
+        }
+        
+        // Add structured responses for manager effectiveness surveys
+        if (isManagerSurvey && response.responses) {
+          responseText += 'Survey Responses:\n';
+          
+          // Get and sort the response entries by question order
+          const sortedResponses = Object.entries(response.responses)
+            .sort(([idA], [idB]) => {
+              const orderA = surveyQuestionOrder[idA] ?? 999;
+              const orderB = surveyQuestionOrder[idB] ?? 999;
+              return orderA - orderB;
+            });
+          
+          // Add each question and answer to the response text
+          sortedResponses.forEach(([questionId, value]) => {
+            const questionText = getQuestionTextById(questionId);
+            const formattedValue = typeof value === 'number' 
+              ? `${value} - ${
+                  value === 1 ? 'Strongly Disagree' :
+                  value === 2 ? 'Disagree' :
+                  value === 3 ? 'Neither agree nor disagree' :
+                  value === 4 ? 'Agree' :
+                  'Strongly Agree'
+                }`
+              : value;
+            
+            responseText += `- ${questionText}\n  ${formattedValue}\n`;
+          });
+          responseText += '\n';
+        }
+        
+        // Add strengths and areas for improvement
+        responseText += `Strengths: ${response.strengths || 'None provided'}\n`;
+        responseText += `Areas for Improvement: ${response.areas_for_improvement || 'None provided'}`;
+        
+        return responseText + '\n----------------------------------------';
       })
       .join('\n\n');
 
@@ -558,21 +596,24 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
                       <div key={`${feedback.id}-container`} className="p-4">
                         <div key={`${feedback.id}-header`} className="flex items-center justify-between mb-4">
                           <div key={`${feedback.id}-badge-container`} className="flex items-center gap-2">
-                            <Badge 
-                              key={`${feedback.id}-badge`}
-                              variant="outline" 
-                              className={cn(
-                                "text-xs capitalize flex items-center gap-1",
-                                feedback.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
-                                feedback.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
-                                feedback.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
-                              )}
-                            >
-                              {feedback.relationship === 'senior_colleague' && <ArrowUpIcon key={`${feedback.id}-up-icon`} className="h-3 w-3" />}
-                              {feedback.relationship === 'equal_colleague' && <EqualIcon key={`${feedback.id}-equal-icon`} className="h-3 w-3" />}
-                              {feedback.relationship === 'junior_colleague' && <ArrowDownIcon key={`${feedback.id}-down-icon`} className="h-3 w-3" />}
-                              {feedback.relationship.replace('_', ' ')}
-                            </Badge>
+                            {/* Only show relationship badge for 360 reviews, not for manager surveys */}
+                            {!isManagerSurvey && (
+                              <Badge 
+                                key={`${feedback.id}-badge`}
+                                variant="outline" 
+                                className={cn(
+                                  "text-xs capitalize flex items-center gap-1",
+                                  feedback.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
+                                  feedback.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
+                                  feedback.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
+                                )}
+                              >
+                                {feedback.relationship === 'senior_colleague' && <ArrowUpIcon key={`${feedback.id}-up-icon`} className="h-3 w-3" />}
+                                {feedback.relationship === 'equal_colleague' && <EqualIcon key={`${feedback.id}-equal-icon`} className="h-3 w-3" />}
+                                {feedback.relationship === 'junior_colleague' && <ArrowDownIcon key={`${feedback.id}-down-icon`} className="h-3 w-3" />}
+                                {feedback.relationship.replace('_', ' ')}
+                              </Badge>
+                            )}
                           </div>
                           <div key={`${feedback.id}-actions`} className="flex items-center gap-4">
                             <span key={`${feedback.id}-date`} className="text-xs text-muted-foreground">
