@@ -30,6 +30,7 @@ interface Props {
   isGeneratingReport: boolean;
   generationStep: number;
   startTime: number | null;
+  elapsedSeconds: number;
   surveyType?: ReviewCycleType;
 }
 
@@ -41,12 +42,6 @@ const generationSteps = [
   "Finalizing report..."
 ];
 
-function getElapsedTime(startTime: number | null): string {
-  if (!startTime) return '0s';
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  return `${elapsed}s`;
-}
-
 export function AIReport({ 
   feedbackRequest, 
   onExportPDF, 
@@ -55,6 +50,7 @@ export function AIReport({
   isGeneratingReport,
   generationStep,
   startTime,
+  elapsedSeconds,
   surveyType
 }: Props) {
   const { toast } = useToast();
@@ -200,7 +196,7 @@ export function AIReport({
                       {isGeneratingReport ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {generationSteps[generationStep]} ({getElapsedTime(startTime)})
+                          {generationSteps[generationStep]} ({elapsedSeconds}s)
                         </>
                       ) : (
                         <>
@@ -244,7 +240,7 @@ export function AIReport({
                     />
                     <div className="flex flex-col sm:flex-row justify-between text-sm text-muted-foreground gap-2 text-center sm:text-left">
                       <span>Step {generationStep + 1} of {generationSteps.length}</span>
-                      <span>Time elapsed: {getElapsedTime(startTime)}</span>
+                      <span>Time elapsed: {elapsedSeconds}s</span>
                     </div>
                   </div>
 

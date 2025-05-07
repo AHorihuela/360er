@@ -92,6 +92,7 @@ export function EmployeeReviewDetailsPage() {
     aiReport,
     generationStep,
     startTime,
+    elapsedSeconds,
     handleReportChange,
     handleGenerateReport,
     setAiReport
@@ -487,6 +488,7 @@ export function EmployeeReviewDetailsPage() {
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
         <AIReport 
+          key={`report-${aiReport?.created_at || 'new'}`}
           feedbackRequest={{
             id: feedbackRequest?.id || '',
             employee: feedbackRequest?.employee,
@@ -502,7 +504,8 @@ export function EmployeeReviewDetailsPage() {
           isGeneratingReport={isGeneratingReport}
           generationStep={generationStep}
           startTime={startTime}
-          surveyType={reviewCycle.type}
+          elapsedSeconds={elapsedSeconds}
+          surveyType={reviewCycle?.type}
         />
       </section>
 

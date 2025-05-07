@@ -25,6 +25,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
   });
   const [generationStep, setGenerationStep] = useState<GenerationStep>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [abortController] = useState(() => new AbortController());
 
@@ -46,6 +47,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
         setIsGeneratingReport(false);
         setGenerationStep(0);
         setStartTime(null);
+        setElapsedSeconds(0);
         setError(null);
       }
     };
@@ -103,6 +105,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
       setIsGeneratingReport(true);
       setGenerationStep(0);
       setStartTime(Date.now());
+      setElapsedSeconds(0);
 
       // Check if already aborted
       if (abortController.signal.aborted) {
@@ -180,6 +183,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
       setIsGeneratingReport(false);
       setGenerationStep(0);
       setStartTime(null);
+      setElapsedSeconds(0);
 
       // Show success toast after UI is updated
       toast({
@@ -193,6 +197,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
       setGenerationStep(0);
       setIsGeneratingReport(false);
       setStartTime(null);
+      setElapsedSeconds(0);
       toast({
         title: "Error",
         description: "Failed to generate AI report",
@@ -202,13 +207,14 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
     }
   };
 
-  // Add interval for real-time elapsed time updates
+  // Replace the existing interval effect with this improved version
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (startTime && isGeneratingReport) {
       interval = setInterval(() => {
-        // Force re-render by updating a state value
-        setGenerationStep(prev => prev); // This will trigger a re-render without changing the step
+        // Calculate elapsed time since start
+        const elapsed = Math.floor((Date.now() - (startTime || 0)) / 1000);
+        setElapsedSeconds(elapsed);
       }, 1000);
     }
     return () => {
@@ -219,6 +225,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
       if (!interval && startTime && isGeneratingReport) {
         setIsGeneratingReport(false);
         setStartTime(null);
+        setElapsedSeconds(0);
       }
     };
   }, [startTime, isGeneratingReport]);
@@ -228,6 +235,7 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
     aiReport,
     generationStep,
     startTime,
+    elapsedSeconds,
     error,
     handleReportChange,
     handleGenerateReport,
