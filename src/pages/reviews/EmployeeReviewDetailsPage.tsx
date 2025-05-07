@@ -31,6 +31,7 @@ import { getFeedbackDate } from '@/utils/report';
 import { exportToPDF } from '@/utils/pdf';
 import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
+import { ReviewCycleType } from '@/types/survey';
 
 function getStatusVariant(status?: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -42,6 +43,25 @@ function getStatusVariant(status?: string): "default" | "secondary" | "destructi
       return 'destructive';
     default:
       return 'outline';
+  }
+}
+
+// Helper function to render the survey type badge
+function getSurveyTypeBadge(type?: ReviewCycleType) {
+  switch (type) {
+    case 'manager_effectiveness':
+      return (
+        <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+          Manager Survey
+        </Badge>
+      );
+    case '360_review':
+    default:
+      return (
+        <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+          360° Feedback
+        </Badge>
+      );
   }
 }
 
@@ -159,7 +179,8 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
               relationship,
               strengths,
               areas_for_improvement,
-              created_at
+              created_at,
+              responses
             ),
             ai_reports (
               content,
@@ -213,6 +234,9 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
     );
   };
 
+  // Determine if this is a manager effectiveness survey
+  const isManagerSurvey = reviewCycle?.type === 'manager_effectiveness';
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -251,9 +275,12 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-xl font-bold">{feedbackRequest?.employee?.name}</h1>
-            <p className="text-sm text-muted-foreground">{feedbackRequest?.employee?.role}</p>
+          <div className="flex items-center">
+            <div>
+              <h1 className="text-xl font-bold">{feedbackRequest?.employee?.name}</h1>
+              <p className="text-sm text-muted-foreground">{feedbackRequest?.employee?.role}</p>
+            </div>
+            {getSurveyTypeBadge(reviewCycle.type)}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -288,8 +315,8 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
         </div>
       </div>
 
-      {/* Analytics Section */}
-      {feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
+      {/* Analytics Section - Only show for 360 feedback */}
+      {!isManagerSurvey && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
         <section className="space-y-4 pb-6">
           <FeedbackAnalytics
             feedbackResponses={feedbackRequest.feedback}
@@ -300,6 +327,14 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
 
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
+        {isManagerSurvey && (
+          <div className="p-4 mb-4 bg-blue-50 border border-blue-200 rounded-md">
+            <h3 className="text-sm font-medium text-blue-800">Manager Effectiveness Survey</h3>
+            <p className="text-sm text-blue-700 mt-1">
+              This report provides insights based on structured survey responses from team members about their manager's effectiveness.
+            </p>
+          </div>
+        )}
         <AIReport 
           feedbackRequest={{
             id: feedbackRequest?.id || '',
@@ -343,6 +378,11 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
                   <p className="text-xs text-muted-foreground mt-1">
                     Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
                   </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Survey Type</p>
+                  <div>{getSurveyTypeBadge(reviewCycle.type)}</div>
                 </div>
 
                 <div>
@@ -433,6 +473,20 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
                           </div>
                         </div>
                         <div key={`${feedback.id}-content`} className="space-y-4">
+                          {/* For manager surveys, show structured responses if available */}
+                          {isManagerSurvey && feedback.responses && Object.keys(feedback.responses).length > 0 && (
+                            <div key={`${feedback.id}-structured`} className="bg-blue-50 p-3 rounded-md space-y-3">
+                              <h4 className="text-sm font-medium">Survey Responses</h4>
+                              {Object.entries(feedback.responses).map(([questionId, value]) => (
+                                <div key={`${feedback.id}-q-${questionId}`} className="text-sm">
+                                  <span className="text-muted-foreground">Q{questionId}: </span>
+                                  <span>{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Show strengths for both survey types */}
                           {feedback.strengths && (
                             <div key={`${feedback.id}-strengths`} className="bg-slate-50 p-3 rounded-md">
                               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -444,6 +498,8 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
                               </p>
                             </div>
                           )}
+                          
+                          {/* Show areas for improvement for both survey types */}
                           {feedback.areas_for_improvement && (
                             <div key={`${feedback.id}-improvements`} className="bg-slate-50 p-3 rounded-md">
                               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">

@@ -1,10 +1,12 @@
 import { CoreFeedbackResponse } from '@/types/feedback/base';
+import { ReviewCycleType } from '@/types/survey';
 
 export interface ReviewCycle {
   id: string;
   title: string;
   review_by_date: string;
   status: string;
+  type: ReviewCycleType;
 }
 
 export interface FeedbackRequest {

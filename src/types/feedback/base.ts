@@ -1,3 +1,5 @@
+import { StructuredResponses } from '@/types/survey';
+
 // Common types used across the feedback domain
 
 export type RelationshipType = 'senior_colleague' | 'equal_colleague' | 'junior_colleague';
@@ -32,6 +34,7 @@ export interface CoreFeedbackResponse extends BaseFeedbackContent {
   status: string;
   session_id: string;
   created_at: string;
+  responses?: StructuredResponses; // Structured responses for manager effectiveness survey
 }
 
 // Type aliases for different contexts
