@@ -4,6 +4,9 @@ export interface TimestampValidation {
   submitted_at?: string;
 }
 
+// Import ReviewCycleType from survey.ts
+import { ReviewCycleType, StructuredResponses } from './survey';
+
 export interface ReviewCycle {
   id: string;
   name: string;
@@ -12,6 +15,8 @@ export interface ReviewCycle {
   end_date: string;
   review_by_date: string;
   status: 'active' | 'completed' | 'draft';
+  // Add the type field with default '360_review' for backward compatibility
+  type: ReviewCycleType;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -62,6 +67,8 @@ export interface FeedbackResponse {
   relationship: string;
   strengths: string | null;
   areas_for_improvement: string | null;
+  // Add the responses field for structured survey responses
+  responses?: StructuredResponses;
 }
 
 export interface FeedbackRequest {
@@ -74,6 +81,7 @@ export interface FeedbackRequest {
   created_at?: string;
   employee?: Employee | Employee[];
   feedback_responses?: FeedbackResponse[];
+  review_cycle?: ReviewCycle; // Add this to access the cycle type
   analytics?: {
     id: string;
     insights: Array<{
@@ -97,6 +105,8 @@ export interface CreateReviewCycleInput {
   review_by_date: string;
   user_id: string;
   status?: 'active' | 'completed';
+  // Add the type field with default
+  type?: ReviewCycleType;
 }
 
 export interface AIReport extends TimestampValidation {

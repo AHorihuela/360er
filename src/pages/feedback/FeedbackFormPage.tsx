@@ -10,6 +10,10 @@ import { useFeedbackFormState } from '@/hooks/useFeedbackFormState';
 import { FeedbackRequest } from '@/types/feedback/submission';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { type RelationshipType } from '@/types/feedback/base';
+import { ReviewCycleType, SurveyQuestion, StructuredResponses } from '@/types/survey';
+import { DynamicSurveyForm } from '@/components/survey/DynamicSurveyForm';
+import { getSurveyQuestions, submitSurveyResponses } from '@/api/surveyQuestions';
+import { Button } from '@/components/ui/button';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -23,6 +27,8 @@ export function FeedbackFormPage() {
   const [showNames, setShowNames] = useState(true);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
   const [sessionId] = useState(() => generateSessionId());
+  const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestion[]>([]);
+  const [isSurveySubmitting, setIsSurveySubmitting] = useState(false);
 
   const { submitFeedback, isSubmitting } = useFeedbackSubmission();
   const {
@@ -36,6 +42,18 @@ export function FeedbackFormPage() {
     isSubmitted
   } = useFeedbackFormState({ uniqueLink: uniqueLink || '' });
 
+  // Safely get the review cycle type with a default value
+  const getSurveyType = (): ReviewCycleType => {
+    if (feedbackRequest && 
+        feedbackRequest.review_cycle && 
+        'type' in feedbackRequest.review_cycle) {
+      return feedbackRequest.review_cycle.type as unknown as ReviewCycleType;
+    }
+    return '360_review'; // Default to 360 review for backward compatibility
+  };
+  
+  const reviewCycleType = getSurveyType();
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -48,7 +66,14 @@ export function FeedbackFormPage() {
           return;
         }
 
-        await fetchFeedbackRequest();
+        const request = await fetchFeedbackRequest();
+        
+        if (request && request.review_cycle && 'type' in request.review_cycle) {
+          // Fetch questions based on the review cycle type
+          const cycleType = request.review_cycle.type as unknown as ReviewCycleType;
+          const questions = await getSurveyQuestions(cycleType);
+          setSurveyQuestions(questions);
+        }
       } catch (error) {
         console.error('Error fetching feedback request:', error);
         toast({
@@ -94,7 +119,8 @@ export function FeedbackFormPage() {
             id,
             title,
             review_by_date,
-            status
+            status,
+            type
           )
         `)
         .ilike('unique_link', cleanLink)
@@ -123,6 +149,7 @@ export function FeedbackFormPage() {
           strengths,
           areas_for_improvement,
           relationship,
+          responses,
           created_at
         `)
         .eq('feedback_request_id', requestData.id);
@@ -158,11 +185,16 @@ export function FeedbackFormPage() {
               aiAnalysisAttempted: formState.aiAnalysisAttempted
             });
 
-            updateFormData({
-              relationship: (existingFeedback.relationship || 'equal_colleague') as RelationshipType,
-              strengths: existingFeedback.strengths || '',
-              areas_for_improvement: existingFeedback.areas_for_improvement || ''
-            });
+            // For traditional 360 reviews, update the form data
+            if (!existingFeedback.responses) {
+              updateFormData({
+                relationship: (existingFeedback.relationship || 'equal_colleague') as RelationshipType,
+                strengths: existingFeedback.strengths || '',
+                areas_for_improvement: existingFeedback.areas_for_improvement || ''
+              });
+            }
+            // For structured surveys, responses are in the responses field
+            // The dynamic form will handle loading from this state
           }
         }
       }
@@ -387,111 +419,131 @@ export function FeedbackFormPage() {
     }
   }
 
+  // New handler for submitting survey responses
+  const handleSurveySubmit = async (responses: StructuredResponses) => {
+    if (!feedbackRequest || !uniqueLink) {
+      toast({
+        title: "Error",
+        description: "Invalid survey data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSurveySubmitting(true);
+
+      // Submit the structured responses
+      await submitSurveyResponses(
+        feedbackRequest.id,
+        formData.relationship, // Use the same relationship from the form state
+        responses,
+        sessionId
+      );
+
+      // Mark as submitted and redirect to thank you page
+      markAsSubmitted();
+      navigate('/feedback/thank-you');
+    } catch (error) {
+      console.error('Error submitting survey:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit survey. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSurveySubmitting(false);
+    }
+  };
+
   if (isLoading) {
-    console.log('Rendering loading state');
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">Loading feedback form...</div>
       </div>
     );
   }
 
-  if (!feedbackRequest || !feedbackRequest.employee || !feedbackRequest.review_cycle) {
-    console.log('Missing required data:', {
-      hasFeedbackRequest: !!feedbackRequest,
-      hasEmployee: !!feedbackRequest?.employee,
-      hasReviewCycle: !!feedbackRequest?.review_cycle
-    });
-    return null;
-  }
-
-  // Only check for review cycle end date, not status
-  const isRequestClosed = feedbackRequest.review_cycle.review_by_date && 
-    new Date(feedbackRequest.review_cycle.review_by_date) < new Date();
-
-  if (isRequestClosed) {
-    console.log('Request is closed, review_by_date:', feedbackRequest.review_cycle.review_by_date);
+  if (!feedbackRequest || !uniqueLink) {
     return (
-      <div className="mx-auto max-w-3xl space-y-8 p-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">Feedback Form Closed</h1>
-          <p className="mt-4 text-muted-foreground">
-            This review cycle has ended.
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Due by: {new Date(feedbackRequest.review_cycle.review_by_date).toLocaleDateString()}
-          </p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center space-y-4 p-4 text-center">
+        <h1 className="text-2xl font-bold">Feedback Link Not Found</h1>
+        <p className="max-w-md text-muted-foreground">
+          This feedback link is invalid or has expired. Please check the URL and try again.
+        </p>
       </div>
     );
   }
 
-  console.log('Rendering feedback form with data:', {
-    employeeName: feedbackRequest.employee.name,
-    reviewCycleTitle: feedbackRequest.review_cycle.title,
-    formStep: formState.step
-  });
-
+  // Render the appropriate form based on the review cycle type
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
-      <div className="relative text-center">
-        <button
-          onClick={() => setShowNames(!showNames)}
-          className="absolute right-0 top-0 p-2"
-          type="button"
-          title={showNames ? "Hide names" : "Show names"}
-        >
-          {showNames ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+    <div className="container max-w-3xl mx-auto py-8 px-4">
+      <div className="mb-6 space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold">
-          Feedback Form for {showNames ? feedbackRequest.employee.name : 'Employee'}
+          {reviewCycleType === '360_review' ? 'Share Your Feedback' : 'Manager Effectiveness Survey'}
         </h1>
-        <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-          Providing feedback for {showNames ? feedbackRequest.employee.name : 'Employee'} - {feedbackRequest.employee.role}
+        <p className="text-muted-foreground">
+          {reviewCycleType === '360_review' 
+            ? 'Provide anonymous feedback to help your colleague grow and improve.'
+            : 'Share your anonymous feedback about your manager to help improve team effectiveness.'}
         </p>
-        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-          Review cycle: {feedbackRequest.review_cycle.title}
-        </p>
-        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-          Due by: {new Date(feedbackRequest.review_cycle.review_by_date).toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-          })}
-        </p>
-        {(formData.strengths || formData.areas_for_improvement) && (
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
-            Draft saved automatically
-          </p>
-        )}
       </div>
 
-      {formState.step === 'submitting' ? (
-        <div className="flex min-h-[300px] items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="text-lg">Submitting your feedback...</p>
+      <div className="mb-6 flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowNames(!showNames)}
+          className="flex items-center gap-2"
+        >
+          {showNames ? (
+            <>
+              <EyeOff className="h-4 w-4" />
+              <span className="sm:inline">Hide Names</span>
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              <span className="sm:inline">Show Names</span>
+            </>
+          )}
+        </Button>
+      </div>
+
+      {reviewCycleType === '360_review' ? (
+        // Traditional 360 review form with AI analysis
+        formState.step === 'form' ? (
+          <FeedbackForm
+            employeeName={feedbackRequest?.employee?.name || 'Employee'}
+            employeeRole={feedbackRequest?.employee?.role || ''}
+            showNames={showNames}
+            formData={formData}
+            onFormDataChange={updateFormData}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        ) : formState.step === 'ai_review' ? (
+          <AiFeedbackReview
+            feedbackData={formData}
+            feedbackRequestId={feedbackRequest?.id || ''}
+            onFeedbackChange={(field, value) => updateFormData({ [field]: value })}
+            onSubmit={handleSubmit}
+            isLoading={isSubmitting}
+          />
+        ) : (
+          <div className="flex min-h-[300px] items-center justify-center">
+            <div className="text-lg">Submitting feedback...</div>
           </div>
-        </div>
-      ) : formState.step === 'ai_review' ? (
-        <AiFeedbackReview
-          feedbackData={formData}
-          onSubmit={handleSubmit}
-          isLoading={isSubmitting}
-          feedbackRequestId={feedbackRequest.id}
-          onFeedbackChange={async (field, value) => {
-            updateFormData({ [field]: value });
-          }}
-        />
+        )
       ) : (
-        <FeedbackForm
-          employeeName={feedbackRequest.employee.name}
-          employeeRole={feedbackRequest.employee.role}
-          showNames={showNames}
-          formData={formData}
-          onFormDataChange={updateFormData}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
+        // Dynamic survey form for manager effectiveness
+        <DynamicSurveyForm
+          questions={surveyQuestions}
+          surveyType={reviewCycleType}
+          employeeName={showNames ? feedbackRequest?.employee?.name || '' : ''}
+          employeeRole={feedbackRequest?.employee?.role || ''}
+          onSubmit={handleSurveySubmit}
+          isSubmitting={isSurveySubmitting}
         />
       )}
     </div>
