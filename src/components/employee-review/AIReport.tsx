@@ -130,6 +130,13 @@ export function AIReport({
     });
   };
 
+  // Update the button click handler to include the surveyType in the displayed UI
+  const getReportTypeLabel = () => {
+    return surveyType === 'manager_effectiveness' 
+      ? 'Manager Effectiveness Report' 
+      : '360-Degree Feedback Report';
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -160,7 +167,7 @@ export function AIReport({
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                   <div className="space-y-1">
-                    <CardTitle>AI-Generated Feedback Report</CardTitle>
+                    <CardTitle>AI-Generated {getReportTypeLabel()}</CardTitle>
                     <CardDescription>
                       {aiReport?.created_at ? `Generated ${new Date(aiReport.created_at).toLocaleString('en-US', {
                         month: 'long',

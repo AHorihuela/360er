@@ -5,12 +5,14 @@ import { generateAIReport } from '../lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
 import { cleanMarkdownContent } from '../utils/report';
+import { ReviewCycleType } from '../types/survey';
 
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
+  surveyType?: ReviewCycleType;
 }
 
-export function useAIReportManagement({ feedbackRequest }: UseAIReportManagementProps) {
+export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIReportManagementProps) {
   const { toast } = useToast();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<AIReportType | null>(() => {
@@ -135,7 +137,8 @@ export function useAIReportManagement({ feedbackRequest }: UseAIReportManagement
       const reportContent = await generateAIReport(
         feedbackRequest.employee?.name || 'Unknown Employee',
         feedbackRequest.employee?.role || 'Unknown Role',
-        feedbackRequest.feedback
+        feedbackRequest.feedback,
+        surveyType
       );
 
       if (!reportContent) {
