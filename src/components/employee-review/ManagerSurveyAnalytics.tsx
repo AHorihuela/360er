@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CoreFeedbackResponse } from '@/types/feedback/base';
@@ -64,12 +64,29 @@ function getScoreEmoji(score: number) {
   return <Sparkles className="h-5 w-5 text-emerald-500" />;
 }
 
+const LOCAL_STORAGE_KEY = 'managerSurveyAnalyticsExpanded';
+
 export function ManagerSurveyAnalytics({ 
   feedbackResponses,
   questionIdToTextMap,
   questionOrder
 }: ManagerSurveyAnalyticsProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Initialize from localStorage or default to true
+  const [isExpanded, setIsExpanded] = useState(() => {
+    // Only run in browser environment
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+      return savedState ? JSON.parse(savedState) : true;
+    }
+    return true;
+  });
+  
+  // Save to localStorage whenever isExpanded changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(isExpanded));
+    }
+  }, [isExpanded]);
   
   // Calculate overall average and metrics for each question
   const { 
@@ -118,11 +135,15 @@ export function ManagerSurveyAnalytics({
     return null;
   }
 
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <Card className="shadow-sm">
       <CardHeader 
-        className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className="cursor-pointer hover:bg-muted/50 transition-colors py-3"
+        onClick={toggleExpanded}
       >
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Manager Effectiveness Summary</CardTitle>
