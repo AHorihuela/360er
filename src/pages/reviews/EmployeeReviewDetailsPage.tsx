@@ -20,7 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
@@ -31,7 +31,7 @@ import { getFeedbackDate } from '@/utils/report';
 import { exportToPDF } from '@/utils/pdf';
 import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
-import { ReviewCycleType } from '@/types/survey';
+import { ReviewCycleType, SurveyQuestion } from '@/types/survey';
 
 function getStatusVariant(status?: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -75,6 +75,9 @@ export function EmployeeReviewDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null);
   const [feedbackRequest, setFeedbackRequest] = useState<FeedbackRequest | null>(null);
+  const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
+  const [surveyQuestionOrder, setSurveyQuestionOrder] = useState<Record<string, number>>({});
+  const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
 
   const {
     deletingFeedbackId,
@@ -105,6 +108,112 @@ export function EmployeeReviewDetailsPage() {
     feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
     [feedbackRequest?.feedback]
   );
+
+  // Get question text by ID using the fetched questions from the database
+  const getQuestionTextById = (questionId: string): string => {
+    if (surveyQuestions[questionId]) {
+      return surveyQuestions[questionId];
+    }
+    
+    // Fallback if question not found
+    return `Question ${questionId.slice(0, 8)}...`;
+  };
+
+  // Fetch survey questions based on the review cycle type
+  useEffect(() => {
+    if (reviewCycle?.type) {
+      fetchSurveyQuestions(reviewCycle.type);
+    }
+  }, [reviewCycle?.type]);
+
+  const fetchSurveyQuestions = async (cycleType: ReviewCycleType) => {
+    try {
+      // Clear any existing questions first and set loading state
+      setSurveyQuestions({});
+      setSurveyQuestionOrder({});
+      setIsQuestionsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('survey_questions')
+        .select('id, question_text, order')
+        .eq('review_cycle_type', cycleType)
+        .order('order', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        console.warn(`No questions found for survey type: ${cycleType}`);
+        toast({
+          title: "Warning",
+          description: `Could not load survey questions for ${cycleType === 'manager_effectiveness' ? 'Manager Survey' : '360° Feedback'}`,
+          variant: "destructive",
+        });
+        setIsQuestionsLoading(false);
+        return;
+      }
+
+      // Create a map of question IDs to question text and order
+      const questionMap: Record<string, string> = {};
+      const orderMap: Record<string, number> = {};
+      
+      data.forEach(question => {
+        questionMap[question.id] = question.question_text;
+        orderMap[question.id] = question.order;
+      });
+
+      setSurveyQuestions(questionMap);
+      setSurveyQuestionOrder(orderMap);
+      console.log(`Loaded ${data.length} questions for survey type: ${cycleType}`);
+    } catch (err) {
+      console.error('Error fetching survey questions:', err);
+      toast({
+        title: "Error",
+        description: "Could not load survey questions. Some question text may not display correctly.",
+        variant: "destructive",
+      });
+      
+      // Retry once after a short delay
+      setTimeout(() => {
+        console.log('Retrying survey question fetch...');
+        fetchSurveyQuestionsRetry(cycleType);
+      }, 2000);
+    } finally {
+      setIsQuestionsLoading(false);
+    }
+  };
+  
+  // Retry function with simplified error handling
+  const fetchSurveyQuestionsRetry = async (cycleType: ReviewCycleType) => {
+    try {
+      const { data, error } = await supabase
+        .from('survey_questions')
+        .select('id, question_text, order')
+        .eq('review_cycle_type', cycleType)
+        .order('order', { ascending: true });
+
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        console.warn(`Retry: No questions found for survey type: ${cycleType}`);
+        return;
+      }
+
+      // Create a map of question IDs to question text and order
+      const questionMap: Record<string, string> = {};
+      const orderMap: Record<string, number> = {};
+      
+      data.forEach(question => {
+        questionMap[question.id] = question.question_text;
+        orderMap[question.id] = question.order;
+      });
+
+      setSurveyQuestions(questionMap);
+      setSurveyQuestionOrder(orderMap);
+      console.log(`Retry successful: Loaded ${data.length} questions for survey type: ${cycleType}`);
+    } catch (err) {
+      console.error('Error in retry fetch for survey questions:', err);
+    }
+  };
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -206,6 +315,11 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
         }
       });
 
+      // Once we have the review cycle data, fetch the survey questions
+      if (cycleData.type) {
+        fetchSurveyQuestions(cycleData.type);
+      }
+
       if (request.ai_reports?.[0]?.content) {
         setAiReport({
           content: request.ai_reports[0].content,
@@ -275,12 +389,14 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center">
-            <div>
-              <h1 className="text-xl font-bold">{feedbackRequest?.employee?.name}</h1>
-              <p className="text-sm text-muted-foreground">{feedbackRequest?.employee?.role}</p>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <div>
+                <h1 className="text-xl font-bold">{feedbackRequest?.employee?.name}</h1>
+                <p className="text-sm text-muted-foreground">{feedbackRequest?.employee?.role}</p>
+              </div>
+              {getSurveyTypeBadge(reviewCycle.type)}
             </div>
-            {getSurveyTypeBadge(reviewCycle.type)}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -328,11 +444,16 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
         {isManagerSurvey && (
-          <div className="p-4 mb-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h3 className="text-sm font-medium text-blue-800">Manager Effectiveness Survey</h3>
-            <p className="text-sm text-blue-700 mt-1">
-              This report provides insights based on structured survey responses from team members about their manager's effectiveness.
-            </p>
+          <div className="p-4 mb-4 bg-blue-50 border border-blue-200 rounded-md flex items-start gap-3">
+            <div className="mt-0.5 bg-blue-100 p-2 rounded-full">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-blue-800 mb-1">Manager Effectiveness Survey</h3>
+              <p className="text-sm text-blue-700">
+                This report provides insights based on structured survey responses about management skills, leadership qualities, and team support. Responses are collected anonymously to ensure honest feedback.
+              </p>
+            </div>
           </div>
         )}
         <AIReport 
@@ -351,6 +472,7 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
           isGeneratingReport={isGeneratingReport}
           generationStep={generationStep}
           startTime={startTime}
+          surveyType={reviewCycle.type}
         />
       </section>
 
@@ -475,14 +597,60 @@ Submitted: ${response.submitted_at ? new Date(response.submitted_at).toLocaleDat
                         <div key={`${feedback.id}-content`} className="space-y-4">
                           {/* For manager surveys, show structured responses if available */}
                           {isManagerSurvey && feedback.responses && Object.keys(feedback.responses).length > 0 && (
-                            <div key={`${feedback.id}-structured`} className="bg-blue-50 p-3 rounded-md space-y-3">
-                              <h4 className="text-sm font-medium">Survey Responses</h4>
-                              {Object.entries(feedback.responses).map(([questionId, value]) => (
-                                <div key={`${feedback.id}-q-${questionId}`} className="text-sm">
-                                  <span className="text-muted-foreground">Q{questionId}: </span>
-                                  <span>{value}</span>
+                            <div key={`${feedback.id}-structured`} className="bg-blue-50 p-4 rounded-md space-y-4">
+                              <h4 className="text-sm font-medium text-blue-800">Survey Responses</h4>
+                              
+                              {isQuestionsLoading ? (
+                                <div className="py-2 flex items-center justify-center">
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  <span className="text-sm text-blue-600">Loading questions...</span>
                                 </div>
-                              ))}
+                              ) : (
+                                // Sort responses by question order and then render
+                                Object.entries(feedback.responses || {})
+                                  .sort(([idA], [idB]) => {
+                                    // Sort by question order, fallback to questionId if order not available
+                                    const orderA = surveyQuestionOrder[idA] ?? 999;
+                                    const orderB = surveyQuestionOrder[idB] ?? 999;
+                                    return orderA - orderB;
+                                  })
+                                  .map(([questionId, value]) => {
+                                    // Get question text from question ID using the fetched questions
+                                    const questionText = getQuestionTextById(questionId);
+                                    
+                                    // Format the value based on whether it's a number (Likert) or string (open-ended)
+                                    const formattedValue = typeof value === 'number' 
+                                      ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className={cn(
+                                            "px-2 py-1 rounded-full text-xs font-medium",
+                                            value === 1 && "bg-red-100 text-red-800",
+                                            value === 2 && "bg-orange-100 text-orange-800",
+                                            value === 3 && "bg-yellow-100 text-yellow-800",
+                                            value === 4 && "bg-green-100 text-green-800",
+                                            value === 5 && "bg-emerald-100 text-emerald-800"
+                                          )}>
+                                            {value}
+                                          </span>
+                                          <span className="text-sm text-gray-600">
+                                            {value === 1 && "Strongly Disagree"}
+                                            {value === 2 && "Disagree"}
+                                            {value === 3 && "Neither agree nor disagree"}
+                                            {value === 4 && "Agree"}
+                                            {value === 5 && "Strongly Agree"}
+                                          </span>
+                                        </div>
+                                      ) 
+                                      : <span className="text-sm">{value}</span>;
+                                    
+                                    return (
+                                      <div key={`${feedback.id}-q-${questionId}`} className="space-y-2 border-b border-blue-100 pb-3 last:border-0 last:pb-0">
+                                        <span className="text-blue-800 font-medium block">{questionText}</span>
+                                        <div className="pl-2">{formattedValue}</div>
+                                      </div>
+                                    );
+                                  })
+                              )}
                             </div>
                           )}
                           

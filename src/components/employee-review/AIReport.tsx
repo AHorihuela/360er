@@ -9,6 +9,7 @@ import { FeedbackResponse } from '@/types/feedback';
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
 import { useToast } from '@/components/ui/use-toast';
 import { debounce } from 'lodash';
+import { ReviewCycleType } from '@/types/survey';
 
 interface Props {
   feedbackRequest: {
@@ -29,6 +30,7 @@ interface Props {
   isGeneratingReport: boolean;
   generationStep: number;
   startTime: number | null;
+  surveyType?: ReviewCycleType;
 }
 
 const generationSteps = [
@@ -52,7 +54,8 @@ export function AIReport({
   onGenerateReport,
   isGeneratingReport,
   generationStep,
-  startTime
+  startTime,
+  surveyType
 }: Props) {
   const { toast } = useToast();
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
