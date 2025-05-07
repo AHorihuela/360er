@@ -71,8 +71,17 @@ export function FeedbackFormPage() {
         if (request && request.review_cycle && 'type' in request.review_cycle) {
           // Fetch questions based on the review cycle type
           const cycleType = request.review_cycle.type as unknown as ReviewCycleType;
-          const questions = await getSurveyQuestions(cycleType);
-          setSurveyQuestions(questions);
+          console.log('FeedbackFormPage - Found review cycle type:', cycleType);
+          
+          try {
+            const questions = await getSurveyQuestions(cycleType);
+            console.log('FeedbackFormPage - Loaded survey questions:', questions);
+            setSurveyQuestions(questions);
+          } catch (error) {
+            console.error('FeedbackFormPage - Error loading survey questions:', error);
+          }
+        } else {
+          console.warn('FeedbackFormPage - Unable to determine review cycle type from:', request?.review_cycle);
         }
       } catch (error) {
         console.error('Error fetching feedback request:', error);
@@ -510,6 +519,18 @@ export function FeedbackFormPage() {
         </Button>
       </div>
 
+      {/* Debug information */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-4 border border-yellow-500 rounded bg-yellow-50 text-sm">
+          <p><strong>Debug Info:</strong></p>
+          <ul className="list-disc pl-4">
+            <li>Review Cycle Type: {reviewCycleType}</li>
+            <li>Questions loaded: {surveyQuestions.length}</li>
+            <li>Form step: {formState.step}</li>
+          </ul>
+        </div>
+      )}
+
       {reviewCycleType === '360_review' ? (
         // Traditional 360 review form with AI analysis
         formState.step === 'form' ? (
@@ -537,14 +558,22 @@ export function FeedbackFormPage() {
         )
       ) : (
         // Dynamic survey form for manager effectiveness
-        <DynamicSurveyForm
-          questions={surveyQuestions}
-          surveyType={reviewCycleType}
-          employeeName={showNames ? feedbackRequest?.employee?.name || '' : ''}
-          employeeRole={feedbackRequest?.employee?.role || ''}
-          onSubmit={handleSurveySubmit}
-          isSubmitting={isSurveySubmitting}
-        />
+        <>
+          {process.env.NODE_ENV === 'development' && surveyQuestions.length === 0 && (
+            <div className="mb-4 p-4 border border-red-500 rounded bg-red-50">
+              <p className="font-bold">No survey questions loaded</p>
+              <p>Check the browser console for errors.</p>
+            </div>
+          )}
+          <DynamicSurveyForm
+            questions={surveyQuestions}
+            surveyType={reviewCycleType}
+            employeeName={showNames ? feedbackRequest?.employee?.name || '' : ''}
+            employeeRole={feedbackRequest?.employee?.role || ''}
+            onSubmit={handleSurveySubmit}
+            isSubmitting={isSurveySubmitting}
+          />
+        </>
       )}
     </div>
   );

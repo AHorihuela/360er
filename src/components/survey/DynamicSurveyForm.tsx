@@ -29,18 +29,26 @@ export function DynamicSurveyForm({
   const [allValid, setAllValid] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
 
+  // Debug logging
+  console.log('DynamicSurveyForm - Received questions:', questions);
+  
   // Sort questions by order property
   const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
+  console.log('DynamicSurveyForm - Sorted questions:', sortedQuestions);
   
   // Get current question
   const currentQuestion = sortedQuestions[currentStep];
+  console.log('DynamicSurveyForm - Current question:', currentQuestion);
   
   // Calculate progress
   const progress = Math.round((currentStep / sortedQuestions.length) * 100);
 
   // Check if current question is answered
   useEffect(() => {
-    if (!currentQuestion) return;
+    if (!currentQuestion) {
+      console.error('No current question found at step:', currentStep);
+      return;
+    }
     
     const response = responses[currentQuestion.id];
     let isValid = false;
@@ -53,10 +61,12 @@ export function DynamicSurveyForm({
     }
     
     setAllValid(isValid);
-  }, [responses, currentQuestion]);
+    console.log('Question validity check:', { questionId: currentQuestion.id, response, isValid });
+  }, [responses, currentQuestion, currentStep]);
 
   // Handle question response change
   const handleResponseChange = (questionId: string, value: string | number) => {
+    console.log('Response change:', { questionId, value });
     setResponses(prev => ({
       ...prev,
       [questionId]: value
@@ -117,8 +127,16 @@ export function DynamicSurveyForm({
 
   // Render the appropriate question component based on type
   const renderQuestion = (question: SurveyQuestion) => {
+    console.log('Rendering question:', question);
+    
+    if (!question) {
+      console.error('Attempted to render undefined question');
+      return <div>Error: Question not found</div>;
+    }
+    
     switch (question.questionType) {
       case 'likert':
+        console.log('Rendering likert question with options:', question.options);
         return (
           <LikertScaleQuestion
             key={question.id}
@@ -147,9 +165,16 @@ export function DynamicSurveyForm({
           />
         );
       default:
-        return null;
+        console.error('Unknown question type:', question.questionType);
+        return <div>Unsupported question type: {question.questionType}</div>;
     }
   };
+
+  // Debug UI rendering
+  if (sortedQuestions.length === 0) {
+    console.error('No questions available to render');
+    return <div className="p-4 border border-red-500 rounded">Error: No questions found for this survey type.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -168,7 +193,11 @@ export function DynamicSurveyForm({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {currentQuestion && renderQuestion(currentQuestion)}
+            {currentQuestion ? (
+              renderQuestion(currentQuestion)
+            ) : (
+              <div className="p-4 border border-red-500 rounded">Error: Current question not found</div>
+            )}
 
             <div className="flex justify-between pt-4">
               <Button

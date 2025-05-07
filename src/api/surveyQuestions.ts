@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { ReviewCycleType, SurveyQuestion } from '@/types/survey';
+import { ReviewCycleType, SurveyQuestion, QuestionOption } from '@/types/survey';
 
 /**
  * Fetch survey questions by review cycle type
@@ -7,6 +7,8 @@ import { ReviewCycleType, SurveyQuestion } from '@/types/survey';
  * @returns An array of survey questions
  */
 export async function getSurveyQuestions(type: ReviewCycleType): Promise<SurveyQuestion[]> {
+  console.log('Fetching survey questions for type:', type);
+  
   const { data, error } = await supabase
     .from('survey_questions')
     .select('*')
@@ -18,12 +20,58 @@ export async function getSurveyQuestions(type: ReviewCycleType): Promise<SurveyQ
     throw error;
   }
   
-  // Parse the options JSON if it exists
-  return data.map(question => ({
-    ...question,
-    options: question.options ? JSON.parse(JSON.stringify(question.options)) : undefined,
-    reviewCycleType: question.review_cycle_type as ReviewCycleType,
-  }));
+  console.log('Raw survey questions data:', data);
+  
+  // Parse the options JSON if it exists and convert snake_case to camelCase
+  const questions = data.map(question => {
+    let parsedOptions: QuestionOption[] | undefined = undefined;
+    
+    // Ensure options are properly parsed
+    if (question.options) {
+      try {
+        // If it's already a parsed object, use it directly
+        if (typeof question.options === 'object') {
+          parsedOptions = Array.isArray(question.options) ? question.options : [];
+        } else {
+          // If it's a string, parse it
+          parsedOptions = JSON.parse(question.options);
+        }
+        
+        // Ensure it's an array
+        if (!Array.isArray(parsedOptions)) {
+          console.warn('Options is not an array, resetting to empty array:', question.options);
+          parsedOptions = [];
+        }
+        
+        // Validate each option has value and label
+        parsedOptions = parsedOptions.map(option => ({
+          value: option.value,
+          label: option.label
+        }));
+      } catch (e) {
+        console.error('Error parsing options for question:', question.id, e);
+        parsedOptions = [];
+      }
+    }
+    
+    // Create the mapped question object with correct property names
+    const parsedQuestion: SurveyQuestion = {
+      id: question.id,
+      reviewCycleType: question.review_cycle_type as ReviewCycleType,
+      questionText: question.question_text,
+      questionType: question.question_type,
+      options: parsedOptions,
+      order: question.order,
+      created_at: question.created_at,
+      updated_at: question.updated_at
+    };
+    
+    console.log('Processed question:', parsedQuestion);
+    return parsedQuestion;
+  });
+  
+  console.log('Returning processed questions:', questions);
+  return questions;
 }
 
 /**
@@ -68,7 +116,8 @@ export async function submitSurveyResponses(
       strengths,
       areas_for_improvement,
       session_id: sessionId,
-      submitted_at: new Date().toISOString()
+      submitted_at: new Date().toISOString(),
+      status: 'submitted'
     })
     .select()
     .single();
