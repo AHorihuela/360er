@@ -108,8 +108,11 @@ describe('ManagerSurveyAnalytics', () => {
       />
     );
 
-    // We'll find the overall score display
-    expect(screen.getByText('3.5')).toBeInTheDocument();
+    // Find the overall score display - using a more specific query
+    const overallScore = screen.getByText('3.5', {
+      selector: '.text-3xl.font-bold .text-yellow-500'
+    });
+    expect(overallScore).toBeInTheDocument();
     expect(screen.getByText('/ 5.0')).toBeInTheDocument();
   });
 
@@ -143,9 +146,19 @@ describe('ManagerSurveyAnalytics', () => {
     // q1 average is (5+4)/2 = 4.5
     // q2 average is (4+3)/2 = 3.5
     // q3 average is (3+2)/2 = 2.5
-    expect(screen.getByText('4.5')).toBeInTheDocument();
-    expect(screen.getByText('3.5')).toBeInTheDocument();
-    expect(screen.getByText('2.5')).toBeInTheDocument();
+    
+    // Use more specific queries to target score elements by their context
+    const questionSections = screen.getAllByText(/(I understand|My manager)/, { selector: 'h4' })
+      .map(heading => heading.closest('div'));
+    
+    // Check for the first question's score (4.5)
+    expect(questionSections[0]?.querySelector('.px-2.py-1')?.textContent).toBe('4.5');
+    
+    // Check for the second question's score (3.5)
+    expect(questionSections[1]?.querySelector('.px-2.py-1')?.textContent).toBe('3.5');
+    
+    // Check for the third question's score (2.5)
+    expect(questionSections[2]?.querySelector('.px-2.py-1')?.textContent).toBe('2.5');
   });
 
   it('toggles expanded state when header is clicked', async () => {
@@ -253,7 +266,11 @@ describe('ManagerSurveyAnalytics', () => {
 
     // Should still render the component
     expect(screen.getByText('Manager Effectiveness Summary')).toBeInTheDocument();
-    // Should show 0 as the average score (no data)
-    expect(screen.getByText('0')).toBeInTheDocument();
+    
+    // Look for zero as the overall score in a more specific way
+    const overallScoreElement = screen.getByText('0', {
+      selector: '.text-3xl.font-bold .text-red-500'
+    });
+    expect(overallScoreElement).toBeInTheDocument();
   });
 }); 
