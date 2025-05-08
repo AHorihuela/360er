@@ -23,6 +23,35 @@ function formatDate(date: string | null | undefined): string {
   return new Date(date).toLocaleDateString();
 }
 
+// Helper function to get color based on score
+function getScoreColor(score: number): { bg: string, border: string, text: string, fill: string } {
+  if (score >= 4) return { 
+    bg: "bg-green-50", 
+    border: "border-green-500", 
+    text: "text-green-700",
+    fill: "bg-green-500"
+  };
+  if (score >= 3) return { 
+    bg: "bg-yellow-50", 
+    border: "border-yellow-500", 
+    text: "text-yellow-700",
+    fill: "bg-yellow-500"
+  };
+  return { 
+    bg: "bg-red-50", 
+    border: "border-red-500", 
+    text: "text-red-700",
+    fill: "bg-red-500"
+  };
+}
+
+// Helper function to get progress bar color
+function getProgressColor(score: number): string {
+  if (score >= 4) return "bg-green-500";
+  if (score >= 3) return "bg-yellow-500";
+  return "bg-red-500";
+}
+
 interface ManagerSurveyReviewCardProps {
   review: DashboardFeedbackResponse;
   questionIdToTextMap: Record<string, string>;
@@ -67,6 +96,9 @@ export function ManagerSurveyReviewCard({
   // Get the employee initials for the avatar
   const employeeInitials = review.employee?.name ? getInitials(review.employee.name) : '?';
   
+  // Get colors based on average score
+  const scoreColors = getScoreColor(averageScore);
+  
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all">
       <CardHeader className="pb-2">
@@ -84,69 +116,35 @@ export function ManagerSurveyReviewCard({
           </div>
           <div className="text-right text-sm text-muted-foreground">
             <div>{formatDate(review.submitted_at)}</div>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              Manager Survey
-            </Badge>
           </div>
         </div>
       </CardHeader>
       
       <CardContent>
         {/* Average score visualization */}
-        <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-4 mb-4">
           <div className={cn(
             "w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2",
-            averageScore >= 4.5 ? "border-emerald-500 bg-emerald-50 text-emerald-700" :
-            averageScore >= 4 ? "border-green-500 bg-green-50 text-green-700" :
-            averageScore >= 3 ? "border-blue-500 bg-blue-50 text-blue-700" :
-            averageScore >= 2 ? "border-orange-500 bg-orange-50 text-orange-700" :
-            "border-red-500 bg-red-50 text-red-700"
+            scoreColors.border,
+            scoreColors.bg,
+            scoreColors.text
           )}>
             {averageScore.toFixed(1)}
           </div>
           <div className="flex-1">
             <div className="text-sm font-medium mb-1">Overall Rating</div>
-            <Progress 
-              value={(averageScore / 5) * 100} 
-              className={cn(
-                "h-2.5 mb-1",
-                averageScore >= 4.5 ? "bg-emerald-500" :
-                averageScore >= 4 ? "bg-green-500" :
-                averageScore >= 3 ? "bg-blue-500" :
-                averageScore >= 2 ? "bg-orange-500" :
-                "bg-red-500"
-              )} 
-            />
+            <div className="h-2.5 mb-1 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full rounded-full", scoreColors.fill)}
+                style={{ width: `${(averageScore / 5) * 100}%` }}
+              ></div>
+            </div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>1</span>
               <span>5</span>
             </div>
           </div>
         </div>
-        
-        {/* Highest/lowest score highlights */}
-        {highestScore && lowestScore && (
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="p-2 rounded-md bg-green-50 border border-green-100">
-              <div className="text-xs text-green-700 font-medium mb-1">Highest Score</div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm line-clamp-1">{getQuestionText(highestScore[0])}</div>
-                <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                  {Number(highestScore[1])}/5
-                </Badge>
-              </div>
-            </div>
-            <div className="p-2 rounded-md bg-orange-50 border border-orange-100">
-              <div className="text-xs text-orange-700 font-medium mb-1">Lowest Score</div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm line-clamp-1">{getQuestionText(lowestScore[0])}</div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-                  {Number(lowestScore[1])}/5
-                </Badge>
-              </div>
-            </div>
-          </div>
-        )}
         
         {/* Toggle to show/hide details */}
         <Button 
@@ -164,37 +162,33 @@ export function ManagerSurveyReviewCard({
       {expanded && (
         <div className="px-6 pb-4 border-t">
           <div className="pt-3 space-y-3">
-            {likertResponses.map(([questionId, value]) => (
-              <div key={questionId} className="space-y-1">
-                <div className="text-sm">{getQuestionText(questionId)}</div>
-                <div className="flex items-center gap-2">
-                  <Progress 
-                    value={(Number(value) / 5) * 100} 
-                    className={cn(
-                      "h-1.5 w-24",
-                      Number(value) >= 4.5 ? "bg-emerald-500" :
-                      Number(value) >= 4 ? "bg-green-500" :
-                      Number(value) >= 3 ? "bg-blue-500" :
-                      Number(value) >= 2 ? "bg-orange-500" :
-                      "bg-red-500"
-                    )} 
-                  />
-                  <span className={cn(
-                    "text-sm font-medium",
-                    Number(value) >= 4.5 ? "text-emerald-700" :
-                    Number(value) >= 4 ? "text-green-700" :
-                    Number(value) >= 3 ? "text-blue-700" :
-                    Number(value) >= 2 ? "text-orange-700" :
-                    "text-red-700"
-                  )}>
-                    {Number(value)}/5
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {getLikertLabel(Number(value))}
-                  </span>
+            {likertResponses.map(([questionId, value]) => {
+              const questionScore = Number(value);
+              const questionColors = getScoreColor(questionScore);
+              
+              return (
+                <div key={questionId} className="space-y-1">
+                  <div className="text-sm">{getQuestionText(questionId)}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className={cn("h-full rounded-full", questionColors.fill)}
+                        style={{ width: `${(questionScore / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      questionColors.text
+                    )}>
+                      {questionScore}/5
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {getLikertLabel(questionScore)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             
             {/* Open-ended responses if any */}
             {Object.entries(review.responses || {})
