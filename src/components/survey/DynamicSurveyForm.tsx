@@ -168,9 +168,9 @@ export function DynamicSurveyForm({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card className="shadow-sm">
-        <CardHeader className="pb-0 pt-3 px-3 sm:px-6 sm:pt-6">
+        <CardHeader className="pb-0 pt-4 px-4 sm:px-8 sm:pt-6">
           {/* Show question counter and completion percentage in one row */}
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">
@@ -182,10 +182,10 @@ export function DynamicSurveyForm({
           </div>
           
           {/* Progress bar */}
-          <Progress value={progress} className="h-1.5 mt-2" />
+          <Progress value={progress} className="h-2 mt-3" />
         </CardHeader>
 
-        <CardContent className="pt-3 px-3 sm:px-6">
+        <CardContent className="pt-5 pb-6 px-4 sm:px-8">
           <form className="space-y-4">
             {currentQuestion ? (
               renderQuestion(currentQuestion)
@@ -197,14 +197,14 @@ export function DynamicSurveyForm({
       </Card>
       
       {/* Navigation buttons outside of card */}
-      <div className="flex justify-between mt-2">
+      <div className="flex justify-between mt-4">
         <Button
           type="button"
           variant="outline"
           onClick={handlePrevious}
           disabled={currentStep === 0 || isSubmitting}
           size="sm"
-          className="w-24 sm:w-28"
+          className="w-28 sm:w-32 h-10"
         >
           <ArrowLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
           <span className="text-xs sm:text-sm">Previous</span>
@@ -216,7 +216,7 @@ export function DynamicSurveyForm({
             onClick={handleNext}
             disabled={!allValid || isSubmitting}
             size="sm"
-            className="w-24 sm:w-28"
+            className="w-28 sm:w-32 h-10"
           >
             <span className="text-xs sm:text-sm">Next</span>
             <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
@@ -226,7 +226,7 @@ export function DynamicSurveyForm({
             type="button"
             onClick={handleSubmit}
             disabled={!allValid || isSubmitting}
-            className="bg-green-600 hover:bg-green-700 w-24 sm:w-28"
+            className="bg-green-600 hover:bg-green-700 w-28 sm:w-32 h-10"
             size="sm"
           >
             {isSubmitting ? (

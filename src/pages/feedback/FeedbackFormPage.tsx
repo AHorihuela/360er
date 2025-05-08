@@ -486,8 +486,8 @@ export function FeedbackFormPage() {
 
   // Render the appropriate form based on the review cycle type
   return (
-    <div className="container max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-6">
+    <div className="container max-w-3xl mx-auto py-10 px-4 sm:px-6">
+      <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold">
             {reviewCycleType === '360_review' 
