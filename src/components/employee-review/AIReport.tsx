@@ -42,6 +42,9 @@ const generationSteps = [
   "Finalizing report..."
 ];
 
+// Key for localStorage
+const LOCAL_STORAGE_KEY = 'performanceSummaryExpanded';
+
 export function AIReport({ 
   feedbackRequest, 
   onExportPDF, 
@@ -49,7 +52,6 @@ export function AIReport({
   onGenerateReport,
   isGeneratingReport,
   generationStep,
-  startTime,
   elapsedSeconds,
   surveyType
 }: Props) {
@@ -63,17 +65,29 @@ export function AIReport({
     } : null;
   });
   
-  // Automatically expand if we have enough reviews to generate a report
-  const [isReportOpen, setIsReportOpen] = useState(() => {
-    const hasEnoughReviews = (feedbackRequest?.feedback?.length ?? 0) > 0;
-    const hasNoReport = !feedbackRequest.ai_reports?.[0];
-    return hasEnoughReviews && hasNoReport;
+  // Initialize expanded state from localStorage or defaults
+  const [isReportOpen, setIsReportOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      // First check localStorage for saved preference
+      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedState !== null) {
+        return JSON.parse(savedState);
+      }
+    }
+    // Default to open if localStorage doesn't have a value
+    return true;
   });
+
+  // Save expanded state to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(isReportOpen));
+    }
+  }, [isReportOpen]);
 
   // Auto-expand when a new report is generated
   useEffect(() => {
     if (feedbackRequest.ai_reports?.[0]) {
-      setIsReportOpen(true);
       const latestReport = feedbackRequest.ai_reports[0];
       setAiReport({
         content: latestReport.content,
@@ -126,11 +140,16 @@ export function AIReport({
     });
   };
 
-  // Update the button click handler to include the surveyType in the displayed UI
+  // Get the report type label based on survey type
   const getReportTypeLabel = () => {
     return surveyType === 'manager_effectiveness' 
       ? 'Manager Effectiveness Report' 
       : '360-Degree Feedback Report';
+  };
+
+  // Handle toggle with localStorage update
+  const handleToggleExpand = () => {
+    setIsReportOpen(prevState => !prevState);
   };
 
   return (
@@ -146,7 +165,7 @@ export function AIReport({
 
       <Card>
         <CardHeader 
-          onClick={() => setIsReportOpen(!isReportOpen)}
+          onClick={handleToggleExpand}
           className="cursor-pointer hover:bg-muted/50 transition-colors"
         >
           <div className="flex items-center justify-between">
@@ -161,52 +180,38 @@ export function AIReport({
           <CardContent className="pt-0">
             {aiReport ? (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
-                  <div className="space-y-1">
-                    <CardTitle>AI-Generated {getReportTypeLabel()}</CardTitle>
-                    <CardDescription>
-                      {aiReport?.created_at ? `Generated ${new Date(aiReport.created_at).toLocaleString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        hour12: true
-                      })}` : 'Recently generated'}
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportPDF}
-                      disabled={isGeneratingReport || !aiReport.content}
-                      className="flex-1 sm:flex-initial"
-                    >
-                      <FileDown className="h-4 w-4 mr-2" />
-                      Export PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onGenerateReport}
-                      disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
-                      className="flex-1 sm:flex-initial whitespace-nowrap"
-                    >
-                      {isGeneratingReport ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {generationSteps[generationStep]} ({elapsedSeconds}s)
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Regenerate
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                {/* Action buttons with optimized spacing */}
+                <div className="flex justify-end gap-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onExportPDF}
+                    disabled={isGeneratingReport || !aiReport.content}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onGenerateReport}
+                    disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
+                    className="whitespace-nowrap"
+                  >
+                    {isGeneratingReport ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {generationSteps[generationStep]} ({elapsedSeconds}s)
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Regenerate
+                      </>
+                    )}
+                  </Button>
                 </div>
+                
                 {aiReport.content ? (
                   <div className="w-full">
                     <MarkdownEditor
