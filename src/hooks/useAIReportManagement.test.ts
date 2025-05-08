@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useAIReportManagement } from './useAIReportManagement';
 import { generateAIReport } from '../lib/openai';
 import { FeedbackRequest } from '@/types/reviews/employee-review';
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
 // Mock dependencies with a delayed promise resolution
 vi.mock('../lib/openai', () => ({
@@ -67,7 +67,7 @@ const mockFeedbackRequest: FeedbackRequest = {
 
 // Simple wrapper without Toaster to avoid DOM warnings
 const Wrapper = ({ children }: { children: ReactNode }) => {
-  return <>{children}</>;
+  return React.createElement(React.Fragment, null, children);
 };
 
 describe('useAIReportManagement', () => {

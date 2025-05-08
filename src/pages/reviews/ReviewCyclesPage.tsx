@@ -252,7 +252,7 @@ export function ReviewCyclesPage() {
             updated_at: cycle.updated_at,
             created_by: cycle.user_id,
             user_id: cycle.user_id,
-            type: cycle.type || '360_review',
+            type: (cycle as any).type || '360_review',
             feedback_requests: validFeedbackRequests,
             _count: {
               feedback_requests: validFeedbackRequests.length,
