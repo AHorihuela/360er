@@ -53,47 +53,47 @@ export function LikertScaleQuestion({
         {questionText} {required && <span className="text-red-500">*</span>}
       </h3>
       
-      <div className="space-y-2 sm:space-y-4">
-        <RadioGroup 
-          value={value?.toString()} 
-          onValueChange={(val) => onChange(parseInt(val, 10))}
-          className="grid grid-cols-5 gap-2"
-        >
-          {safeOptions.map((option) => {
-            const isSelected = value?.toString() === option.value.toString();
-            
-            return (
-              <div key={option.value} className="group">
-                {/* The actual radio input for accessibility */}
-                <RadioGroupItem
-                  value={option.value.toString()}
-                  id={`${id}-${option.value}`}
-                  className="sr-only peer"
-                />
-                
-                {/* Clickable label with hover and selection states */}
-                <Label 
-                  htmlFor={`${id}-${option.value}`}
-                  className="flex flex-col items-center justify-center cursor-pointer py-4 px-2 rounded-md hover:bg-accent/20 peer-data-[state=checked]:bg-accent/30 transition-colors h-full min-h-20"
-                >
-                  {/* Custom radio indicator */}
+      <RadioGroup 
+        value={value?.toString()} 
+        onValueChange={(val) => onChange(parseInt(val, 10))}
+        className="grid grid-cols-5 gap-2"
+      >
+        {safeOptions.map((option) => {
+          const isSelected = value?.toString() === option.value.toString();
+          
+          return (
+            <div key={option.value} className="group">
+              <RadioGroupItem
+                value={option.value.toString()}
+                id={`${id}-${option.value}`}
+                className="sr-only peer"
+              />
+              
+              <Label 
+                htmlFor={`${id}-${option.value}`}
+                className="flex flex-col items-center justify-center cursor-pointer py-3 px-2 rounded-md hover:bg-accent/20 peer-data-[state=checked]:bg-accent/30 transition-colors h-full min-h-24"
+              >
+                {/* Custom radio indicator */}
+                <div className="mb-3">
                   <div 
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mb-3
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
                       ${isSelected ? 'border-primary bg-primary' : 'border-gray-300 group-hover:border-gray-400'}`}
                   >
                     {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                   </div>
-                  
-                  {/* Option label */}
-                  <span className="text-xs sm:text-sm text-center text-muted-foreground group-hover:text-foreground peer-data-[state=checked]:text-foreground font-medium">
+                </div>
+                
+                {/* Option label */}
+                <div className="text-center">
+                  <span className={`text-xs sm:text-sm ${isSelected ? 'text-foreground font-medium' : 'text-muted-foreground group-hover:text-foreground'}`}>
                     {option.label}
                   </span>
-                </Label>
-              </div>
-            );
-          })}
-        </RadioGroup>
-      </div>
+                </div>
+              </Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
     </div>
   );
 } 
