@@ -2,10 +2,12 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import MarkdownIt from 'markdown-it';
 import { EditorToolbar } from './EditorToolbar';
 import { editorExtensions, editorProps } from './editor-config';
+import { ReactNode } from 'react';
 
 interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
+  actionButtons?: ReactNode;
 }
 
 const md = new MarkdownIt({
@@ -14,7 +16,7 @@ const md = new MarkdownIt({
   linkify: true,
 });
 
-export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, actionButtons }: MarkdownEditorProps) {
   const editor = useEditor({
     extensions: editorExtensions,
     content: md.render(value),
@@ -124,7 +126,9 @@ export function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
 
   return (
     <div className="relative flex flex-col gap-2">
-      <EditorToolbar editor={editor} />
+      <EditorToolbar editor={editor}>
+        {actionButtons}
+      </EditorToolbar>
       <div className="relative">
         <EditorContent editor={editor} />
       </div>

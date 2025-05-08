@@ -179,39 +179,7 @@ export function AIReport({
         {isReportOpen && (
           <CardContent className="pt-0">
             {aiReport ? (
-              <div className="space-y-4">
-                {/* Action buttons with optimized spacing */}
-                <div className="flex justify-end gap-2 mb-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onExportPDF}
-                    disabled={isGeneratingReport || !aiReport.content}
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onGenerateReport}
-                    disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
-                    className="whitespace-nowrap"
-                  >
-                    {isGeneratingReport ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {generationSteps[generationStep]} ({elapsedSeconds}s)
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Regenerate
-                      </>
-                    )}
-                  </Button>
-                </div>
-                
+              <div>
                 {aiReport.content ? (
                   <div className="w-full">
                     <MarkdownEditor
@@ -220,6 +188,38 @@ export function AIReport({
                         handleReportChange(value);
                         onReportChange?.(value);
                       }}
+                      actionButtons={
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onExportPDF}
+                            disabled={isGeneratingReport || !aiReport.content}
+                          >
+                            <FileDown className="h-4 w-4 mr-2" />
+                            Export PDF
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onGenerateReport}
+                            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
+                            className="whitespace-nowrap"
+                          >
+                            {isGeneratingReport ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {generationSteps[generationStep]} ({elapsedSeconds}s)
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Regenerate
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      }
                     />
                   </div>
                 ) : (
