@@ -23,6 +23,8 @@ import { generateShortId } from '../utils/uniqueId';
 import { cn } from '@/lib/utils';
 import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
 import { type DashboardCompetency } from '@/types/feedback/dashboard';
+import { RecentReviews } from '@/components/dashboard/RecentReviews';
+import { ReviewCycleType } from '@/types/survey';
 
 type ReviewCycleInput = {
   id: string;
@@ -128,6 +130,9 @@ export function DashboardPage(): JSX.Element {
     // Initialize from localStorage if available
     return localStorage.getItem('selectedCycleId');
   });
+  // Add state for survey questions
+  const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
+  const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
 
   const fetchData = async () => {
     if (!user?.id) return;
@@ -153,7 +158,8 @@ export function DashboardPage(): JSX.Element {
               strengths,
               areas_for_improvement,
               submitted_at,
-              status
+              status,
+              responses
             ),
             analytics:feedback_analytics (
               id,
@@ -215,6 +221,11 @@ export function DashboardPage(): JSX.Element {
           if (employeesWithStatus) {
             setEmployees(employeesWithStatus);
           }
+          
+          // Fetch survey questions for the active cycle type
+          if (cycleToShow.type) {
+            fetchSurveyQuestions(cycleToShow.type);
+          }
         }
       }
     } catch (error) {
@@ -258,6 +269,11 @@ export function DashboardPage(): JSX.Element {
 
       if (employeesWithStatus) {
         setEmployees(employeesWithStatus);
+      }
+      
+      // Fetch survey questions for the selected cycle type
+      if (selectedCycle.type) {
+        fetchSurveyQuestions(selectedCycle.type);
       }
     }
   };
@@ -322,6 +338,52 @@ export function DashboardPage(): JSX.Element {
       });
     }
   }
+
+  // Add function to fetch survey questions
+  const fetchSurveyQuestions = async (cycleType: ReviewCycleType) => {
+    try {
+      // Clear any existing questions first and set loading state
+      setSurveyQuestions({});
+      setIsQuestionsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('survey_questions')
+        .select('id, question_text')
+        .eq('review_cycle_type', cycleType);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        console.warn(`No questions found for survey type: ${cycleType}`);
+        toast({
+          title: "Warning",
+          description: `Could not load survey questions for ${cycleType === 'manager_effectiveness' ? 'Manager Survey' : '360° Feedback'}`,
+          variant: "destructive",
+        });
+        setIsQuestionsLoading(false);
+        return;
+      }
+
+      // Create a map of question IDs to question text
+      const questionMap: Record<string, string> = {};
+      
+      data.forEach(question => {
+        questionMap[question.id] = question.question_text;
+      });
+
+      setSurveyQuestions(questionMap);
+      console.log(`Loaded ${data.length} questions for survey type: ${cycleType}`);
+    } catch (err) {
+      console.error('Error fetching survey questions:', err);
+      toast({
+        title: "Error",
+        description: "Could not load survey questions. Some question text may not display correctly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsQuestionsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -481,6 +543,169 @@ export function DashboardPage(): JSX.Element {
                   </p>
                 </CardHeader>
               </Card>
+
+              {/* Display the appropriate review section based on cycle type */}
+              {(() => {
+                // Get the current cycle type
+                const cycleType = allReviewCycles.find(c => c.id === activeReviewCycle.id)?.type || '360_review';
+                console.log("Current cycle type:", cycleType);
+                
+                // For manager effectiveness survey
+                if (cycleType === 'manager_effectiveness') {
+                  console.log("Using manager effectiveness display");
+                  
+                  // Add employee information to feedback requests
+                  const enhancedRequests = activeReviewCycle.feedback_requests.map(request => {
+                    // Find the employee data for this request
+                    const employee = employees.find(e => e.id === request.employee_id);
+                    
+                    // Return a new request object with employee data attached
+                    return {
+                      ...request,
+                      employee: employee ? {
+                        id: employee.id,
+                        name: employee.name,
+                        role: employee.role
+                      } : undefined
+                    };
+                  });
+                  
+                  console.log("Enhanced requests with employee data:", 
+                    enhancedRequests.map(r => ({ 
+                      id: r.id, 
+                      employee_id: r.employee_id, 
+                      employee_name: r.employee?.name 
+                    }))
+                  );
+                  
+                  return (
+                    <div>
+                      <RecentReviews 
+                        feedbackRequests={enhancedRequests}
+                        questionIdToTextMap={surveyQuestions}
+                        reviewCycleType='manager_effectiveness'
+                      />
+                    </div>
+                  );
+                }
+                
+                // For 360 reviews, show the original implementation
+                return (
+                  <div className="space-y-4 mt-8 pt-8 border-t">
+                    <h2 className="text-xl font-semibold">Recent Reviews</h2>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {activeReviewCycle.feedback_requests
+                        .flatMap(fr => (fr.feedback_responses || []).map(response => ({
+                          ...response,
+                          employee_id: fr.employee_id
+                        })))
+                        .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+                        .slice(0, visibleReviews)
+                        .map((response) => {
+                          // Find the employee from the employees array
+                          const employee = employees.find(e => e.id === response.employee_id);
+                          if (!employee) return null;
+
+                          return (
+                            <Card 
+                              key={response.id}
+                              className={cn(
+                                "hover:shadow-lg transition-all duration-300 cursor-pointer",
+                                response.relationship === 'senior_colleague' && 'border-blue-100',
+                                response.relationship === 'equal_colleague' && 'border-green-100',
+                                response.relationship === 'junior_colleague' && 'border-purple-100'
+                              )}
+                              onClick={() => navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee_id}`)}
+                            >
+                              <CardContent className="pt-4 sm:pt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                                      <AvatarFallback>
+                                        {employee.name.split(' ').map((n: string) => n[0]).join('')}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h3 className="font-semibold text-sm sm:text-base">{employee.name}</h3>
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs sm:text-sm text-muted-foreground">{employee.role}</p>
+                                        <Badge variant="outline" className={cn(
+                                          "text-xs capitalize flex items-center gap-1",
+                                          response.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
+                                          response.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
+                                          response.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
+                                        )}>
+                                          {response.relationship === 'senior_colleague' && <ArrowUpIcon className="h-3 w-3" />}
+                                          {response.relationship === 'equal_colleague' && <EqualIcon className="h-3 w-3" />}
+                                          {response.relationship === 'junior_colleague' && <ArrowDownIcon className="h-3 w-3" />}
+                                          {response.relationship.replace('_', ' ')}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-xs text-muted-foreground block">
+                                      {new Date(response.submitted_at).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground mt-1 block">
+                                      Review #{employee.completed_reviews}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-4 mt-4">
+                                  {response.strengths && (
+                                    <div className="bg-slate-50 p-3 rounded-md">
+                                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                        <StarIcon className="h-4 w-4 text-yellow-500" />
+                                        Strengths
+                                      </h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {response.strengths}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {response.areas_for_improvement && (
+                                    <div className="bg-slate-50 p-3 rounded-md">
+                                      <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                        <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                                        Areas for Improvement
+                                      </h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {response.areas_for_improvement}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="mt-4 flex justify-end">
+                                  {employee.completed_reviews === 1 && (
+                                    <Badge variant="secondary" className="text-xs">First Review</Badge>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                        .filter(Boolean)
+                      }
+                    </div>
+                    {activeReviewCycle.feedback_requests
+                      .flatMap(fr => fr.feedback_responses || [])
+                      .length > visibleReviews && (
+                      <div className="flex justify-center mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setVisibleReviews(prev => prev + 4)}
+                          className="w-full sm:w-auto"
+                        >
+                          Load More Reviews
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </>
@@ -532,121 +757,6 @@ export function DashboardPage(): JSX.Element {
                 </Card>
               ))}
           </div>
-        </div>
-      )}
-
-      {/* Recent Reviews */}
-      {activeReviewCycle && activeReviewCycle.feedback_requests.some(fr => fr.feedback_responses && fr.feedback_responses.length > 0) && (
-        <div className="space-y-4 mt-8 pt-8 border-t">
-          <h2 className="text-xl font-semibold">Recent Reviews</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            {activeReviewCycle.feedback_requests
-              .flatMap(fr => (fr.feedback_responses || []).map(response => ({
-                ...response,
-                employee_id: fr.employee_id
-              })))
-              .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-              .slice(0, visibleReviews)
-              .map((response) => {
-                // Find the employee from the employees array
-                const employee = employees.find(e => e.id === response.employee_id);
-                if (!employee) return null;
-
-                return (
-                  <Card 
-                    key={response.id}
-                    className={cn(
-                      "hover:shadow-lg transition-all duration-300 cursor-pointer",
-                      response.relationship === 'senior_colleague' && 'border-blue-100',
-                      response.relationship === 'equal_colleague' && 'border-green-100',
-                      response.relationship === 'junior_colleague' && 'border-purple-100'
-                    )}
-                    onClick={() => navigate(`/reviews/${activeReviewCycle.id}/employee/${response.employee_id}`)}
-                  >
-                    <CardContent className="pt-4 sm:pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                            <AvatarFallback>
-                              {employee.name.split(' ').map((n: string) => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-semibold text-sm sm:text-base">{employee.name}</h3>
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs sm:text-sm text-muted-foreground">{employee.role}</p>
-                              <Badge variant="outline" className={cn(
-                                "text-xs capitalize flex items-center gap-1",
-                                response.relationship === 'senior_colleague' && 'bg-blue-50 border-blue-200',
-                                response.relationship === 'equal_colleague' && 'bg-green-50 border-green-200',
-                                response.relationship === 'junior_colleague' && 'bg-purple-50 border-purple-200'
-                              )}>
-                                {response.relationship === 'senior_colleague' && <ArrowUpIcon className="h-3 w-3" />}
-                                {response.relationship === 'equal_colleague' && <EqualIcon className="h-3 w-3" />}
-                                {response.relationship === 'junior_colleague' && <ArrowDownIcon className="h-3 w-3" />}
-                                {response.relationship.replace('_', ' ')}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-muted-foreground block">
-                            {new Date(response.submitted_at).toLocaleDateString()}
-                          </span>
-                          <span className="text-xs text-muted-foreground mt-1 block">
-                            Review #{employee.completed_reviews}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 mt-4">
-                        {response.strengths && (
-                          <div className="bg-slate-50 p-3 rounded-md">
-                            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                              <StarIcon className="h-4 w-4 text-yellow-500" />
-                              Strengths
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {response.strengths}
-                            </p>
-                          </div>
-                        )}
-                        {response.areas_for_improvement && (
-                          <div className="bg-slate-50 p-3 rounded-md">
-                            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                              <TrendingUpIcon className="h-4 w-4 text-blue-500" />
-                              Areas for Improvement
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {response.areas_for_improvement}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex justify-end">
-                        {employee.completed_reviews === 1 && (
-                          <Badge variant="secondary" className="text-xs">First Review</Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-          </div>
-          {activeReviewCycle.feedback_requests
-            .flatMap(fr => fr.feedback_responses || [])
-            .length > visibleReviews && (
-            <div className="flex justify-center mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setVisibleReviews(prev => prev + 4)}
-                className="w-full sm:w-auto"
-              >
-                Load More Reviews
-              </Button>
-            </div>
-          )}
         </div>
       )}
 

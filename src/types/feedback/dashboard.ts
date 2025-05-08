@@ -26,6 +26,7 @@ export interface DashboardFeedbackResponse {
   areas_for_improvement: string | null;
   feedback_request_id: string;
   employee?: DashboardEmployeeReference;
+  responses?: Record<string, number | string>;
 }
 
 export interface DashboardCompetency {
