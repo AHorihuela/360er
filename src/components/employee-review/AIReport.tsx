@@ -65,6 +65,9 @@ export function AIReport({
     } : null;
   });
   
+  // Track button loading state separately for immediate feedback
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
+  
   // Initialize expanded state from localStorage or defaults
   const [isReportOpen, setIsReportOpen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -77,6 +80,19 @@ export function AIReport({
     // Default to open if localStorage doesn't have a value
     return true;
   });
+
+  // Update local button state based on parent component state
+  useEffect(() => {
+    if (isGeneratingReport) {
+      setIsButtonLoading(true);
+    } else {
+      // Only reset button state after a short delay to avoid UI flicker
+      const timeout = setTimeout(() => {
+        setIsButtonLoading(false);
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [isGeneratingReport]);
 
   // Save expanded state to localStorage when it changes
   useEffect(() => {
@@ -128,6 +144,12 @@ export function AIReport({
       });
     }
   }, 1000);
+
+  // Handle generate report with immediate loading state
+  const handleGenerateReport = () => {
+    setIsButtonLoading(true);
+    onGenerateReport();
+  };
 
   const formatLastAnalyzed = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -194,7 +216,7 @@ export function AIReport({
                             variant="outline"
                             size="sm"
                             onClick={onExportPDF}
-                            disabled={isGeneratingReport || !aiReport.content}
+                            disabled={isGeneratingReport || isButtonLoading || !aiReport.content}
                           >
                             <FileDown className="h-4 w-4 mr-2" />
                             Export PDF
@@ -202,14 +224,14 @@ export function AIReport({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={onGenerateReport}
-                            disabled={isGeneratingReport || !feedbackRequest?.feedback?.length}
+                            onClick={handleGenerateReport}
+                            disabled={isGeneratingReport || isButtonLoading || !feedbackRequest?.feedback?.length}
                             className="whitespace-nowrap"
                           >
-                            {isGeneratingReport ? (
+                            {isGeneratingReport || isButtonLoading ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {generationSteps[generationStep]} ({elapsedSeconds}s)
+                                {generationSteps[generationStep] || "Starting generation..."} {elapsedSeconds > 0 ? `(${elapsedSeconds}s)` : ''}
                               </>
                             ) : (
                               <>
@@ -223,8 +245,52 @@ export function AIReport({
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No report content available. Try regenerating the report.
+                  <div className="text-center space-y-3 border border-primary/20 rounded-lg p-4 sm:p-6 bg-primary/5">
+                    <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    {feedbackRequest?.feedback?.length ? (
+                      <>
+                        <h3 className="text-base font-semibold">Report Content Missing</h3>
+                        <p className="text-muted-foreground text-sm px-2">
+                          The report content has been removed or is not available. 
+                          Click below to regenerate the report.
+                        </p>
+                        <Button
+                          size="default"
+                          onClick={handleGenerateReport}
+                          disabled={isGeneratingReport || isButtonLoading}
+                          className="mt-2 w-full sm:w-auto"
+                        >
+                          {isGeneratingReport || isButtonLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <span>Preparing report...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              <span>Regenerate Report</span>
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-base font-semibold">Waiting for Reviews</h3>
+                        <p className="text-muted-foreground text-sm px-2">
+                          No reviews have been submitted yet. The AI report will be available once feedback is collected.
+                        </p>
+                        <Button
+                          size="default"
+                          disabled
+                          className="mt-2 w-full sm:w-auto"
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate Report
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -269,11 +335,21 @@ export function AIReport({
                     </p>
                     <Button
                       size="default"
-                      onClick={onGenerateReport}
+                      onClick={handleGenerateReport}
+                      disabled={isButtonLoading}
                       className="mt-2 w-full sm:w-auto"
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Report
+                      {isButtonLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <span>Preparing report...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          <span>Generate Report</span>
+                        </>
+                      )}
                     </Button>
                   </>
                 ) : (
