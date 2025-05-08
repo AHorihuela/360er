@@ -19,6 +19,8 @@ import {
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
+import { ManagerSurveyAnalytics } from "@/components/analytics/ManagerSurveyAnalytics";
+import { ReviewCycleType } from "@/types/survey";
 
 // Map between base relationship types and analytics relationship types
 const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
@@ -50,6 +52,7 @@ export default function AnalyticsPage() {
   });
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (authState !== "Authenticated") {
@@ -142,6 +145,11 @@ export default function AnalyticsPage() {
 
             console.log("Final mapped cycle:", mappedReviewCycle);
             setActiveReviewCycle(mappedReviewCycle);
+            
+            // Fetch survey questions if it's a manager effectiveness survey
+            if (cycleToShow.type === 'manager_effectiveness') {
+              fetchSurveyQuestions(cycleToShow.type);
+            }
           }
         } else {
           console.log("No review cycles found");
@@ -161,12 +169,54 @@ export default function AnalyticsPage() {
     fetchReviewCycles();
   }, [authState, user?.id, selectedCycleId, toast]);
 
+  // Fetch survey questions for manager effectiveness surveys
+  const fetchSurveyQuestions = async (cycleType: ReviewCycleType) => {
+    try {
+      const { data, error } = await supabase
+        .from('survey_questions')
+        .select('id, question_text')
+        .eq('review_cycle_type', cycleType);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        console.warn(`No questions found for survey type: ${cycleType}`);
+        return;
+      }
+
+      // Create a map of question IDs to question text
+      const questionMap: Record<string, string> = {};
+      
+      data.forEach(question => {
+        questionMap[question.id] = question.question_text;
+      });
+
+      setSurveyQuestions(questionMap);
+      console.log(`Loaded ${data.length} questions for survey type: ${cycleType}`);
+    } catch (err) {
+      console.error('Error fetching survey questions:', err);
+      toast({
+        title: "Error",
+        description: "Could not load survey questions. Some question text may not display correctly.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCycleChange = (cycleId: string) => {
     localStorage.setItem('selectedCycleId', cycleId);
     setSelectedCycleId(cycleId);
     // Reset employee selection when cycle changes
     setSelectedEmployeeIds([]);
     setFilters(current => ({ ...current, employeeIds: [] }));
+    
+    // Find the selected cycle
+    const selectedCycle = allReviewCycles.find(c => c.id === cycleId);
+    
+    // Fetch survey questions if it's a manager effectiveness survey
+    if (selectedCycle?.type === 'manager_effectiveness') {
+      fetchSurveyQuestions(selectedCycle.type);
+    }
   };
 
   const toggleEmployee = (employeeId: string) => {
@@ -231,7 +281,15 @@ export default function AnalyticsPage() {
     request => request.analytics && request.feedback_responses && request.feedback_responses.length > 0
   );
 
+  const hasResponses = activeReviewCycle?.feedback_requests?.some(
+    request => request.feedback_responses && request.feedback_responses.length > 0
+  );
+
+  const isManagerSurvey = activeReviewCycle?.type === 'manager_effectiveness';
+
   console.log("Has analytics:", hasAnalytics);
+  console.log("Has responses:", hasResponses);
+  console.log("Is manager survey:", isManagerSurvey);
   console.log("Active review cycle:", activeReviewCycle);
   console.log("Current filters:", filters);
   console.log("Selected employees:", selectedEmployeeIds);
@@ -293,7 +351,7 @@ export default function AnalyticsPage() {
               <div className="flex-1 min-w-[300px]">
                 <div className="flex items-center gap-2 mb-2">
                   <label className="text-sm font-medium">
-                    Employees
+                    {isManagerSurvey ? 'Managers' : 'Employees'}
                   </label>
                   {selectedEmployeeIds.length > 0 && (
                     <span className="text-xs text-orange-500 font-medium">
@@ -329,58 +387,81 @@ export default function AnalyticsPage() {
             )}
 
             {/* Feedback Source Filter */}
-            <div className="min-w-[300px]">
-              <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium">
-                  Feedback Source
-                </label>
-                {selectedRelationships.length > 0 && (
-                  <span className="text-xs text-orange-500 font-medium">
-                    {selectedRelationships.length} selected
-                  </span>
-                )}
+            {!isManagerSurvey && (
+              <div className="min-w-[300px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium">
+                    Feedback Source
+                  </label>
+                  {selectedRelationships.length > 0 && (
+                    <span className="text-xs text-orange-500 font-medium">
+                      {selectedRelationships.length} selected
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {RELATIONSHIP_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleRelationship(option.value)}
+                      className="h-8 border-muted hover:bg-transparent"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {selectedRelationships.includes(option.value) && (
+                          <Check className="h-3.5 w-3.5 text-orange-500" />
+                        )}
+                        <span>{option.label}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleRelationship(option.value)}
-                    className="h-8 border-muted hover:bg-transparent"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      {selectedRelationships.includes(option.value) && (
-                        <Check className="h-3.5 w-3.5 text-orange-500" />
-                      )}
-                      <span>{option.label}</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {hasAnalytics ? (
-        <CompetencyAnalysis 
-          feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
-          showTeamStats={true}
-          title="Team Competency Analysis"
-          subtitle="Comprehensive view of your team's competency levels based on feedback data"
-          filters={filters}
-        />
+      {/* Render appropriate analytics based on review cycle type */}
+      {isManagerSurvey ? (
+        hasResponses ? (
+          <ManagerSurveyAnalytics 
+            feedbackRequests={activeReviewCycle!.feedback_requests}
+            questionIdToTextMap={surveyQuestions}
+            employeeFilters={selectedEmployeeIds}
+          />
+        ) : (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                {activeReviewCycle ? 
+                  "No feedback data available for analysis in the current manager survey." :
+                  "Please create a manager effectiveness cycle and collect some feedback to see analytics."}
+              </p>
+            </CardContent>
+          </Card>
+        )
       ) : (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">
-              {activeReviewCycle ? 
-                "No feedback data available for analysis in the current review cycle." :
-                "Please create a review cycle and collect some feedback to see analytics."}
-            </p>
-          </CardContent>
-        </Card>
+        hasAnalytics ? (
+          <CompetencyAnalysis 
+            feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
+            showTeamStats={true}
+            title="Team Competency Analysis"
+            subtitle="Comprehensive view of your team's competency levels based on feedback data"
+            filters={filters}
+          />
+        ) : (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                {activeReviewCycle ? 
+                  "No feedback data available for analysis in the current review cycle." :
+                  "Please create a review cycle and collect some feedback to see analytics."}
+              </p>
+            </CardContent>
+          </Card>
+        )
       )}
     </div>
   );
