@@ -10,9 +10,14 @@ import { ReviewCycleType } from '../types/survey';
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
   surveyType?: ReviewCycleType;
+  onSuccessfulGeneration?: () => Promise<void>;
 }
 
-export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIReportManagementProps) {
+export function useAIReportManagement({ 
+  feedbackRequest, 
+  surveyType,
+  onSuccessfulGeneration 
+}: UseAIReportManagementProps) {
   const { toast } = useToast();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<AIReportType | null>(() => {
@@ -178,6 +183,11 @@ export function useAIReportManagement({ feedbackRequest, surveyType }: UseAIRepo
         .eq('feedback_request_id', feedbackRequest.id);
 
       if (finalizeError) throw finalizeError;
+
+      // Refresh data from the parent component if callback provided
+      if (onSuccessfulGeneration) {
+        await onSuccessfulGeneration();
+      }
 
       // Only reset states after successful completion
       setIsGeneratingReport(false);

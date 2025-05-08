@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -73,6 +73,7 @@ export function EmployeeReviewDetailsPage() {
   const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
   const [surveyQuestionOrder, setSurveyQuestionOrder] = useState<Record<string, number>>({});
   const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
+  const [aiReportState, setAiReportState] = useState<{ content: string; created_at: string; } | null>(null);
 
   const {
     deletingFeedbackId,
@@ -87,24 +88,10 @@ export function EmployeeReviewDetailsPage() {
     onFeedbackUpdate: setFeedbackRequest
   });
 
-  const {
-    isGeneratingReport,
-    aiReport,
-    generationStep,
-    startTime,
-    elapsedSeconds,
-    handleReportChange,
-    handleGenerateReport,
-    setAiReport
-  } = useAIReportManagement({
-    feedbackRequest,
-    surveyType: reviewCycle?.type
-  });
-
-  const sortedFeedback = useMemo(() => 
-    feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
-    [feedbackRequest?.feedback]
-  );
+  // Function to update AI report state - separate from the hook
+  const updateAiReport = useCallback((report: { content: string; created_at: string; } | null) => {
+    setAiReportState(report);
+  }, []);
 
   // Get question text by ID using the fetched questions from the database
   const getQuestionTextById = (questionId: string): string => {
@@ -117,13 +104,7 @@ export function EmployeeReviewDetailsPage() {
   };
 
   // Fetch survey questions based on the review cycle type
-  useEffect(() => {
-    if (reviewCycle?.type) {
-      fetchSurveyQuestions(reviewCycle.type);
-    }
-  }, [reviewCycle?.type]);
-
-  const fetchSurveyQuestions = async (cycleType: ReviewCycleType) => {
+  const fetchSurveyQuestions = useCallback(async (cycleType: ReviewCycleType) => {
     try {
       // Clear any existing questions first and set loading state
       setSurveyQuestions({});
@@ -177,10 +158,10 @@ export function EmployeeReviewDetailsPage() {
     } finally {
       setIsQuestionsLoading(false);
     }
-  };
+  }, [toast]);
   
   // Retry function with simplified error handling
-  const fetchSurveyQuestionsRetry = async (cycleType: ReviewCycleType) => {
+  const fetchSurveyQuestionsRetry = useCallback(async (cycleType: ReviewCycleType) => {
     try {
       const { data, error } = await supabase
         .from('survey_questions')
@@ -210,7 +191,7 @@ export function EmployeeReviewDetailsPage() {
     } catch (err) {
       console.error('Error in retry fetch for survey questions:', err);
     }
-  };
+  }, []);
 
   const handleCopyLink = async () => {
     if (!feedbackRequest?.unique_link) return;
@@ -291,11 +272,7 @@ export function EmployeeReviewDetailsPage() {
     });
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [cycleId, employeeId]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     if (!cycleId || !employeeId) return;
 
     try {
@@ -356,7 +333,7 @@ export function EmployeeReviewDetailsPage() {
       }
 
       if (request.ai_reports?.[0]?.content) {
-        setAiReport({
+        updateAiReport({
           content: request.ai_reports[0].content,
           created_at: request.ai_reports[0].updated_at
         });
@@ -373,7 +350,50 @@ export function EmployeeReviewDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [cycleId, employeeId, navigate, toast, updateAiReport, fetchSurveyQuestions]);
+
+  // Now we can use the useAIReportManagement hook with fetchData
+  const {
+    isGeneratingReport,
+    aiReport,
+    generationStep,
+    startTime,
+    elapsedSeconds,
+    handleReportChange,
+    handleGenerateReport,
+    setAiReport
+  } = useAIReportManagement({
+    feedbackRequest,
+    surveyType: reviewCycle?.type,
+    onSuccessfulGeneration: fetchData
+  });
+
+  // Update the shared state whenever aiReport changes
+  useEffect(() => {
+    if (aiReport) {
+      updateAiReport(aiReport);
+    }
+  }, [aiReport, updateAiReport]);
+
+  const sortedFeedback = useMemo(() => 
+    feedbackRequest?.feedback?.sort((a, b) => getFeedbackDate(b) - getFeedbackDate(a)) ?? [],
+    [feedbackRequest?.feedback]
+  );
+
+  // Determine if this is a manager effectiveness survey
+  const isManagerSurvey = reviewCycle?.type === 'manager_effectiveness';
+
+  // Effects
+  // Fetch survey questions effect
+  useEffect(() => {
+    if (reviewCycle?.type) {
+      fetchSurveyQuestions(reviewCycle.type);
+    }
+  }, [reviewCycle?.type, fetchSurveyQuestions]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleExportPDF = async () => {
     if (!aiReport?.content || !feedbackRequest?.employee?.name) return;
@@ -382,9 +402,6 @@ export function EmployeeReviewDetailsPage() {
       `${feedbackRequest.employee.name}_Feedback_Report.pdf`
     );
   };
-
-  // Determine if this is a manager effectiveness survey
-  const isManagerSurvey = reviewCycle?.type === 'manager_effectiveness';
 
   if (error) {
     return (
