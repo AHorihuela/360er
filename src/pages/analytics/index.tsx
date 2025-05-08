@@ -427,7 +427,7 @@ export default function AnalyticsPage() {
       {isManagerSurvey ? (
         hasResponses ? (
           <ManagerSurveyAnalytics 
-            feedbackRequests={activeReviewCycle!.feedback_requests}
+            feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
             questionIdToTextMap={surveyQuestions}
             employeeFilters={selectedEmployeeIds}
           />
