@@ -904,6 +904,133 @@ export function MethodologyExplanation() {
                 </div>
               </div>
             </div>
+
+            {/* New section for Survey Questions */}
+            <div className="p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <MessagesSquare className="h-6 w-6 text-primary" />
+                </div>
+                <div className="space-y-4 w-full">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Survey Questions</h3>
+                    <p className="text-muted-foreground">The Manager Effectiveness Survey includes the following structured questions:</p>
+                  </div>
+                  
+                  <div className="grid gap-8">
+                    {/* Likert Scale Questions with visual rating scale */}
+                    <div className="bg-muted/50 p-6 rounded-lg">
+                      <div className="flex items-center gap-2 mb-5">
+                        <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Quantitative</Badge>
+                        <h4 className="font-medium text-base">Likert Scale Questions</h4>
+                      </div>
+                      
+                      {/* Rating scale legend */}
+                      <div className="mb-6 bg-background/80 p-4 rounded-md border border-border/40">
+                        <p className="text-sm font-medium mb-3">Rating Scale:</p>
+                        <div className="grid grid-cols-5 gap-1 text-center text-xs">
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 rounded-full bg-red-100 text-red-700 flex items-center justify-center mb-1 font-medium">1</div>
+                            <span className="text-muted-foreground">Strongly Disagree</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center mb-1 font-medium">2</div>
+                            <span className="text-muted-foreground">Disagree</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center mb-1 font-medium">3</div>
+                            <span className="text-muted-foreground">Neutral</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center mb-1 font-medium">4</div>
+                            <span className="text-muted-foreground">Agree</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-1 font-medium">5</div>
+                            <span className="text-muted-foreground">Strongly Agree</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Questions with category badges */}
+                      <div className="space-y-4">
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-blue-500/10 text-blue-700 border-blue-200 font-medium">Expectations</Badge>
+                          <p className="text-sm">I understand what is expected of me at work.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-green-500/10 text-green-700 border-green-200 font-medium">Productivity</Badge>
+                          <p className="text-sm">My manager contributes to my productivity.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-purple-500/10 text-purple-700 border-purple-200 font-medium">Feedback</Badge>
+                          <p className="text-sm">My manager frequently provides feedback that helps me improve my performance.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-yellow-500/10 text-yellow-700 border-yellow-200 font-medium">Direction</Badge>
+                          <p className="text-sm">My manager effectively directs our people and resources toward our most important priorities.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-orange-500/10 text-orange-700 border-orange-200 font-medium">Balance</Badge>
+                          <p className="text-sm">My manager effectively balances doing work, delegating work, coaching, and influencing others.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-red-500/10 text-red-700 border-red-200 font-medium">Growth</Badge>
+                          <p className="text-sm">My manager actively supports my career growth and development.</p>
+                        </div>
+                        
+                        <div className="p-4 bg-background/80 rounded-md border border-border/40 flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5 min-w-[90px] text-center bg-indigo-500/10 text-indigo-700 border-indigo-200 font-medium">Inclusion</Badge>
+                          <p className="text-sm">My manager values my opinions and gives me the opportunity to contribute ideas to help our department achieve its goals.</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Open-Ended Questions with visual text area representation */}
+                    <div className="bg-muted/50 p-6 rounded-lg">
+                      <div className="flex items-center gap-2 mb-5">
+                        <Badge className="bg-primary/20 hover:bg-primary/30 text-primary font-medium">Qualitative</Badge>
+                        <h4 className="font-medium text-base">Open-Ended Questions</h4>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div className="bg-background/80 p-5 rounded-md border border-border/40">
+                          <p className="text-sm font-medium mb-3">What could this manager do to better support the team's success and development?</p>
+                          <div className="h-20 bg-muted/40 rounded border border-border/30 p-3">
+                            <div className="w-1/2 h-2 bg-muted rounded"></div>
+                            <div className="w-3/4 h-2 bg-muted rounded mt-2"></div>
+                            <div className="w-2/3 h-2 bg-muted rounded mt-2"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-background/80 p-5 rounded-md border border-border/40">
+                          <p className="text-sm font-medium mb-3">What is one suggestion or improvement that this manager could do that would improve your overall experience?</p>
+                          <div className="h-20 bg-muted/40 rounded border border-border/30 p-3">
+                            <div className="w-2/3 h-2 bg-muted rounded"></div>
+                            <div className="w-1/2 h-2 bg-muted rounded mt-2"></div>
+                            <div className="w-3/5 h-2 bg-muted rounded mt-2"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-background/80 p-5 rounded-md border border-border/40">
+                          <p className="text-sm font-medium mb-3">Is there any additional feedback you would like to share?</p>
+                          <div className="h-20 bg-muted/40 rounded border border-border/30 p-3">
+                            <div className="w-1/3 h-2 bg-muted rounded"></div>
+                            <div className="w-2/5 h-2 bg-muted rounded mt-2"></div>
+                            <div className="w-1/4 h-2 bg-muted rounded mt-2"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
