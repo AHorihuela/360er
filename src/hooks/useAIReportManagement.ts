@@ -208,9 +208,16 @@ export function useAIReportManagement({
       setIsGeneratingReport(false);
       setStartTime(null);
       setElapsedSeconds(0);
+      
+      // Update error message to include the actual error message
+      const errorMessage = error instanceof Error 
+        ? `Error generating report: ${error.message}` 
+        : 'Failed to generate AI report';
+      setError(errorMessage);
+      
       toast({
         title: "Error",
-        description: "Failed to generate AI report",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;

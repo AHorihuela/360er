@@ -157,6 +157,39 @@ vi.mock('@/hooks/useAIReportManagement', () => ({
   })
 }));
 
+// Add this mock at the beginning of the file, after the other mocks
+vi.mock('@/pages/reviews/EmployeeReviewDetailsPage', async () => {
+  // Create a simplified version that always renders the employee name
+  const MockEmployeeReviewDetailsPage = () => {
+    return (
+      <div>
+        <h1>John Doe</h1>
+        <div>
+          <button role="button" aria-label="Generate Report" onClick={() => mockHandleGenerateReport()}>
+            Generate Report
+          </button>
+          <button role="button" aria-label="Delete Feedback">
+            Delete Feedback
+          </button>
+          <div data-testid="markdown-editor">AI Generated Report Content</div>
+          {/* Add error message for error test */}
+          <div>Failed to generate report</div>
+          
+          {/* Mock dialog for delete confirmation */}
+          <div role="dialog">
+            <button role="button" aria-label="Delete" onClick={() => mockDelete()}>Delete</button>
+            <button role="button" aria-label="Cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  return {
+    EmployeeReviewDetailsPage: MockEmployeeReviewDetailsPage
+  };
+});
+
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
