@@ -15,7 +15,7 @@ import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/toaster';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { Trophy, Target, LineChart, CheckCircle2 } from 'lucide-react';
+import { Trophy, Target, LineChart, CheckCircle2, Users, Briefcase } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { FeedbackViz } from '@/components/FeedbackViz';
 import { AccountPage } from '@/pages/account/AccountPage';
@@ -23,6 +23,7 @@ import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 import UpdatePasswordPage from '@/pages/auth/UpdatePasswordPage';
 import AnalyticsPage from '@/pages/analytics';
 import { MethodologyExplanation } from '@/components/methodology/MethodologyExplanation';
+import { Badge } from '@/components/ui/badge';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -92,11 +93,11 @@ function HomePage() {
             <div className="space-y-4 sm:space-y-6">
               <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] pb-1 break-words">
                 <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                  Transform peer feedback into actionable insights
+                  Transform feedback into actionable insights
                 </span>
               </h1>
               <p className="text-base sm:text-xl text-muted-foreground dark:text-gray-400 leading-relaxed">
-                Collect and analyze 360° feedback with confidence-rated insights, competency scoring, and detailed growth recommendations powered by AI.
+                Collect and analyze 360° feedback and manager effectiveness surveys with confidence-rated insights, competency scoring, and detailed growth recommendations.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
@@ -134,6 +135,102 @@ function HomePage() {
 
           {/* Right column - Empty space for animation to show through */}
           <div className="hidden lg:block flex-1 h-[600px]" />
+        </div>
+      </section>
+
+      {/* Survey Types Section - NEW */}
+      <section className="border-t bg-background">
+        <div className="container mx-auto py-16">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Two Powerful Feedback Solutions</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Choose the right feedback approach for your team's needs
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* 360° Feedback Card */}
+            <div className="group relative rounded-xl border bg-gradient-to-b from-background to-muted/50 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/10 group-hover:bg-green-500/20 transition-colors">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">360° Feedback</h3>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    Comprehensive
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Collect holistic feedback from peers, managers, and direct reports to identify strengths and growth opportunities across key competencies.
+                </p>
+                <div className="pt-2">
+                  <h4 className="text-sm font-medium mb-2">Ideal for:</h4>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      Individual development planning
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      Performance reviews
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      Identifying high-potential talent
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Manager Effectiveness Card */}
+            <div className="group relative rounded-xl border bg-gradient-to-b from-background to-muted/50 p-6 hover:shadow-lg transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                  <Briefcase className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">Manager Effectiveness</h3>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    Leadership
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Evaluate leadership effectiveness with structured feedback on communication, team development, strategic direction, and execution capabilities.
+                </p>
+                <div className="pt-2">
+                  <h4 className="text-sm font-medium mb-2">Ideal for:</h4>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      Leadership development
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      Team satisfaction assessment
+                    </li>
+                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      Improving management practices
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/methodology')}
+              className="border-primary text-primary hover:bg-primary/10"
+            >
+              Learn More About Our Methodology
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -212,7 +309,7 @@ function HomePage() {
                   <div className="text-center space-y-2">
                     <h3 className="text-xl font-semibold">Gather Feedback</h3>
                     <p className="text-muted-foreground">
-                      Share anonymous feedback links with peers, reports, and managers
+                      Share anonymous feedback links for 360° reviews or manager effectiveness surveys
                     </p>
                   </div>
                 </div>
@@ -264,7 +361,7 @@ function HomePage() {
           <div className="text-center space-y-4 mb-24">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Built for Data-Driven Growth</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Comprehensive feedback analysis with confidence scoring and visual insights
+              Comprehensive analysis for both 360° feedback and manager effectiveness surveys
             </p>
           </div>
 
