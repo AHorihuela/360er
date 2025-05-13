@@ -4,8 +4,8 @@
 
 [![Stars](https://img.shields.io/github/stars/AHorihuela/360er?style=flat-square&logo=github)](https://github.com/AHorihuela/360er/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.0-blue?style=flat-square&logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.2-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md)
 
   <img src="public/images/og-preview.png" alt="Squad360 - AI-Powered Team Feedback Platform" width="800"/>
@@ -29,12 +29,13 @@
 ![Feedback Form](/public/images/feedback-form.png)
 Each employee receives a unique feedback link that can be shared with peers, reports, and managers. The feedback is completely anonymous - not even administrators can see who provided specific feedback.
 
-### 2. AI-Enhanced Quality Review ✨
+### 2. AI-Enhanced Insights ✨
 ![Sample AI Review](/public/images/sample-ai-review.png)
-Before submission, feedback is processed through an AI review system that:
-- Ensures specific examples are included
-- Follows feedback best practices
-- Enhances clarity and actionability
+Our platform leverages AI to:
+- Generate comprehensive feedback reports
+- Identify patterns across multiple feedback sources
+- Provide actionable insights for growth
+- Synthesize qualitative feedback into clear recommendations
 
 ### 3. Comprehensive Analysis 📊
 ![Feedback Analysis](/public/images/feedback-analysis.png)
@@ -42,13 +43,15 @@ The platform aggregates feedback across seven key performance indicators, provid
 - Detailed performance insights
 - Pattern recognition across feedback sources
 - Visual breakdown of feedback trends
+- Relationship-based analysis (peer, senior, junior perspectives)
 
-### 4. Quantitative Assessment 📈
+### 4. Manager Effectiveness Surveys 📈
 ![Overall Analysis](/public/images/overall-analysis.png)
-Each review generates:
-- Confidence-scored evaluations (High/Medium/Low)
-- Evidence-based competency ratings
-- Actionable growth recommendations
+In addition to 360-degree reviews, the platform supports specialized manager effectiveness surveys that:
+- Evaluate leadership capabilities
+- Assess team management skills
+- Provide targeted improvement recommendations
+- Compare performance against organizational benchmarks
 
 ## Competency Framework 🎯
 
@@ -81,26 +84,58 @@ For detailed information about our analysis methodology and feedback framework, 
 
 - [Competency Analysis Methodology](documentation/competency_analysis.md) - Detailed explanation of our scoring system, confidence levels, relationship weighting, and outlier handling.
 - [Quantitative Feedback Framework](documentation/quantitative_feedback_framew.md) - Overview of how we transform qualitative feedback into actionable insights.
+- [Database Structure](documentation/database.md) - Comprehensive documentation of our database schema, relationships, and security policies.
+- [Manager Effectiveness Implementation](documentation/manager-effectiveness-implementation-plan.md) - Details on our manager effectiveness survey implementation.
 
 ## Tech Stack 🛠️
 
 ### Frontend 🎨
-- React with TypeScript
+- React 18 with TypeScript
 - Tailwind CSS for styling
 - Shadcn UI components
 - React Router for navigation
 - Lucide React for icons
 - TipTap for rich text editing
+- GSAP for animations
+- Framer Motion for UI transitions
+- Recharts for data visualization
 - jsPDF for PDF generation
 - html2canvas for PDF rendering
 - markdown-it for markdown parsing
 - Sonner for toast notifications
+- Zustand for state management
 
 ### Backend ⚙️
 - Supabase for database and authentication
 - Row Level Security (RLS) policies
 - Real-time data synchronization
 - OpenAI GPT-4 for report generation
+- Express.js for API endpoints
+- tRPC for type-safe API calls
+
+### Testing 🧪
+- Vitest for unit and integration testing
+- Testing Library for component testing
+- Coverage reporting with v8
+
+## Project Structure 📂
+
+```
+src/
+├── api/        # API client functions
+├── assets/     # Static assets
+├── components/ # Reusable UI components
+├── constants/  # Application constants
+├── features/   # Feature-specific components
+├── hooks/      # Custom React hooks
+├── lib/        # Third-party library integrations
+├── pages/      # Page components
+├── scripts/    # Utility scripts
+├── server/     # Backend server code
+├── tests/      # Test files
+├── types/      # TypeScript type definitions
+└── utils/      # Helper functions
+```
 
 ## Getting Started 🚀
 
@@ -129,6 +164,9 @@ npm install
 
 # Start development server
 npm run dev
+
+# Run tests
+npm test
 
 # Build for production
 npm run build
