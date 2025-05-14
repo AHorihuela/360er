@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
+import { ManagerComparisonChart } from './ManagerComparisonChart';
 
 interface ManagerSurveyAnalyticsProps {
   feedbackRequests: DashboardFeedbackRequest[];
@@ -321,6 +322,16 @@ export function ManagerSurveyAnalytics({
                 </Card>
               )}
             </div>
+            
+            {/* Manager Comparison Chart */}
+            {analyticsData.managerScores.length > 1 && (
+              <div className="mt-6">
+                <ManagerComparisonChart 
+                  managerScores={analyticsData.managerScores}
+                  questionIdToTextMap={questionIdToTextMap}
+                />
+              </div>
+            )}
             
             {/* Top and Bottom Managers */}
             {analyticsData.managerScores.length > 1 && (
