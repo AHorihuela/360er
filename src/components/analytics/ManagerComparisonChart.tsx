@@ -59,6 +59,7 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
           name: manager.name,
           score: manager.averageScore,
           responseCount: manager.responsesCount,
+          questionText: 'Overall Average'
         };
       } else {
         // Use specific question scores
@@ -71,10 +72,17 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
           name: manager.name,
           score: averageScore,
           responseCount: questionScores.length,
+          questionText: questionIdToTextMap[selectedQuestionId] || 'Unknown Question'
         };
       }
     }).sort((a, b) => b.score - a.score); // Sort by score descending
-  }, [managerScores, selectedQuestionId]);
+  }, [managerScores, selectedQuestionId, questionIdToTextMap]);
+
+  // Get the currently selected question text
+  const selectedQuestionText = useMemo(() => {
+    if (selectedQuestionId === 'overall') return 'Overall Average';
+    return questionIdToTextMap[selectedQuestionId] || 'Unknown Question';
+  }, [selectedQuestionId, questionIdToTextMap]);
 
   const getScoreColor = (score: number) => {
     if (score >= 4.5) return '#15803d'; // green-700
@@ -97,7 +105,14 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
     <Card className="col-span-full">
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <CardTitle className="text-sm">Manager Comparison</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-sm">Manager Comparison</CardTitle>
+            {selectedQuestionId !== 'overall' && (
+              <p className="text-xs text-muted-foreground line-clamp-2 max-w-[350px] sm:max-w-[400px]" title={selectedQuestionText}>
+                {selectedQuestionText}
+              </p>
+            )}
+          </div>
           <Select
             value={selectedQuestionId}
             onValueChange={setSelectedQuestionId}
@@ -105,10 +120,17 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
             <SelectTrigger className="w-full sm:w-[300px] h-8 text-xs">
               <SelectValue placeholder="Select question" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-w-[95vw] w-[400px]" align="end">
               {availableQuestions.map(question => (
-                <SelectItem key={question.id} value={question.id} className="text-xs">
-                  {question.text}
+                <SelectItem 
+                  key={question.id} 
+                  value={question.id} 
+                  className="text-xs py-3"
+                  title={question.text}
+                >
+                  <div className="line-clamp-2">
+                    {question.text}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -157,11 +179,16 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
                   const data = payload[0].payload;
                   
                   return (
-                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="space-y-1">
+                    <div className="rounded-lg border bg-background p-2 shadow-sm max-w-[350px]">
+                      <div className="space-y-2">
                         <div className="text-sm font-medium">
                           {data.name}
                         </div>
+                        {selectedQuestionId !== 'overall' && (
+                          <div className="text-xs text-muted-foreground">
+                            {data.questionText}
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <span className="text-xs">Score:</span>
                           <span className="text-sm font-medium">{formatScore(data.score)}</span>

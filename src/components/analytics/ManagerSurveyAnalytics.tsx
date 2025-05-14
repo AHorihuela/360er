@@ -268,7 +268,7 @@ export function ManagerSurveyAnalytics({
                     <CardTitle className="text-sm">Highest Rated Area</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-2 font-medium line-clamp-2">
+                    <p className="text-sm mb-2 font-medium line-clamp-2 h-10" title={analyticsData.questionAverages[0].questionText}>
                       {analyticsData.questionAverages[0].questionText}
                     </p>
                     <div className="flex items-center gap-2">
@@ -296,7 +296,7 @@ export function ManagerSurveyAnalytics({
                     <CardTitle className="text-sm">Needs Improvement</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm mb-2 font-medium line-clamp-2">
+                    <p className="text-sm mb-2 font-medium line-clamp-2 h-10" title={analyticsData.questionAverages[analyticsData.questionAverages.length - 1].questionText}>
                       {analyticsData.questionAverages[analyticsData.questionAverages.length - 1].questionText}
                     </p>
                     <div className="flex items-center gap-2">
@@ -393,7 +393,9 @@ export function ManagerSurveyAnalytics({
                 return (
                   <div key={question.questionId} className="p-4">
                     <div className="mb-3">
-                      <h3 className="font-medium mb-1">{question.questionText}</h3>
+                      <h3 className="font-medium mb-1 break-words pr-4" title={question.questionText}>
+                        {question.questionText}
+                      </h3>
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "text-sm font-medium px-2 py-0.5 rounded",
@@ -502,7 +504,7 @@ export function ManagerSurveyAnalytics({
                         {bestQuestion && (
                           <div className="space-y-1">
                             <h4 className="text-xs font-medium text-green-700">Strength</h4>
-                            <p className="text-sm">{bestQuestion.questionText}</p>
+                            <p className="text-sm line-clamp-2" title={bestQuestion.questionText}>{bestQuestion.questionText}</p>
                             <div className="flex items-center gap-2">
                               <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
                                 <div 
@@ -520,7 +522,7 @@ export function ManagerSurveyAnalytics({
                         {worstQuestion && bestQuestion?.questionId !== worstQuestion?.questionId && (
                           <div className="space-y-1">
                             <h4 className="text-xs font-medium text-orange-700">Area for Improvement</h4>
-                            <p className="text-sm">{worstQuestion.questionText}</p>
+                            <p className="text-sm line-clamp-2" title={worstQuestion.questionText}>{worstQuestion.questionText}</p>
                             <div className="flex items-center gap-2">
                               <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
                                 <div 
