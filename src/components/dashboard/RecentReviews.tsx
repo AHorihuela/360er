@@ -24,12 +24,14 @@ interface RecentReviewsProps {
   feedbackRequests: DashboardFeedbackRequest[];
   questionIdToTextMap: Record<string, string>;
   reviewCycleType?: ReviewCycleType;
+  reviewCycleId?: string;
 }
 
 export function RecentReviews({ 
   feedbackRequests,
   questionIdToTextMap,
-  reviewCycleType = '360_review'
+  reviewCycleType = '360_review',
+  reviewCycleId
 }: RecentReviewsProps) {
   const [visibleReviews, setVisibleReviews] = useState(6);
   
@@ -106,6 +108,7 @@ export function RecentReviews({
             key={review.id}
             review={review}
             questionIdToTextMap={questionIdToTextMap}
+            reviewCycleId={reviewCycleId}
           />
         ))}
       </div>

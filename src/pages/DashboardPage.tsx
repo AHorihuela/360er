@@ -584,6 +584,7 @@ export function DashboardPage(): JSX.Element {
                         feedbackRequests={enhancedRequests}
                         questionIdToTextMap={surveyQuestions}
                         reviewCycleType='manager_effectiveness'
+                        reviewCycleId={activeReviewCycle.id}
                       />
                     </div>
                   );

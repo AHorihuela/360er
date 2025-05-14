@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardFeedbackResponse } from '@/types/feedback/dashboard';
+import { useNavigate } from 'react-router-dom';
 
 // Helper function to get initials from name
 function getInitials(name: string | undefined): string {
@@ -55,13 +56,16 @@ function getProgressColor(score: number): string {
 interface ManagerSurveyReviewCardProps {
   review: DashboardFeedbackResponse;
   questionIdToTextMap: Record<string, string>;
+  reviewCycleId?: string;
 }
 
 export function ManagerSurveyReviewCard({ 
   review, 
-  questionIdToTextMap 
+  questionIdToTextMap,
+  reviewCycleId
 }: ManagerSurveyReviewCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
   
   // Extract Likert responses and calculate average
   const likertResponses = Object.entries(review.responses || {})
@@ -99,8 +103,27 @@ export function ManagerSurveyReviewCard({
   // Get colors based on average score
   const scoreColors = getScoreColor(averageScore);
   
+  // Event handler for card click
+  const handleCardClick = () => {
+    if (reviewCycleId && review.employee?.id) {
+      navigate(`/reviews/${reviewCycleId}/employee/${review.employee.id}`);
+    }
+  };
+  
+  // Event handler for details button click to prevent navigation
+  const handleDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the card click event
+    setExpanded(!expanded);
+  };
+  
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all">
+    <Card 
+      className={cn(
+        "overflow-hidden transition-all",
+        reviewCycleId && review.employee?.id ? "hover:shadow-md cursor-pointer" : ""
+      )}
+      onClick={reviewCycleId && review.employee?.id ? handleCardClick : undefined}
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
@@ -150,7 +173,7 @@ export function ManagerSurveyReviewCard({
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => setExpanded(!expanded)}
+          onClick={handleDetailsClick}
           className="w-full text-xs justify-between"
         >
           {expanded ? "Hide details" : "Show all responses"}
@@ -160,7 +183,7 @@ export function ManagerSurveyReviewCard({
       
       {/* Expandable detailed responses */}
       {expanded && (
-        <div className="px-6 pb-4 border-t">
+        <div className="px-6 pb-4 border-t" onClick={(e) => e.stopPropagation()}>
           <div className="pt-3 space-y-3">
             {likertResponses.map(([questionId, value]) => {
               const questionScore = Number(value);
