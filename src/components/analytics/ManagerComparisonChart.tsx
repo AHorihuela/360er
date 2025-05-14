@@ -7,9 +7,10 @@ import {
   XAxis, 
   YAxis, 
   Tooltip as RechartsTooltip,
-  Legend,
+  LabelList,
   Cell,
-  CartesianGrid
+  CartesianGrid,
+  ReferenceLine
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,14 @@ interface ManagerComparisonChartProps {
     questionScores: Record<string, number[]>;
   }>;
   questionIdToTextMap: Record<string, string>;
+}
+
+interface ChartDataItem {
+  name: string;
+  score: number;
+  responseCount: number;
+  questionText: string;
+  formattedScore: string;
 }
 
 export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: ManagerComparisonChartProps) {
@@ -59,7 +68,8 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
           name: manager.name,
           score: manager.averageScore,
           responseCount: manager.responsesCount,
-          questionText: 'Overall Average'
+          questionText: 'Overall Average',
+          formattedScore: manager.averageScore.toFixed(1)
         };
       } else {
         // Use specific question scores
@@ -72,7 +82,8 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
           name: manager.name,
           score: averageScore,
           responseCount: questionScores.length,
-          questionText: questionIdToTextMap[selectedQuestionId] || 'Unknown Question'
+          questionText: questionIdToTextMap[selectedQuestionId] || 'Unknown Question',
+          formattedScore: averageScore.toFixed(1)
         };
       }
     }).sort((a, b) => b.score - a.score); // Sort by score descending
@@ -93,8 +104,17 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
     return '#ef4444'; // red-500
   };
 
+  const getScoreTextColor = (score: number): string => {
+    if (score >= 4.0) return '#ffffff'; // white for dark backgrounds
+    return '#000000'; // black for light backgrounds
+  };
+
   const formatScore = (score: number) => {
     return score.toFixed(1);
+  };
+
+  const renderScoreLabel = (entry: ChartDataItem): string => {
+    return entry.score >= 2.5 ? entry.formattedScore : '';
   };
 
   if (managerScores.length === 0) {
@@ -104,11 +124,11 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
   return (
     <Card className="col-span-full">
       <CardHeader className="pb-2">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle className="text-sm">Manager Comparison</CardTitle>
+            <CardTitle className="text-base">Manager Comparison</CardTitle>
             {selectedQuestionId !== 'overall' && (
-              <p className="text-xs text-muted-foreground line-clamp-2 max-w-[350px] sm:max-w-[400px]" title={selectedQuestionText}>
+              <p className="text-sm text-muted-foreground line-clamp-2 max-w-[350px] sm:max-w-[400px]" title={selectedQuestionText}>
                 {selectedQuestionText}
               </p>
             )}
@@ -138,15 +158,15 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] mt-4">
+        <div className="h-[300px] mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              barSize={20}
+              margin={{ top: 10, right: 50, left: 120, bottom: 5 }}
+              barSize={24}
             >
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
               <XAxis
                 type="number"
                 domain={[0, 5]}
@@ -154,26 +174,49 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
                 tickLine={true}
                 axisLine={true}
                 fontSize={12}
+                stroke="#94a3b8"
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                width={100}
+                width={120}
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
+                stroke="#94a3b8"
               />
+              {/* Add reference lines for score benchmarks */}
+              <ReferenceLine x={3} stroke="#f59e0b" strokeDasharray="3 3" />
+              <ReferenceLine x={4} stroke="#10b981" strokeDasharray="3 3" />
+              
               <Bar
                 dataKey="score"
                 background={{ fill: "#f8fafc" }}
                 radius={[0, 4, 4, 0]}
+                isAnimationActive={true}
+                animationDuration={800}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={getScoreColor(entry.score)} 
+                  />
                 ))}
+                <LabelList 
+                  dataKey="formattedScore" 
+                  position="insideRight" 
+                  offset={10}
+                  style={{ 
+                    fontSize: '12px', 
+                    fontWeight: 'bold',
+                    fill: '#ffffff'
+                  }}
+                  formatter={renderScoreLabel}
+                />
               </Bar>
+              
               <RechartsTooltip
-                cursor={{ fill: 'transparent' }}
+                cursor={{ fill: 'rgba(236, 240, 243, 0.5)' }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const data = payload[0].payload;
@@ -203,6 +246,22 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
               />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+        
+        {/* Legend for score thresholds */}
+        <div className="mt-3 flex flex-wrap justify-end items-center gap-6 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-600 rounded-sm"></div>
+            <span>Excellent (≥4.0)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-yellow-500 rounded-sm"></div>
+            <span>Good (≥3.0)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-orange-500 rounded-sm"></div>
+            <span>Needs Improvement (≤2.5)</span>
+          </div>
         </div>
       </CardContent>
     </Card>
