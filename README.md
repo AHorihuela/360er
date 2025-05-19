@@ -83,7 +83,7 @@ Our platform evaluates seven core competencies across key aspects:
 For detailed information about our analysis methodology and feedback framework, please refer to:
 
 - [Competency Analysis Methodology](documentation/competency_analysis.md) - Detailed explanation of our scoring system, confidence levels, relationship weighting, and outlier handling.
-- [Quantitative Feedback Framework](documentation/quantitative_feedback_framew.md) - Overview of how we transform qualitative feedback into actionable insights.
+- [Quantitative Feedback Framework](documentation/quantitative_feedback_framework.md) - Overview of how we transform qualitative feedback into actionable insights.
 - [Database Structure](documentation/database.md) - Comprehensive documentation of our database schema, relationships, and security policies.
 - [Manager Effectiveness Implementation](documentation/manager-effectiveness-implementation-plan.md) - Details on our manager effectiveness survey implementation.
 
