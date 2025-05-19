@@ -132,10 +132,13 @@ src/
 ├── pages/      # Page components
 ├── scripts/    # Utility scripts
 ├── server/     # Backend server code
-├── tests/      # Test files
+├── tests/      # Integration tests and shared utilities
 ├── types/      # TypeScript type definitions
 └── utils/      # Helper functions
 ```
+
+> **Note**: Additional unit tests can be found in `__tests__` folders next to
+> their respective components.
 
 ## Getting Started 🚀
 
