@@ -93,7 +93,9 @@ function formatManagerSurveyForPrompt(
 
   // Calculate averages for Likert questions
   const likertScores = Object.entries(likertResponses).map(([id, data]) => {
-    const avg = data.values.reduce((sum, val) => sum + val, 0) / data.values.length;
+    const avg = data.values.length > 0
+      ? data.values.reduce((sum, val) => sum + val, 0) / data.values.length
+      : 0;
     return {
       id,
       questionText: data.questionText,
