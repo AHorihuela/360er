@@ -4,15 +4,19 @@ import { RecentReviews } from '../RecentReviews';
 import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { FeedbackResponse } from '@/types/feedback';
 
-// Mock the child component to inspect props
-const mockManagerSurveyReviewCard = vi.fn((props: any) => (
-  <div data-testid={`review-card-${props.review.id}`} data-cycle={props.reviewCycleId}>
-    Mock Card
-  </div>
-));
+// Create a function reference for assertions
+const mockManagerSurveyReviewCard = vi.fn();
 
+// Setup mock properly
 vi.mock('../ManagerSurveyReviewCard', () => ({
-  ManagerSurveyReviewCard: mockManagerSurveyReviewCard
+  ManagerSurveyReviewCard: (props: any) => {
+    mockManagerSurveyReviewCard(props);
+    return (
+      <div data-testid={`review-card-${props.review.id}`} data-cycle={props.reviewCycleId}>
+        Mock Card
+      </div>
+    );
+  }
 }));
 
 describe('RecentReviews Component', () => {
@@ -77,8 +81,8 @@ describe('RecentReviews Component', () => {
     );
 
     expect(mockManagerSurveyReviewCard).toHaveBeenCalled();
-    mockManagerSurveyReviewCard.mock.calls.forEach(([props]) => {
-      expect(props.reviewCycleId).toBe('cycle1');
+    mockManagerSurveyReviewCard.mock.calls.forEach((args) => {
+      expect(args[0].reviewCycleId).toBe('cycle1');
     });
   });
 });
