@@ -112,20 +112,52 @@ export function ReviewCyclesPage() {
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
   const { user, isMasterAccount } = useAuth();
   const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(false);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        fetchReviewCycles(user.id);
-      } else {
-        navigate('/login');
+    async function initialLoad() {
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          console.log('[DEBUG] Initial user load:', currentUser.id);
+          setIsUserLoaded(true);
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data",
+          variant: "destructive",
+        });
       }
-    });
-  }, [navigate, viewingAllAccounts]);
+    }
+    
+    initialLoad();
+  }, [navigate]);
+  
+  useEffect(() => {
+    if (!isUserLoaded || !user?.id) return;
+    
+    console.log('[DEBUG] Fetching cycles after toggle change:', { viewingAllAccounts });
+    fetchReviewCycles(user.id);
+  }, [isUserLoaded, viewingAllAccounts, user?.id]);
+
+  // Reset viewingAllAccounts when isMasterAccount changes
+  useEffect(() => {
+    // When isMasterAccount becomes false, ensure viewingAllAccounts is also false
+    if (!isMasterAccount && viewingAllAccounts) {
+      console.log('[DEBUG] Master account status changed, resetting viewing mode');
+      setViewingAllAccounts(false);
+    }
+  }, [isMasterAccount, viewingAllAccounts]);
 
   async function fetchReviewCycles(currentUserId: string) {
     try {
       setIsLoading(true);
+      console.log('[DEBUG] Fetching review cycles:', { isMasterAccount, viewingAllAccounts, currentUserId });
+      
       let query = supabase
         .from('review_cycles')
         .select(`
@@ -165,9 +197,15 @@ export function ReviewCyclesPage() {
           )
         `);
 
-      // If master account and viewing all accounts, don't filter by user_id
-      if (!isMasterAccount || !viewingAllAccounts) {
+      // Only show all accounts if master account AND viewing all accounts is enabled
+      const shouldFilterByUser = !isMasterAccount || !viewingAllAccounts;
+      console.log('[DEBUG] Should filter by user?', shouldFilterByUser);
+      
+      if (shouldFilterByUser) {
+        console.log('[DEBUG] Filtering by user_id:', currentUserId);
         query = query.eq('user_id', currentUserId);
+      } else {
+        console.log('[DEBUG] Showing all review cycles (master account mode)');
       }
 
       // Order by created_at descending
@@ -184,6 +222,8 @@ export function ReviewCyclesPage() {
         console.error('No data returned from Supabase');
         return;
       }
+      
+      console.log('[DEBUG] Retrieved cycles count:', reviewCyclesData.length);
 
       const processedCycles: ReviewCycle[] = reviewCyclesData
         .map(cycle => {
@@ -293,6 +333,21 @@ export function ReviewCyclesPage() {
 
   async function handleDelete(cycleId: string) {
     if (isDeletingId) return;
+    
+    // Find the cycle to delete
+    const cycleToDelete = reviewCycles.find(cycle => cycle.id === cycleId);
+    
+    // Safety check: Only allow deleting if user owns the cycle or if we're in a development environment
+    const isOwnedByCurrentUser = cycleToDelete?.user_id === user?.id;
+    if (isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser) {
+      toast({
+        title: "Permission Denied",
+        description: "Master accounts cannot delete review cycles owned by other users.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCycleToDelete(cycleId);
     setShowDeleteDialog(true);
   }
@@ -307,7 +362,21 @@ export function ReviewCyclesPage() {
         .delete()
         .eq('id', cycleToDelete);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        
+        // Check for permission errors from RLS policies
+        if (error.code === 'PGRST301' || error.message.includes('permission') || error.message.includes('policy')) {
+          toast({
+            title: "Permission Denied",
+            description: "You don't have permission to delete this review cycle.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
 
       setReviewCycles(reviewCycles.filter(cycle => cycle.id !== cycleToDelete));
       toast({
@@ -392,10 +461,8 @@ export function ReviewCyclesPage() {
           <Switch
             checked={viewingAllAccounts}
             onCheckedChange={(checked: boolean) => {
+              console.log('[DEBUG] Master account toggle changed:', checked);
               setViewingAllAccounts(checked);
-              if (user) {
-                fetchReviewCycles(user.id);
-              }
             }}
             id="master-view-toggle"
           />
@@ -452,82 +519,110 @@ export function ReviewCyclesPage() {
         </Card>
       ) : (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {reviewCycles.map((cycle) => (
-            <Card 
-              key={cycle.id} 
-              className="relative cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => navigate(`/reviews/${cycle.id}`)}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
-                    <div className="mt-2 space-y-1">
-                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                        Due {formatDate(cycle.review_by_date)}
-                      </span>
-                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                        <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                        {cycle._count?.feedback_requests || 0} reviewees
-                      </span>
+          {reviewCycles.map((cycle) => {
+            // Check if cycle belongs to current user
+            const isOwnedByCurrentUser = cycle.user_id === user?.id;
+            
+            // Determine card styles based on ownership in master account mode
+            const cardStyles = 
+              isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser
+                ? "relative cursor-pointer hover:border-primary/50 transition-colors border-amber-200 border-2" 
+                : "relative cursor-pointer hover:border-primary/50 transition-colors";
+                
+            return (
+              <Card 
+                key={cycle.id} 
+                className={cardStyles}
+                onClick={() => navigate(`/reviews/${cycle.id}`)}
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
+                      <div className="mt-2 space-y-1">
+                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                          Due {formatDate(cycle.review_by_date)}
+                        </span>
+                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                          <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                          {cycle._count?.feedback_requests || 0} reviewees
+                        </span>
+                      </div>
+                      
+                      {/* Owner badge for master account mode */}
+                      {isMasterAccount && viewingAllAccounts && (
+                        <Badge 
+                          variant={isOwnedByCurrentUser ? "default" : "outline"} 
+                          className={`mt-2 ${isOwnedByCurrentUser ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-800 hover:bg-amber-50"}`}
+                        >
+                          {isOwnedByCurrentUser ? "Your Review" : "Other User's Review"}
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
+                      {getStatusText(cycle)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <span>Progress</span>
+                      <span>{calculateProgress(cycle)}%</span>
+                    </div>
+                    <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      {(() => {
+                        const { completed, pending } = getResponseCounts(cycle);
+                        return (
+                          <>
+                            <span>{completed} reviews completed</span>
+                            <span>{pending} pending</span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
-                  <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
-                    {getStatusText(cycle)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span>Progress</span>
-                    <span>{calculateProgress(cycle)}%</span>
-                  </div>
-                  <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    {(() => {
-                      const { completed, pending } = getResponseCounts(cycle);
-                      return (
-                        <>
-                          <span>{completed} reviews completed</span>
-                          <span>{pending} pending</span>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0">
-                <div className="flex items-center justify-between w-full">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(cycle.id);
-                    }}
-                    disabled={isDeletingId === cycle.id}
-                    className="text-destructive hover:text-destructive-foreground"
-                  >
-                    {isDeletingId === cycle.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <div className="flex items-center justify-between w-full">
+                    {/* Only show delete button for user's own reviews */}
+                    {(!isMasterAccount || !viewingAllAccounts || isOwnedByCurrentUser) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(cycle.id);
+                        }}
+                        disabled={isDeletingId === cycle.id}
+                        className="text-destructive hover:text-destructive-foreground"
+                      >
+                        {isDeletingId === cycle.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    Manage
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
+                    {/* If no delete button, add an empty div to maintain layout */}
+                    {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
+                      <div></div>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      Manage
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
 
