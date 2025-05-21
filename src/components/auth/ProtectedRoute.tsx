@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
+  const { setUser, setAuthState, checkMasterAccountStatus } = useAuth();
 
   useEffect(() => {
     async function checkAuth() {
@@ -18,26 +20,49 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         if (error) {
           console.error('Auth error:', error);
           setIsAuthenticated(false);
+          setAuthState('Unauthenticated');
           return;
         }
 
         console.log('Session check:', session ? 'Authenticated' : 'Not authenticated');
         setIsAuthenticated(!!session);
+        
+        if (session?.user) {
+          setUser(session.user);
+          setAuthState('Authenticated');
+          
+          // Check if user is a master account
+          await checkMasterAccountStatus(session.user.id);
+        } else {
+          setAuthState('Unauthenticated');
+        }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           console.log('Auth state changed:', _event, session ? 'Authenticated' : 'Not authenticated');
           setIsAuthenticated(!!session);
+          
+          if (session?.user) {
+            setUser(session.user);
+            setAuthState('Authenticated');
+            
+            // Check if user is a master account
+            await checkMasterAccountStatus(session.user.id);
+          } else {
+            setUser(null);
+            setAuthState('Unauthenticated');
+          }
         });
 
         return () => subscription.unsubscribe();
       } catch (error) {
         console.error('Auth check error:', error);
         setIsAuthenticated(false);
+        setAuthState('Unauthenticated');
       }
     }
 
     checkAuth();
-  }, []);
+  }, [setUser, setAuthState, checkMasterAccountStatus]);
 
   if (isAuthenticated === null) {
     return (

@@ -25,6 +25,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
+import { useAuth } from '@/hooks/useAuth';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 function determineRequestStatus(
   responseCount: number,
@@ -107,6 +110,8 @@ export function ReviewCyclesPage() {
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
+  const { user, isMasterAccount } = useAuth();
+  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -116,11 +121,12 @@ export function ReviewCyclesPage() {
         navigate('/login');
       }
     });
-  }, [navigate]);
+  }, [navigate, viewingAllAccounts]);
 
   async function fetchReviewCycles(currentUserId: string) {
     try {
-      const { data: reviewCyclesData, error: reviewCyclesError } = await supabase
+      setIsLoading(true);
+      let query = supabase
         .from('review_cycles')
         .select(`
           id,
@@ -157,9 +163,17 @@ export function ReviewCyclesPage() {
               feedback_request_id
             )
           )
-        `)
-        .eq('user_id', currentUserId)
-        .order('created_at', { ascending: false });
+        `);
+
+      // If master account and viewing all accounts, don't filter by user_id
+      if (!isMasterAccount || !viewingAllAccounts) {
+        query = query.eq('user_id', currentUserId);
+      }
+
+      // Order by created_at descending
+      query = query.order('created_at', { ascending: false });
+
+      const { data: reviewCyclesData, error: reviewCyclesError } = await query;
 
       if (reviewCyclesError) {
         console.error('Supabase error details:', reviewCyclesError);
@@ -269,7 +283,7 @@ export function ReviewCyclesPage() {
       console.error('Error fetching review cycles:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch review cycles. Please check console for details.",
+        description: "Failed to load review cycles",
         variant: "destructive",
       });
     } finally {
@@ -368,121 +382,154 @@ export function ReviewCyclesPage() {
     };
   }
 
-  return (
-    <>
-      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
-          <h1 className="text-2xl font-bold">Review Cycles</h1>
-          <Button
-            onClick={() => navigate('/reviews/new-cycle')}
-            className="w-full sm:w-auto gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            New Review Cycle
-          </Button>
+  // Add UI for master account to toggle view
+  const renderMasterAccountToggle = () => {
+    if (!isMasterAccount) return null;
+    
+    return (
+      <div className="my-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={viewingAllAccounts}
+            onCheckedChange={(checked: boolean) => {
+              setViewingAllAccounts(checked);
+              if (user) {
+                fetchReviewCycles(user.id);
+              }
+            }}
+            id="master-view-toggle"
+          />
+          <Label htmlFor="master-view-toggle">
+            View all user accounts
+          </Label>
         </div>
-
-        {isLoading ? (
-          <div>Loading...</div>
-        ) : reviewCycles.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Review Cycles</CardTitle>
-              <CardDescription>
-                Get started by creating your first review cycle
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center py-6">
-              <Button 
-                onClick={() => navigate('/reviews/new-cycle')}
-                className="w-full sm:w-auto"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Review Cycle
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {reviewCycles.map((cycle) => (
-              <Card 
-                key={cycle.id} 
-                className="relative cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => navigate(`/reviews/${cycle.id}`)}
-              >
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
-                      <div className="mt-2 space-y-1">
-                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                          Due {formatDate(cycle.review_by_date)}
-                        </span>
-                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                          {cycle._count?.feedback_requests || 0} reviewees
-                        </span>
-                      </div>
-                    </div>
-                    <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
-                      {getStatusText(cycle)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span>Progress</span>
-                      <span>{calculateProgress(cycle)}%</span>
-                    </div>
-                    <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      {(() => {
-                        const { completed, pending } = getResponseCounts(cycle);
-                        return (
-                          <>
-                            <span>{completed} reviews completed</span>
-                            <span>{pending} pending</span>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <div className="flex items-center justify-between w-full">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(cycle.id);
-                      }}
-                      disabled={isDeletingId === cycle.id}
-                      className="text-destructive hover:text-destructive-foreground"
-                    >
-                      {isDeletingId === cycle.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      Manage
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+        {viewingAllAccounts && (
+          <Badge variant="outline" className="ml-2 bg-amber-100">
+            Master Account Mode
+          </Badge>
         )}
       </div>
+    );
+  };
+
+  return (
+    <div className="container mx-auto py-6 px-4 md:px-6">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Review Cycles</h1>
+          <p className="text-muted-foreground">
+            Manage your team review cycles and feedback
+          </p>
+        </div>
+        
+        <Button onClick={() => navigate('/reviews/new')} size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          New Review Cycle
+        </Button>
+      </div>
+
+      {renderMasterAccountToggle()}
+
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : reviewCycles.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Review Cycles</CardTitle>
+            <CardDescription>
+              Get started by creating your first review cycle
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center py-6">
+            <Button 
+              onClick={() => navigate('/reviews/new-cycle')}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Review Cycle
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {reviewCycles.map((cycle) => (
+            <Card 
+              key={cycle.id} 
+              className="relative cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => navigate(`/reviews/${cycle.id}`)}
+            >
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
+                    <div className="mt-2 space-y-1">
+                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                        Due {formatDate(cycle.review_by_date)}
+                      </span>
+                      <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                        <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                        {cycle._count?.feedback_requests || 0} reviewees
+                      </span>
+                    </div>
+                  </div>
+                  <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
+                    {getStatusText(cycle)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span>Progress</span>
+                    <span>{calculateProgress(cycle)}%</span>
+                  </div>
+                  <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    {(() => {
+                      const { completed, pending } = getResponseCounts(cycle);
+                      return (
+                        <>
+                          <span>{completed} reviews completed</span>
+                          <span>{pending} pending</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <div className="flex items-center justify-between w-full">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(cycle.id);
+                    }}
+                    disabled={isDeletingId === cycle.id}
+                    className="text-destructive hover:text-destructive-foreground"
+                  >
+                    {isDeletingId === cycle.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    Manage
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
@@ -500,6 +547,6 @@ export function ReviewCyclesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 } 

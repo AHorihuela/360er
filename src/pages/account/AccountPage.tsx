@@ -3,9 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { AccountInfo } from '@/components/account/AccountInfo';
 import { PasswordChange } from '@/components/account/PasswordChange';
 import { AccountDeletion } from '@/components/account/AccountDeletion';
+import { MasterAccountStatus } from '@/components/account/MasterAccountStatus';
 
 export function AccountPage() {
-  const { user } = useAuth();
+  const { user, isMasterAccount } = useAuth();
 
   return (
     <MainLayout>
@@ -19,6 +20,7 @@ export function AccountPage() {
 
         <div className="space-y-6">
           <AccountInfo user={user} />
+          <MasterAccountStatus user={user} />
           <PasswordChange />
           <AccountDeletion />
         </div>
