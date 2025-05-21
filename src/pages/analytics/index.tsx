@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { ManagerSurveyAnalytics } from "@/components/analytics/ManagerSurveyAnalytics";
 import { ReviewCycleType } from "@/types/survey";
+import { MasterAccountToggle } from "@/components/ui/MasterAccountToggle";
+import { Badge } from "@/components/ui/badge";
 
 // Map between base relationship types and analytics relationship types
 const RELATIONSHIP_MAPPING: Record<BaseRelationshipType, AnalyticsRelationshipType> = {
@@ -36,7 +38,7 @@ const RELATIONSHIP_OPTIONS = [
 ] as const;
 
 export default function AnalyticsPage() {
-  const { authState, user } = useAuth();
+  const { authState, user, isMasterAccount } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +55,10 @@ export default function AnalyticsPage() {
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
+  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
+    const savedState = localStorage.getItem('masterViewingAllAccounts');
+    return savedState === 'true';
+  });
 
   useEffect(() => {
     if (authState !== "Authenticated") {
@@ -67,8 +73,10 @@ export default function AnalyticsPage() {
       
       setIsLoading(true);
       try {
-        console.log("Fetching review cycles for user:", user.id);
-        const { data: reviewCycles, error: cyclesError } = await supabase
+        console.log("[DEBUG] Fetching review cycles for analytics:", { user: user.id, viewingAllAccounts });
+        
+        // Build query to fetch review cycles
+        let query = supabase
           .from('review_cycles')
           .select(`
             *,
@@ -82,8 +90,19 @@ export default function AnalyticsPage() {
               )
             )
           `)
-          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
+        
+        // Only filter by user_id if not a master account or not viewing all accounts
+        const shouldFilterByUser = !isMasterAccount || !viewingAllAccounts;
+        
+        if (shouldFilterByUser) {
+          console.log('[DEBUG] Filtering analytics by user_id:', user.id);
+          query = query.eq('user_id', user.id);
+        } else {
+          console.log('[DEBUG] Showing all analytics data (master account mode)');
+        }
+        
+        const { data: reviewCycles, error: cyclesError } = await query;
 
         if (cyclesError) {
           console.error('Error fetching review cycles:', cyclesError);
@@ -103,6 +122,12 @@ export default function AnalyticsPage() {
 
           if (cycleToShow) {
             console.log("Selected cycle:", cycleToShow);
+            
+            // Add indicator for cycles from other users
+            const enhancedCycle = {
+              ...cycleToShow,
+              isFromOtherUser: cycleToShow.user_id !== user.id
+            };
             
             // Map the feedback requests to ensure they match the DashboardFeedbackRequest type
             const mappedRequests = cycleToShow.feedback_requests?.map((request: any) => {
@@ -139,7 +164,7 @@ export default function AnalyticsPage() {
             console.log("Mapped requests:", mappedRequests);
             
             const mappedReviewCycle = {
-              ...cycleToShow,
+              ...enhancedCycle,
               feedback_requests: mappedRequests
             };
 
@@ -167,7 +192,7 @@ export default function AnalyticsPage() {
     }
 
     fetchReviewCycles();
-  }, [authState, user?.id, selectedCycleId, toast]);
+  }, [authState, user?.id, selectedCycleId, toast, isMasterAccount, viewingAllAccounts]);
 
   // Fetch survey questions for manager effectiveness surveys
   const fetchSurveyQuestions = async (cycleType: ReviewCycleType) => {
@@ -296,173 +321,208 @@ export default function AnalyticsPage() {
   console.log("Selected relationships:", selectedRelationships);
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8">Analytics</h1>
-      
-      <Card className="mb-8">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle>Filters</CardTitle>
-            {(selectedRelationships.length > 0 || selectedEmployeeIds.length > 0) && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={resetFilters}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Clear filters
-              </Button>
-            )}
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground">
+              Insights from your team's feedback
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-x-8 gap-y-4">
-            {/* Review Cycle Filter */}
-            <div className="min-w-[200px]">
-              <label htmlFor="cycle-select" className="text-sm font-medium block mb-2">
-                Review Cycle
-              </label>
-              {allReviewCycles.length > 0 ? (
-                <Select
-                  value={activeReviewCycle?.id}
-                  onValueChange={handleCycleChange}
+
+          <Select value={selectedCycleId || ''} onValueChange={handleCycleChange}>
+            <SelectTrigger className="w-full md:w-[220px]">
+              <SelectValue placeholder="Select review cycle" />
+            </SelectTrigger>
+            <SelectContent>
+              {allReviewCycles.map((cycle) => (
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  <div className="flex items-center">
+                    {cycle.title}
+                    {isMasterAccount && viewingAllAccounts && cycle.user_id !== user?.id && (
+                      <Badge variant="outline" className="ml-2 bg-amber-100 text-xs">
+                        Other User
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Add the Master Account Toggle */}
+        <MasterAccountToggle 
+          viewingAllAccounts={viewingAllAccounts} 
+          setViewingAllAccounts={setViewingAllAccounts} 
+        />
+
+        <Card className="mb-8">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle>Filters</CardTitle>
+              {(selectedRelationships.length > 0 || selectedEmployeeIds.length > 0) && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <SelectTrigger className="w-full">
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select a review cycle" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allReviewCycles.map((cycle) => (
-                      <SelectItem key={cycle.id} value={cycle.id}>
-                        {cycle.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-muted-foreground">No review cycles available</p>
+                  Clear filters
+                </Button>
               )}
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
+              {/* Review Cycle Filter */}
+              <div className="min-w-[200px]">
+                <label htmlFor="cycle-select" className="text-sm font-medium block mb-2">
+                  Review Cycle
+                </label>
+                {allReviewCycles.length > 0 ? (
+                  <Select
+                    value={activeReviewCycle?.id}
+                    onValueChange={handleCycleChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <SelectValue placeholder="Select a review cycle" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allReviewCycles.map((cycle) => (
+                        <SelectItem key={cycle.id} value={cycle.id}>
+                          {cycle.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No review cycles available</p>
+                )}
+              </div>
 
-            {/* Employee Filter */}
-            {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
-              <div className="flex-1 min-w-[300px]">
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    {isManagerSurvey ? 'Managers' : 'Employees'}
-                  </label>
-                  {selectedEmployeeIds.length > 0 && (
-                    <span className="text-xs text-orange-500 font-medium">
-                      {selectedEmployeeIds.length} selected
-                    </span>
-                  )}
+              {/* Employee Filter */}
+              {activeReviewCycle?.feedback_requests && activeReviewCycle.feedback_requests.length > 0 && (
+                <div className="flex-1 min-w-[300px]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium">
+                      {isManagerSurvey ? 'Managers' : 'Employees'}
+                    </label>
+                    {selectedEmployeeIds.length > 0 && (
+                      <span className="text-xs text-orange-500 font-medium">
+                        {selectedEmployeeIds.length} selected
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {activeReviewCycle.feedback_requests
+                      .filter(request => request.employee)
+                      .map(request => (
+                        <Button
+                          key={request.employee_id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleEmployee(request.employee_id)}
+                          className="h-8 border-muted hover:bg-transparent"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            {selectedEmployeeIds.includes(request.employee_id) && (
+                              <Check className="h-3.5 w-3.5 text-orange-500" />
+                            )}
+                            <span>
+                              {Array.isArray(request.employee) 
+                                ? request.employee[0]?.name 
+                                : request.employee?.name}
+                            </span>
+                          </div>
+                        </Button>
+                      ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {activeReviewCycle.feedback_requests
-                    .filter(request => request.employee)
-                    .map(request => (
+              )}
+
+              {/* Feedback Source Filter */}
+              {!isManagerSurvey && (
+                <div className="min-w-[300px]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-medium">
+                      Feedback Source
+                    </label>
+                    {selectedRelationships.length > 0 && (
+                      <span className="text-xs text-orange-500 font-medium">
+                        {selectedRelationships.length} selected
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {RELATIONSHIP_OPTIONS.map((option) => (
                       <Button
-                        key={request.employee_id}
+                        key={option.value}
                         variant="outline"
                         size="sm"
-                        onClick={() => toggleEmployee(request.employee_id)}
+                        onClick={() => toggleRelationship(option.value)}
                         className="h-8 border-muted hover:bg-transparent"
                       >
                         <div className="flex items-center gap-1.5">
-                          {selectedEmployeeIds.includes(request.employee_id) && (
+                          {selectedRelationships.includes(option.value) && (
                             <Check className="h-3.5 w-3.5 text-orange-500" />
                           )}
-                          <span>
-                            {Array.isArray(request.employee) 
-                              ? request.employee[0]?.name 
-                              : request.employee?.name}
-                          </span>
+                          <span>{option.label}</span>
                         </div>
                       </Button>
                     ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Feedback Source Filter */}
-            {!isManagerSurvey && (
-              <div className="min-w-[300px]">
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium">
-                    Feedback Source
-                  </label>
-                  {selectedRelationships.length > 0 && (
-                    <span className="text-xs text-orange-500 font-medium">
-                      {selectedRelationships.length} selected
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {RELATIONSHIP_OPTIONS.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleRelationship(option.value)}
-                      className="h-8 border-muted hover:bg-transparent"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {selectedRelationships.includes(option.value) && (
-                          <Check className="h-3.5 w-3.5 text-orange-500" />
-                        )}
-                        <span>{option.label}</span>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Render appropriate analytics based on review cycle type */}
-      {isManagerSurvey ? (
-        hasResponses ? (
-          <ManagerSurveyAnalytics 
-            feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
-            questionIdToTextMap={surveyQuestions}
-            employeeFilters={selectedEmployeeIds}
-          />
+        {/* Render appropriate analytics based on review cycle type */}
+        {isManagerSurvey ? (
+          hasResponses ? (
+            <ManagerSurveyAnalytics 
+              feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
+              questionIdToTextMap={surveyQuestions}
+              employeeFilters={selectedEmployeeIds}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-8">
+                <p className="text-center text-muted-foreground">
+                  {activeReviewCycle ? 
+                    "No feedback data available for analysis in the current manager survey." :
+                    "Please create a manager effectiveness cycle and collect some feedback to see analytics."}
+                </p>
+              </CardContent>
+            </Card>
+          )
         ) : (
-          <Card>
-            <CardContent className="py-8">
-              <p className="text-center text-muted-foreground">
-                {activeReviewCycle ? 
-                  "No feedback data available for analysis in the current manager survey." :
-                  "Please create a manager effectiveness cycle and collect some feedback to see analytics."}
-              </p>
-            </CardContent>
-          </Card>
-        )
-      ) : (
-        hasAnalytics ? (
-          <CompetencyAnalysis 
-            feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
-            showTeamStats={true}
-            title="Team Competency Analysis"
-            subtitle="Comprehensive view of your team's competency levels based on feedback data"
-            filters={filters}
-          />
-        ) : (
-          <Card>
-            <CardContent className="py-8">
-              <p className="text-center text-muted-foreground">
-                {activeReviewCycle ? 
-                  "No feedback data available for analysis in the current review cycle." :
-                  "Please create a review cycle and collect some feedback to see analytics."}
-              </p>
-            </CardContent>
-          </Card>
-        )
-      )}
+          hasAnalytics ? (
+            <CompetencyAnalysis 
+              feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
+              showTeamStats={true}
+              title="Team Competency Analysis"
+              subtitle="Comprehensive view of your team's competency levels based on feedback data"
+              filters={filters}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-8">
+                <p className="text-center text-muted-foreground">
+                  {activeReviewCycle ? 
+                    "No feedback data available for analysis in the current review cycle." :
+                    "Please create a review cycle and collect some feedback to see analytics."}
+                </p>
+              </CardContent>
+            </Card>
+          )
+        )}
+      </div>
     </div>
   );
 } 
