@@ -26,8 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
 import { useAuth } from '@/hooks/useAuth';
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { MasterAccountToggle } from '@/components/ui/MasterAccountToggle';
 
 function determineRequestStatus(
   responseCount: number,
@@ -111,7 +110,10 @@ export function ReviewCyclesPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
   const { user, isMasterAccount } = useAuth();
-  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(false);
+  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
+    const savedState = localStorage.getItem('masterViewingAllAccounts');
+    return savedState === 'true';
+  });
   const [isUserLoaded, setIsUserLoaded] = useState(false);
 
   useEffect(() => {
@@ -451,34 +453,6 @@ export function ReviewCyclesPage() {
     };
   }
 
-  // Add UI for master account to toggle view
-  const renderMasterAccountToggle = () => {
-    if (!isMasterAccount) return null;
-    
-    return (
-      <div className="my-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={viewingAllAccounts}
-            onCheckedChange={(checked: boolean) => {
-              console.log('[DEBUG] Master account toggle changed:', checked);
-              setViewingAllAccounts(checked);
-            }}
-            id="master-view-toggle"
-          />
-          <Label htmlFor="master-view-toggle">
-            View all user accounts
-          </Label>
-        </div>
-        {viewingAllAccounts && (
-          <Badge variant="outline" className="ml-2 bg-amber-100">
-            Master Account Mode
-          </Badge>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -495,7 +469,10 @@ export function ReviewCyclesPage() {
         </Button>
       </div>
 
-      {renderMasterAccountToggle()}
+      <MasterAccountToggle 
+        viewingAllAccounts={viewingAllAccounts} 
+        setViewingAllAccounts={setViewingAllAccounts} 
+      />
 
       {isLoading ? (
         <div>Loading...</div>
