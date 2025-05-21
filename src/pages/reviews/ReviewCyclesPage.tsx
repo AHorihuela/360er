@@ -422,7 +422,7 @@ export function ReviewCyclesPage() {
           </p>
         </div>
         
-        <Button onClick={() => navigate('/reviews/new')} size="sm">
+        <Button onClick={() => navigate('/reviews/new-cycle')} size="sm">
           <Plus className="mr-2 h-4 w-4" />
           New Review Cycle
         </Button>

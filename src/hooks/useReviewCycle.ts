@@ -10,7 +10,11 @@ export function useReviewCycle(cycleId: string | undefined) {
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([])
 
   const fetchData = useCallback(async () => {
-    if (!cycleId) return
+    // Don't try to fetch data if cycleId is missing or "new"
+    if (!cycleId || cycleId === 'new') {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true)
@@ -92,6 +96,11 @@ export function useReviewCycle(cycleId: string | undefined) {
   }, [cycleId, toast])
 
   const updateTitle = async (newTitle: string): Promise<void> => {
+    // Don't try to update if cycleId is missing or "new"
+    if (!cycleId || cycleId === 'new') {
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('review_cycles')
@@ -112,6 +121,11 @@ export function useReviewCycle(cycleId: string | undefined) {
   }
 
   const removeEmployee = async (requestId: string) => {
+    // Don't try to update if cycleId is missing or "new"
+    if (!cycleId || cycleId === 'new') {
+      return false;
+    }
+    
     try {
       const { error } = await supabase
         .from('feedback_requests')

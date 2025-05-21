@@ -23,11 +23,23 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   setIsMasterAccount: (isMaster: boolean) => set({ isMasterAccount: isMaster }),
   checkMasterAccountStatus: async (userId: string) => {
     try {
+      // Skip check if userId is not valid
+      if (!userId || userId.length < 10) {
+        set({ isMasterAccount: false });
+        return false;
+      }
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle "not found" gracefully
+      
+      // No data means not a master account - not an error
+      if (!data) {
+        set({ isMasterAccount: false });
+        return false;
+      }
       
       if (error) {
         console.error('Error checking master account status:', error);

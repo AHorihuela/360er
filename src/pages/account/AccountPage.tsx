@@ -20,7 +20,7 @@ export function AccountPage() {
 
         <div className="space-y-6">
           <AccountInfo user={user} />
-          <MasterAccountStatus user={user} />
+          {isMasterAccount && <MasterAccountStatus user={user} />}
           <PasswordChange />
           <AccountDeletion />
         </div>
