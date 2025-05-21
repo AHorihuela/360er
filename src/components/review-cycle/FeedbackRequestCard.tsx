@@ -12,8 +12,9 @@ import { FeedbackRequest, REQUEST_STATUS } from '@/types/review'
 interface FeedbackRequestCardProps {
   request: FeedbackRequest
   cycleId: string
-  onDelete: (request: FeedbackRequest) => void
+  onDelete?: (request: FeedbackRequest) => void
   onCopyLink: (link: string) => void
+  readOnly?: boolean
 }
 
 function determineRequestStatus(request: FeedbackRequest): string {
@@ -30,7 +31,13 @@ function determineRequestStatus(request: FeedbackRequest): string {
   return REQUEST_STATUS.PENDING
 }
 
-export function FeedbackRequestCard({ request, cycleId, onDelete, onCopyLink }: FeedbackRequestCardProps) {
+export function FeedbackRequestCard({ 
+  request, 
+  cycleId, 
+  onDelete, 
+  onCopyLink,
+  readOnly = false 
+}: FeedbackRequestCardProps) {
   const navigate = useNavigate()
   const responseCount = request._count?.responses || 0
   const targetResponses = request.target_responses || 1
@@ -130,24 +137,28 @@ export function FeedbackRequestCard({ request, cycleId, onDelete, onCopyLink }: 
                       <p>Copy feedback link</p>
                     </TooltipContent>
                   </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onDelete(request)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Remove employee</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  
+                  {/* Only show delete button if not readOnly and onDelete is provided */}
+                  {!readOnly && onDelete && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDelete(request)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Remove employee</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </CardContent>

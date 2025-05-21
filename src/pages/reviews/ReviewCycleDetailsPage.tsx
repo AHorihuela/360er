@@ -21,7 +21,9 @@ export function ReviewCycleDetailsPage() {
     feedbackRequests, 
     updateTitle,
     removeEmployee,
-    setFeedbackRequests
+    setFeedbackRequests,
+    isMasterMode,
+    cycleOwnerUserId
   } = useReviewCycle(cycleId);
 
   const [showAddEmployeesDialog, setShowAddEmployeesDialog] = useState(false);
@@ -42,10 +44,14 @@ export function ReviewCycleDetailsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // If in master mode, we need to fetch employees belonging to the cycle owner
+      const userId = isMasterMode && cycleOwnerUserId ? cycleOwnerUserId : user.id;
+      console.log('[DEBUG] Fetching employees for user:', { userId, isMasterMode, cycleOwnerUserId });
+
       const { data: allEmployees, error: employeesError } = await supabase
         .from('employees')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
       if (employeesError) throw employeesError;
 
@@ -77,19 +83,37 @@ export function ReviewCycleDetailsPage() {
 
   if (!reviewCycle) return null;
 
+  // Display a badge indicating this is another user's review cycle if master mode
+  const renderMasterModeIndicator = () => {
+    if (!isMasterMode) return null;
+    
+    return (
+      <div className="mb-4">
+        <div className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+          <span className="mr-1">⚠️</span> You are viewing another user's review cycle in Master Account mode
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-8">
+      {renderMasterModeIndicator()}
+      
       <div className="flex justify-between items-center">
         <EditableTitle
           title={reviewCycle.title}
           dueDate={reviewCycle.review_by_date}
           type={reviewCycle.type}
           onSave={updateTitle}
+          readOnly={isMasterMode} // Make title read-only in master mode
         />
-        <Button onClick={() => setShowAddEmployeesDialog(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
+        {!isMasterMode && (
+          <Button onClick={() => setShowAddEmployeesDialog(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -98,7 +122,7 @@ export function ReviewCycleDetailsPage() {
             key={request.id}
             request={request}
             cycleId={cycleId || ''}
-            onDelete={(request) => {
+            onDelete={isMasterMode ? undefined : (request) => {
               setEmployeeToRemove({
                 id: request.id,
                 name: Array.isArray(request.employee) 
@@ -114,6 +138,7 @@ export function ReviewCycleDetailsPage() {
                 description: "The feedback link has been copied to your clipboard.",
               });
             }}
+            readOnly={isMasterMode}
           />
         ))}
       </div>

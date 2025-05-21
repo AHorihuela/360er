@@ -2,12 +2,25 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS } from '@/types/review'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
 
 export function useReviewCycle(cycleId: string | undefined) {
   const { toast } = useToast()
+  const { isMasterAccount, user } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [reviewCycle, setReviewCycle] = useState<ReviewCycle | null>(null)
   const [feedbackRequests, setFeedbackRequests] = useState<FeedbackRequest[]>([])
+  const [cycleOwnerUserId, setCycleOwnerUserId] = useState<string | null>(null)
+  const [isMasterMode, setIsMasterMode] = useState(false)
+  
+  // Check if we're in master mode (viewing another user's cycle)
+  useEffect(() => {
+    if (isMasterAccount && cycleOwnerUserId && user?.id && user.id !== cycleOwnerUserId) {
+      setIsMasterMode(true);
+    } else {
+      setIsMasterMode(false);
+    }
+  }, [isMasterAccount, cycleOwnerUserId, user?.id]);
 
   const fetchData = useCallback(async () => {
     // Don't try to fetch data if cycleId is missing or "new"
@@ -47,9 +60,21 @@ export function useReviewCycle(cycleId: string | undefined) {
           )
         `)
         .eq('id', cycleId)
-        .single()
+        .maybeSingle()
 
       if (cycleError) throw cycleError
+      if (!cycleData) {
+        toast({
+          title: "Error",
+          description: "Review cycle not found",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      // Store the cycle owner's user ID
+      setCycleOwnerUserId(cycleData.user_id)
 
       // Process feedback requests
       const processedRequests = cycleData.feedback_requests.map((request: any) => {
@@ -157,6 +182,8 @@ export function useReviewCycle(cycleId: string | undefined) {
     feedbackRequests,
     updateTitle,
     removeEmployee,
-    setFeedbackRequests
+    setFeedbackRequests,
+    isMasterMode,
+    cycleOwnerUserId
   }
 } 

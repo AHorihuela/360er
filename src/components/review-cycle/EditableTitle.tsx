@@ -10,9 +10,16 @@ interface EditableTitleProps {
   dueDate: string
   type?: ReviewCycleType
   onSave: (newTitle: string) => Promise<void>
+  readOnly?: boolean
 }
 
-export function EditableTitle({ title, dueDate, type = '360_review', onSave }: EditableTitleProps) {
+export function EditableTitle({ 
+  title, 
+  dueDate, 
+  type = '360_review', 
+  onSave,
+  readOnly = false 
+}: EditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedTitle, setEditedTitle] = useState(title)
 
@@ -68,17 +75,19 @@ export function EditableTitle({ title, dueDate, type = '360_review', onSave }: E
       <div className="flex items-center gap-2 group">
         <h1 className="text-2xl font-bold">{title}</h1>
         <Badge variant="outline" className="ml-2">{getSurveyTypeLabel(type)}</Badge>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setEditedTitle(title)
-            setIsEditing(true)
-          }}
-          className="h-8 w-8"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setEditedTitle(title)
+              setIsEditing(true)
+            }}
+            className="h-8 w-8"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       <p className="text-muted-foreground text-sm">Due {new Date(dueDate).toLocaleDateString()}</p>
     </div>
