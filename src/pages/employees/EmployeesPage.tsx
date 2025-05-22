@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/hooks/useAuth';
-import { MasterAccountToggle } from '@/components/ui/MasterAccountToggle';
 import { Badge } from '@/components/ui/badge';
 
 interface FeedbackRequest {
@@ -127,7 +126,7 @@ function EmployeeTable({
 export function EmployeesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isMasterAccount } = useAuth();
+  const { user, isMasterAccount, viewingAllAccounts } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditLoading, setIsEditLoading] = useState(false);
@@ -141,10 +140,6 @@ export function EmployeesPage() {
     id: '',
     name: '',
     role: ''
-  });
-  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
-    const savedState = localStorage.getItem('masterViewingAllAccounts');
-    return savedState === 'true';
   });
 
   useEffect(() => {
@@ -328,14 +323,6 @@ export function EmployeesPage() {
     navigate(`/reviews/${cycleId}/employee/${employeeId}`);
   }
 
-  // Add styles to employee rows if they're from another account
-  function getRowStyles(employee: Employee): string {
-    const isOwnedByCurrentUser = employee.user_id === user?.id;
-    return isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser
-      ? "border-b border-amber-200 bg-amber-50/50"
-      : "border-b";
-  }
-
   if (error) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -347,13 +334,13 @@ export function EmployeesPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="container max-w-5xl mx-auto py-8">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Employees</h1>
+            <h1 className="text-2xl font-bold">Team Members</h1>
             <p className="text-muted-foreground">
-              Manage your team members and their reviews
+              Manage your team members
             </p>
           </div>
           <Button onClick={() => {
@@ -361,179 +348,121 @@ export function EmployeesPage() {
             setCurrentEmployee({ id: '', name: '', role: '' });
             setShowModal(true);
           }}>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Employee
+            <PlusIcon className="mr-2 h-4 w-4" /> Add Team Member
           </Button>
         </div>
 
-        {/* Add the Master Account Toggle */}
-        <MasterAccountToggle 
-          viewingAllAccounts={viewingAllAccounts} 
-          setViewingAllAccounts={setViewingAllAccounts} 
-        />
-
+        {/* Display master account mode badge if viewing all accounts */}
+        {isMasterAccount && viewingAllAccounts && (
+          <div className="flex justify-end">
+            <Badge variant="outline" className="bg-amber-100">
+              Master Account Mode
+            </Badge>
+          </div>
+        )}
+        
         {isLoading ? (
-          <div className="text-center py-8">Loading employees...</div>
+          <div className="flex items-center justify-center py-12">
+            <p>Loading team members...</p>
+          </div>
         ) : error ? (
-          <div className="text-center text-destructive py-8">{error}</div>
+          <div className="rounded-lg border border-destructive p-4">
+            <p className="text-destructive">{error}</p>
+          </div>
         ) : employees.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">No employees found</p>
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <h3 className="text-lg font-medium mb-2">No team members found</h3>
+            <p className="text-muted-foreground mb-4">
+              Add your first team member to start collecting feedback
+            </p>
             <Button onClick={() => {
               setIsEditing(false);
               setCurrentEmployee({ id: '', name: '', role: '' });
               setShowModal(true);
             }}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Your First Employee
+              <PlusIcon className="mr-2 h-4 w-4" /> Add Team Member
             </Button>
           </div>
         ) : (
-          <div className="rounded-lg border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="p-4 text-left font-medium">Name</th>
-                  <th className="p-4 text-left font-medium">Role</th>
-                  <th className="p-4 text-left font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((employee) => {
-                  // Check if employee belongs to current user
-                  const isOwnedByCurrentUser = employee.user_id === user?.id;
-                  const rowClasses = getRowStyles(employee);
-                  
-                  return (
-                    <tr key={employee.id} className={rowClasses}>
-                      <td className="p-4">
-                        <div className="flex items-center">
-                          {employee.name}
-                          {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
-                            <Badge variant="outline" className="ml-2 bg-amber-100 text-xs">
-                              Other User
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">{employee.role}</td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          {employee.latest_feedback_request?.review_cycle_id && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewReview(
-                                employee.latest_feedback_request!.review_cycle_id,
-                                employee.id
-                              )}
-                              title="View Latest Review"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {/* Only show edit/delete buttons for user's own employees */}
-                          {(!isMasterAccount || !viewingAllAccounts || isOwnedByCurrentUser) && (
-                            <>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleEdit(employee)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleDelete(employee.id)}
-                                disabled={isDeleteLoading && employeeToDelete === employee.id}
-                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <EmployeeTable 
+            employees={employees} 
+            onEdit={handleEdit} 
+            onDelete={(id) => {
+              setEmployeeToDelete(id);
+              setShowDeleteDialog(true);
+            }}
+            onViewReview={handleViewReview}
+            isDeleteLoading={isDeleteLoading}
+            employeeToDelete={employeeToDelete}
+          />
         )}
       </div>
 
+      {/* Employee Add/Edit Dialog */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
+            <DialogTitle>{isEditing ? 'Edit Team Member' : 'Add Team Member'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  required
-                  value={currentEmployee.name}
-                  onChange={(e) => setCurrentEmployee({ ...currentEmployee, name: e.target.value })}
-                  placeholder="John Doe"
-                  disabled={isEditLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input
-                  id="role"
-                  required
-                  value={currentEmployee.role}
-                  onChange={(e) => setCurrentEmployee({ ...currentEmployee, role: e.target.value })}
-                  placeholder="Software Engineer"
-                  disabled={isEditLoading}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={currentEmployee.name}
+                onChange={(e) => setCurrentEmployee({ ...currentEmployee, name: e.target.value })}
+                required
+                placeholder="Enter full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Input
+                id="role"
+                value={currentEmployee.role}
+                onChange={(e) => setCurrentEmployee({ ...currentEmployee, role: e.target.value })}
+                required
+                placeholder="Enter job title/role"
+              />
             </div>
             <div className="flex justify-end gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setShowModal(false);
-                  setIsEditing(false);
-                  setCurrentEmployee({ id: '', name: '', role: '' });
-                }}
-                disabled={isEditLoading}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowModal(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isEditLoading}>
-                {isEditLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Employee'}
+              <Button
+                type="submit"
+                disabled={isEditLoading}
+              >
+                {isEditLoading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the employee
-              and all associated feedback requests.
+              This will permanently delete this team member and all associated feedback. 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowDeleteDialog(false);
-              setEmployeeToDelete(null);
-            }}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => employeeToDelete && handleDelete(employeeToDelete)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (employeeToDelete) {
+                  handleDelete(employeeToDelete);
+                }
+              }}
+              className="bg-destructive hover:bg-destructive/90"
               disabled={isDeleteLoading}
             >
               {isDeleteLoading ? 'Deleting...' : 'Delete'}

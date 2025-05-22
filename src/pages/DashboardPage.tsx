@@ -37,7 +37,6 @@ import { FeedbackTimeline } from '@/components/dashboard/FeedbackTimeline';
 import { type DashboardCompetency } from '@/types/feedback/dashboard';
 import { RecentReviews } from '@/components/dashboard/RecentReviews';
 import { ReviewCycleType } from '@/types/survey';
-import { MasterAccountToggle } from '@/components/ui/MasterAccountToggle';
 
 type ReviewCycleInput = {
   id: string;
@@ -132,7 +131,7 @@ function mapFeedbackRequestsToDashboard(
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isMasterAccount } = useAuth();
+  const { user, isMasterAccount, viewingAllAccounts } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycleWithFeedback | null>(null);
   const [employees, setEmployees] = useState<DashboardEmployee[]>([]);
@@ -146,11 +145,6 @@ export function DashboardPage(): JSX.Element {
   // Add state for survey questions
   const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
   const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
-  // Add state for viewing all accounts
-  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
-    const savedState = localStorage.getItem('masterViewingAllAccounts');
-    return savedState === 'true';
-  });
   const [isUserLoaded, setIsUserLoaded] = useState(false);
   
   useEffect(() => {
@@ -179,15 +173,17 @@ export function DashboardPage(): JSX.Element {
   useEffect(() => {
     if (!isUserLoaded || !user?.id) return;
     
-    console.log('[DEBUG] Fetching data after toggle change:', { viewingAllAccounts });
+    console.log('[DEBUG] Fetching data after change:', { viewingAllAccounts });
     fetchData();
   }, [isUserLoaded, viewingAllAccounts, user?.id]);
 
-  const fetchData = async () => {
+  const fetchData = async (): Promise<void> => {
     if (!user?.id) return;
 
     try {
       setIsLoading(true);
+      
+      console.log('[DEBUG] Starting fetch with selectedCycleId:', selectedCycleId, 'viewingAllAccounts:', viewingAllAccounts, 'isMasterAccount:', isMasterAccount);
       
       // Employee fetch logic - for master account mode, potentially fetch all employees
       let employeeQuery = supabase
@@ -195,15 +191,30 @@ export function DashboardPage(): JSX.Element {
         .select('*');
       
       // Only show all employees if master account AND viewing all accounts is enabled
-      const shouldFilterEmployeesByUser = !isMasterAccount || !viewingAllAccounts;
+      const shouldFilterByUser = !isMasterAccount || !viewingAllAccounts;
       
-      if (shouldFilterEmployeesByUser) {
+      if (shouldFilterByUser) {
         employeeQuery = employeeQuery.eq('user_id', user.id);
       }
       
       const { data: employeesData, error: employeesError } = await employeeQuery;
-
-      // Review cycles fetch logic - for master account mode, potentially fetch all cycles
+ 
+      // Process employee data first - this is critical
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+        toast({
+          title: 'Error fetching employees',
+          description: employeesError.message,
+          variant: 'destructive',
+        });
+      } else if (employeesData) {
+        console.log('[DEBUG] Employees data loaded, count:', employeesData.length);
+        setEmployeesData(employeesData as DashboardEmployee[]);
+      }
+  
+      // Review cycles fetch logic - simple and direct approach
+      // For master account mode with viewingAllAccounts, we fetch ALL cycles
+      // Otherwise, we only fetch the user's own cycles
       let cyclesQuery = supabase
         .from('review_cycles')
         .select(`
@@ -229,26 +240,17 @@ export function DashboardPage(): JSX.Element {
         `)
         .order('created_at', { ascending: false });
       
-      // Only show all cycles if master account AND viewing all accounts is enabled
-      const shouldFilterCyclesByUser = !isMasterAccount || !viewingAllAccounts;
-      
-      if (shouldFilterCyclesByUser) {
+      // Only filter by user_id if we're not in master mode or viewingAllAccounts is off
+      if (shouldFilterByUser) {
+        console.log('[DEBUG] Filtering cycles by user:', user.id);
         cyclesQuery = cyclesQuery.eq('user_id', user.id);
+      } else {
+        console.log('[DEBUG] Fetching ALL cycles in master mode');
       }
       
       const { data: reviewCycles, error: cyclesError } = await cyclesQuery;
 
-      if (employeesError) {
-        console.error('Error fetching employees:', employeesError);
-        toast({
-          title: 'Error fetching employees',
-          description: employeesError.message,
-          variant: 'destructive',
-        });
-      } else if (employeesData) {
-        setEmployeesData(employeesData as DashboardEmployee[]);
-      }
-
+      // Handle review cycle errors
       if (cyclesError) {
         console.error('Error fetching review cycles:', cyclesError);
         toast({
@@ -256,13 +258,27 @@ export function DashboardPage(): JSX.Element {
           description: cyclesError.message,
           variant: 'destructive',
         });
-      } else if (reviewCycles && reviewCycles.length > 0) {
+      }
+      
+      // Process review cycles if we have them
+      if (reviewCycles && reviewCycles.length > 0) {
+        console.log('[DEBUG] Review cycles loaded, count:', reviewCycles.length, 'cycles');
+        
+        // Debug log cycle IDs and titles for troubleshooting
+        console.log('[DEBUG] Cycles loaded:', reviewCycles.map(c => ({ id: c.id, title: c.title, user_id: c.user_id })));
+        
         setAllReviewCycles(reviewCycles);
         
         // If no cycle is selected, use the most recent one
         const cycleToShow = selectedCycleId 
           ? reviewCycles.find(c => c.id === selectedCycleId) 
           : reviewCycles[0];
+
+        if (cycleToShow) {
+          console.log('[DEBUG] Selected cycle:', cycleToShow.id, cycleToShow.title);
+        } else if (selectedCycleId) {
+          console.log('[DEBUG] Selected cycle not found in loaded cycles. Selected ID:', selectedCycleId);
+        }
 
         if (cycleToShow && cycleToShow.feedback_requests) {
           const {
@@ -309,11 +325,13 @@ export function DashboardPage(): JSX.Element {
   };
 
   const handleCycleChange = (cycleId: string) => {
+    console.log('[DEBUG] Cycle selection changed to:', cycleId);
     localStorage.setItem('selectedCycleId', cycleId);
     setSelectedCycleId(cycleId);
     const selectedCycle = allReviewCycles.find(c => c.id === cycleId);
     
     if (selectedCycle && selectedCycle.feedback_requests) {
+      console.log('[DEBUG] Processing selected cycle:', selectedCycle.title);
       const {
         mappedRequests,
         totalRequests,
@@ -343,6 +361,49 @@ export function DashboardPage(): JSX.Element {
       if (selectedCycle.type) {
         fetchSurveyQuestions(selectedCycle.type);
       }
+    } else {
+      console.warn('[DEBUG] Selected cycle not found in current cycles list. ID:', cycleId);
+      // If in master account mode, try to refetch data to get the missing cycle
+      if (isMasterAccount && viewingAllAccounts) {
+        console.log('[DEBUG] In master mode, refreshing data to find missing cycle');
+        // Force an immediate refetch to try and find the cycle
+        fetchData();
+      } else {
+        // If not in master mode and cycle not found, we might need to clear the selection
+        console.log('[DEBUG] Cycle not found and not in master mode - clearing active cycle');
+        setActiveReviewCycle(null);
+        // But we keep the selectedCycleId in case we toggle to master mode and can find it
+      }
+    }
+  };
+
+  // Add this effect to ensure the dropdown selection is properly maintained
+  useEffect(() => {
+    // Check if we have a selectedCycleId but no activeReviewCycle
+    if (selectedCycleId && !activeReviewCycle && allReviewCycles.length > 0) {
+      console.log('[DEBUG] Trying to restore active cycle from selectedCycleId');
+      const cycle = allReviewCycles.find(c => c.id === selectedCycleId);
+      if (cycle) {
+        handleCycleChange(selectedCycleId);
+      } else {
+        console.log('[DEBUG] Selected cycle not found in current cycles list');
+        // If in master account mode, don't clear selection immediately
+        if (isMasterAccount && viewingAllAccounts) {
+          console.log('[DEBUG] In master mode, will keep selection until data refresh completes');
+        } else {
+          console.log('[DEBUG] Clearing cycle selection as it no longer exists');
+          localStorage.removeItem('selectedCycleId');
+          setSelectedCycleId(null);
+        }
+      }
+    }
+  }, [selectedCycleId, activeReviewCycle, allReviewCycles, isMasterAccount, viewingAllAccounts]);
+
+  // Add this helper function to force a dropdown refresh if needed
+  const refreshDropdown = () => {
+    // Reselect the current cycle to force the dropdown to update
+    if (selectedCycleId) {
+      handleCycleChange(selectedCycleId);
     }
   };
 
@@ -351,16 +412,39 @@ export function DashboardPage(): JSX.Element {
     if (selectedCycleId && allReviewCycles.length > 0) {
       const cycleExists = allReviewCycles.some(c => c.id === selectedCycleId);
       if (!cycleExists) {
-        localStorage.removeItem('selectedCycleId');
-        setSelectedCycleId(null);
+        // Only clear selection if we're not in master account view mode
+        // When in master mode, we might be temporarily unable to see the cycle
+        if (!isMasterAccount || !viewingAllAccounts) {
+          console.log('[DEBUG] Selected cycle not found in available cycles - clearing selection');
+          localStorage.removeItem('selectedCycleId');
+          setSelectedCycleId(null);
+        } else {
+          console.log('[DEBUG] Cycle not found but in master mode - keeping selection');
+        }
       }
     }
-  }, [allReviewCycles, selectedCycleId]);
+  }, [allReviewCycles, selectedCycleId, isMasterAccount, viewingAllAccounts]);
+
+  // Add this new effect to handle master account mode changes
+  useEffect(() => {
+    // When toggling master account mode, we need to refetch data
+    if (user?.id) {
+      console.log('[DEBUG] Master account or viewing mode changed, refreshing data');
+      fetchData();
+    }
+  }, [viewingAllAccounts, isMasterAccount, user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     fetchData();
   }, [user?.id, toast]);
+
+  // Add this new function to ensure the dropdown shows all available cycles
+  const getDisplayedCycles = () => {
+    if (!allReviewCycles.length) return [];
+    console.log('[DEBUG] Rendering cycles in dropdown:', allReviewCycles.length);
+    return allReviewCycles;
+  };
 
   // Add new function to handle adding employee to current cycle
   async function handleAddEmployeeToCycle(employeeId: string) {
@@ -511,14 +595,21 @@ export function DashboardPage(): JSX.Element {
           </div>
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Select value={selectedCycleId || ''} onValueChange={handleCycleChange}>
+            <Select 
+              value={selectedCycleId || ''} 
+              onValueChange={handleCycleChange}
+              key={`cycle-select-${allReviewCycles.length}-${viewingAllAccounts}-${isMasterAccount}`}
+            >
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Select review cycle" />
               </SelectTrigger>
               <SelectContent>
-                {allReviewCycles.map((cycle) => (
+                {getDisplayedCycles().map((cycle: ReviewCycle) => (
                   <SelectItem key={cycle.id} value={cycle.id}>
                     {cycle.title}
+                    {isMasterAccount && viewingAllAccounts && cycle.user_id !== user?.id && (
+                      <span className="ml-2 text-xs text-muted-foreground">(Other user)</span>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -579,12 +670,15 @@ export function DashboardPage(): JSX.Element {
           </div>
         </div>
         
-        {/* Add the Master Account Toggle here */}
-        <MasterAccountToggle 
-          viewingAllAccounts={viewingAllAccounts} 
-          setViewingAllAccounts={setViewingAllAccounts} 
-        />
-
+        {/* Display master account mode badge if viewing all accounts */}
+        {isMasterAccount && viewingAllAccounts && (
+          <div className="flex justify-end">
+            <Badge variant="outline" className="bg-amber-100">
+              Master Account Mode
+            </Badge>
+          </div>
+        )}
+        
         {/* Active Review Cycle Progress */}
         {activeReviewCycle && (
           <>

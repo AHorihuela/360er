@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ReviewCycle, FeedbackRequest, REQUEST_STATUS, RequestStatus } from '@/types/review';
 import { useAuth } from '@/hooks/useAuth';
-import { MasterAccountToggle } from '@/components/ui/MasterAccountToggle';
 
 function determineRequestStatus(
   responseCount: number,
@@ -109,11 +108,7 @@ export function ReviewCyclesPage() {
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
-  const { user, isMasterAccount } = useAuth();
-  const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
-    const savedState = localStorage.getItem('masterViewingAllAccounts');
-    return savedState === 'true';
-  });
+  const { user, isMasterAccount, viewingAllAccounts } = useAuth();
   const [isUserLoaded, setIsUserLoaded] = useState(false);
 
   useEffect(() => {
@@ -142,18 +137,9 @@ export function ReviewCyclesPage() {
   useEffect(() => {
     if (!isUserLoaded || !user?.id) return;
     
-    console.log('[DEBUG] Fetching cycles after toggle change:', { viewingAllAccounts });
+    console.log('[DEBUG] Fetching cycles after change:', { viewingAllAccounts });
     fetchReviewCycles(user.id);
   }, [isUserLoaded, viewingAllAccounts, user?.id]);
-
-  // Reset viewingAllAccounts when isMasterAccount changes
-  useEffect(() => {
-    // When isMasterAccount becomes false, ensure viewingAllAccounts is also false
-    if (!isMasterAccount && viewingAllAccounts) {
-      console.log('[DEBUG] Master account status changed, resetting viewing mode');
-      setViewingAllAccounts(false);
-    }
-  }, [isMasterAccount, viewingAllAccounts]);
 
   async function fetchReviewCycles(currentUserId: string) {
     try {
@@ -454,167 +440,171 @@ export function ReviewCyclesPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 md:px-6">
-      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Review Cycles</h1>
-          <p className="text-muted-foreground">
-            Manage your team review cycles and feedback
-          </p>
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Review Cycles</h1>
+            <p className="text-muted-foreground">
+              Manage your review cycles, collect feedback, and analyze results
+            </p>
+          </div>
+          <Button onClick={() => navigate('/reviews/new-cycle')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Review Cycle
+          </Button>
         </div>
         
-        <Button onClick={() => navigate('/reviews/new-cycle')} size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          New Review Cycle
-        </Button>
-      </div>
-
-      <MasterAccountToggle 
-        viewingAllAccounts={viewingAllAccounts} 
-        setViewingAllAccounts={setViewingAllAccounts} 
-      />
-
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : reviewCycles.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>No Review Cycles</CardTitle>
-            <CardDescription>
-              Get started by creating your first review cycle
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Button 
-              onClick={() => navigate('/reviews/new-cycle')}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="mr-2 h-4 w-4" />
+        {/* Display master account mode badge if viewing all accounts */}
+        {isMasterAccount && viewingAllAccounts && (
+          <div className="flex justify-end">
+            <Badge variant="outline" className="bg-amber-100">
+              Master Account Mode
+            </Badge>
+          </div>
+        )}
+        
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : reviewCycles.length === 0 ? (
+          <div className="text-center py-12 border border-dashed rounded-lg">
+            <h3 className="text-lg font-medium mb-2">No review cycles found</h3>
+            <p className="text-muted-foreground mb-6">
+              Create your first review cycle to start collecting feedback
+            </p>
+            <Button onClick={() => navigate('/reviews/new-cycle')}>
+              <Plus className="h-4 w-4 mr-2" />
               Create Review Cycle
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {reviewCycles.map((cycle) => {
-            // Check if cycle belongs to current user
-            const isOwnedByCurrentUser = cycle.user_id === user?.id;
-            
-            // Determine card styles based on ownership in master account mode
-            const cardStyles = 
-              isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser
-                ? "relative cursor-pointer hover:border-primary/50 transition-colors border-amber-200 border-2" 
-                : "relative cursor-pointer hover:border-primary/50 transition-colors";
-                
-            return (
-              <Card 
-                key={cycle.id} 
-                className={cardStyles}
-                onClick={() => navigate(`/reviews/${cycle.id}`)}
-              >
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
-                      <div className="mt-2 space-y-1">
-                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                          Due {formatDate(cycle.review_by_date)}
-                        </span>
-                        <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                          {cycle._count?.feedback_requests || 0} reviewees
-                        </span>
-                      </div>
-                      
-                      {/* Owner badge for master account mode */}
-                      {isMasterAccount && viewingAllAccounts && (
-                        <Badge 
-                          variant={isOwnedByCurrentUser ? "default" : "outline"} 
-                          className={`mt-2 ${isOwnedByCurrentUser ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-800 hover:bg-amber-50"}`}
-                        >
-                          {isOwnedByCurrentUser ? "Your Review" : "Other User's Review"}
-                        </Badge>
-                      )}
-                    </div>
-                    <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
-                      {getStatusText(cycle)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span>Progress</span>
-                      <span>{calculateProgress(cycle)}%</span>
-                    </div>
-                    <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      {(() => {
-                        const { completed, pending } = getResponseCounts(cycle);
-                        return (
-                          <>
-                            <span>{completed} reviews completed</span>
-                            <span>{pending} pending</span>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <div className="flex items-center justify-between w-full">
-                    {/* Only show delete button for user's own reviews */}
-                    {(!isMasterAccount || !viewingAllAccounts || isOwnedByCurrentUser) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(cycle.id);
-                        }}
-                        disabled={isDeletingId === cycle.id}
-                        className="text-destructive hover:text-destructive-foreground"
-                      >
-                        {isDeletingId === cycle.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {reviewCycles.map((cycle) => {
+              // Check if cycle belongs to current user
+              const isOwnedByCurrentUser = cycle.user_id === user?.id;
+              
+              // Determine card styles based on ownership in master account mode
+              const cardStyles = 
+                isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser
+                  ? "relative cursor-pointer hover:border-primary/50 transition-colors border-amber-200 border-2" 
+                  : "relative cursor-pointer hover:border-primary/50 transition-colors";
+                  
+              return (
+                <Card 
+                  key={cycle.id} 
+                  className={cardStyles}
+                  onClick={() => navigate(`/reviews/${cycle.id}`)}
+                >
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
+                        <div className="mt-2 space-y-1">
+                          <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                            <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                            Due {formatDate(cycle.review_by_date)}
+                          </span>
+                          <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                            <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                            {cycle._count?.feedback_requests || 0} reviewees
+                          </span>
+                        </div>
+                        
+                        {/* Owner badge for master account mode */}
+                        {isMasterAccount && viewingAllAccounts && (
+                          <Badge 
+                            variant={isOwnedByCurrentUser ? "default" : "outline"} 
+                            className={`mt-2 ${isOwnedByCurrentUser ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-800 hover:bg-amber-50"}`}
+                          >
+                            {isOwnedByCurrentUser ? "Your Review" : "Other User's Review"}
+                          </Badge>
                         )}
+                      </div>
+                      <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
+                        {getStatusText(cycle)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span>Progress</span>
+                        <span>{calculateProgress(cycle)}%</span>
+                      </div>
+                      <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        {(() => {
+                          const { completed, pending } = getResponseCounts(cycle);
+                          return (
+                            <>
+                              <span>{completed} reviews completed</span>
+                              <span>{pending} pending</span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <div className="flex items-center justify-between w-full">
+                      {/* Only show delete button for user's own reviews */}
+                      {(!isMasterAccount || !viewingAllAccounts || isOwnedByCurrentUser) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(cycle.id);
+                          }}
+                          disabled={isDeletingId === cycle.id}
+                          className="text-destructive hover:text-destructive-foreground"
+                        >
+                          {isDeletingId === cycle.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      {/* If no delete button, add an empty div to maintain layout */}
+                      {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
+                        <div></div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        Manage
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
-                    )}
-                    {/* If no delete button, add an empty div to maintain layout */}
-                    {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
-                      <div></div>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      Manage
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                    </div>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Review Cycle</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this review cycle? This action cannot be undone.
+              This action will permanently delete this review cycle and all associated feedback.
+              This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeletingId ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
