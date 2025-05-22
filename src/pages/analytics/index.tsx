@@ -335,7 +335,7 @@ export default function AnalyticsPage() {
             <SelectTrigger className="w-full md:w-[220px]">
               <SelectValue placeholder="Select review cycle" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px] overflow-y-auto">
               {allReviewCycles.map((cycle) => (
                 <SelectItem key={cycle.id} value={cycle.id}>
                   <div className="flex items-center">
@@ -392,7 +392,7 @@ export default function AnalyticsPage() {
                         <SelectValue placeholder="Select a review cycle" />
                       </div>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
                       {allReviewCycles.map((cycle) => (
                         <SelectItem key={cycle.id} value={cycle.id}>
                           {cycle.title}

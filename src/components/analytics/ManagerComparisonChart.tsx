@@ -140,7 +140,7 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
             <SelectTrigger className="w-full sm:w-[300px] h-8 text-xs">
               <SelectValue placeholder="Select question" />
             </SelectTrigger>
-            <SelectContent className="max-w-[95vw] w-[400px]" align="end">
+            <SelectContent className="max-w-[95vw] w-[400px] max-h-[300px] overflow-y-auto" align="end">
               {availableQuestions.map(question => (
                 <SelectItem 
                   key={question.id} 

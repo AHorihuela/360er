@@ -603,7 +603,7 @@ export function DashboardPage(): JSX.Element {
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Select review cycle" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px] overflow-y-auto">
                 {getDisplayedCycles().map((cycle: ReviewCycle) => (
                   <SelectItem key={cycle.id} value={cycle.id}>
                     {cycle.title}
