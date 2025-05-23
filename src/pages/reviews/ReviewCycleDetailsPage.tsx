@@ -451,7 +451,7 @@ export function ReviewCycleDetailsPage() {
             <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDeleteCycle}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 text-white"
               disabled={isDeleting}
             >
               {isDeleting ? 'Deleting...' : 'Delete Review Cycle'}
