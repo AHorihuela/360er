@@ -276,6 +276,13 @@ export function DashboardPage(): JSX.Element {
 
         if (cycleToShow) {
           console.log('[DEBUG] Selected cycle:', cycleToShow.id, cycleToShow.title);
+          
+          // If we auto-selected the most recent cycle, update selectedCycleId
+          if (!selectedCycleId && cycleToShow === reviewCycles[0]) {
+            console.log('[DEBUG] Auto-selecting most recent cycle:', cycleToShow.id);
+            setSelectedCycleId(cycleToShow.id);
+            localStorage.setItem('selectedCycleId', cycleToShow.id);
+          }
         } else if (selectedCycleId) {
           console.log('[DEBUG] Selected cycle not found in loaded cycles. Selected ID:', selectedCycleId);
         }
