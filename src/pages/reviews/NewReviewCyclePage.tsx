@@ -44,7 +44,7 @@ export function NewReviewCyclePage() {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Omit<CreateReviewCycleInput, 'user_id'>>({
-    title: '',
+    title: '360° Review - ' + new Date().toLocaleDateString(),
     review_by_date: (() => {
       const date = new Date();
       date.setDate(date.getDate() + 30);
@@ -96,11 +96,14 @@ export function NewReviewCyclePage() {
 
   // Handler for survey type change
   const handleTypeChange = (value: ReviewCycleType) => {
+    const defaultTitle = value === '360_review' 
+      ? `360° Review - ${new Date().toLocaleDateString()}`
+      : `Manager Survey - ${new Date().toLocaleDateString()}`;
+      
     setFormData(prev => ({
       ...prev,
       type: value,
-      // Optionally set a different default title based on type
-      title: prev.title || `${value === '360_review' ? '360° Review' : 'Manager Survey'} - ${new Date().toLocaleDateString()}`
+      title: defaultTitle // Always set default title based on type
     }));
   };
 
