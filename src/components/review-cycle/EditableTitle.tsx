@@ -23,7 +23,17 @@ export function EditableTitle({
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isEditingDueDate, setIsEditingDueDate] = useState(false)
   const [editedTitle, setEditedTitle] = useState(title)
-  const [editedDueDate, setEditedDueDate] = useState(dueDate.split('T')[0]) // Format for date input
+  
+  // Extract date properly to avoid timezone issues
+  const getLocalDateString = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  const [editedDueDate, setEditedDueDate] = useState(getLocalDateString(dueDate))
 
   const handleSaveTitle = async () => {
     await onSave(editedTitle)
@@ -31,7 +41,11 @@ export function EditableTitle({
   }
 
   const handleSaveDueDate = async () => {
-    await onSave(title, editedDueDate)
+    // Create a date object and set it to noon to avoid timezone issues
+    const selectedDate = new Date(editedDueDate + 'T12:00:00');
+    const isoString = selectedDate.toISOString();
+    
+    await onSave(title, isoString)
     setIsEditingDueDate(false)
   }
 
@@ -42,7 +56,7 @@ export function EditableTitle({
 
   const handleCancelDueDate = () => {
     setIsEditingDueDate(false)
-    setEditedDueDate(dueDate.split('T')[0])
+    setEditedDueDate(getLocalDateString(dueDate))
   }
 
   const getSurveyTypeLabel = (type: ReviewCycleType) => {
@@ -135,7 +149,7 @@ export function EditableTitle({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setEditedDueDate(dueDate.split('T')[0])
+                setEditedDueDate(getLocalDateString(dueDate))
                 setIsEditingDueDate(true)
               }}
               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
