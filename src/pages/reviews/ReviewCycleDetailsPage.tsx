@@ -46,12 +46,37 @@ export function ReviewCycleDetailsPage() {
   // Delete cycle state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Cycle owner email for master mode
+  const [cycleOwnerEmail, setCycleOwnerEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (showAddEmployeesDialog) {
       fetchAvailableEmployees();
     }
   }, [showAddEmployeesDialog]);
+
+  // Fetch cycle owner email when in master mode
+  useEffect(() => {
+    async function fetchCycleOwnerEmail() {
+      if (isMasterMode && cycleOwnerUserId) {
+        try {
+          const { data: usersData, error: usersError } = await supabase
+            .rpc('get_user_emails', { user_ids: [cycleOwnerUserId] });
+            
+          if (!usersError && usersData && usersData.length > 0) {
+            setCycleOwnerEmail(usersData[0].email);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch cycle owner email:', error);
+        }
+      } else {
+        setCycleOwnerEmail(null);
+      }
+    }
+    
+    fetchCycleOwnerEmail();
+  }, [isMasterMode, cycleOwnerUserId]);
 
   async function fetchAvailableEmployees() {
     setIsFetchingEmployees(true);
@@ -158,7 +183,8 @@ export function ReviewCycleDetailsPage() {
     return (
       <div className="mb-4">
         <div className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-          <span className="mr-1">⚠️</span> You are viewing another user's review cycle in Master Account mode
+          <span className="mr-1">⚠️</span> 
+          You are viewing{cycleOwnerEmail ? ` ${cycleOwnerEmail}'s` : ' another user\'s'} review cycle in Master Account mode
         </div>
       </div>
     );
