@@ -69,14 +69,25 @@ Our platform evaluates seven core competencies across key aspects:
 
 ## Analysis Methodology 📊
 
+### Hybrid Analytics Approach
+- **Default View**: Pre-calculated aggregate scores (Senior 40%, Peer 35%, Junior 25%)
+- **Relationship Filtering**: Dynamic analysis by specific feedback sources (Senior/Peer/Junior)
+- **Employee Filtering**: Subset analysis for selected team members
+- **Combined Filtering**: Employee and relationship filters work together
+
+### Data Requirements & Confidence
 - **Minimum Review Threshold**: 5 reviews required for analysis
 - **Confidence Ratings**:
-  - Low: 0-2 pieces of evidence
-  - Medium: 3 pieces of evidence
-  - High: 4+ pieces of evidence
+  - High: Strong evidence (4+ pieces) with consistent feedback
+  - Medium: Moderate evidence (3 pieces) with some variation
+  - Low: Limited evidence (0-2 pieces) or high variation
 - **Evidence Tracking**: Count of specific examples per competency
 - **Role Context**: Analysis adjusted for managerial vs IC roles
-- **Relationship Perspectives**: Separate analysis for senior, peer, and junior feedback
+
+### Score Consistency
+- **Aggregate Scores**: Match exactly with individual employee review pages
+- **No Discrepancies**: Same scores across analytics and individual views
+- **Relationship Perspectives**: Separate insights available for senior, peer, and junior feedback when filtering is applied
 
 ## Documentation 📚
 

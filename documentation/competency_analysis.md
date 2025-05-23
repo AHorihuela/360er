@@ -186,94 +186,63 @@ const OUTLIER_THRESHOLDS = {
 - Proper relationship tagging for weighting
 - Complete competency coverage in feedback
 
-## Aggregation Methodology
+## Aggregation Methodology - Updated
 
-### 1. Individual Analysis
+### Overview
+Our competency analysis system operates on a **two-phase approach**: 
+1. **Calculation Phase**: During AI analysis, scores are computed with proper weighting
+2. **Reporting Phase**: UI displays pre-calculated scores for consistency
+
+### 1. Calculation Phase (AI Analysis)
 - Each relationship type (senior, peer, junior) is analyzed separately by GPT
 - Scores are assigned on a 0-5 scale with one decimal precision (e.g., 4.2/5.0)
-- Evidence quotes are collected to support each score
-- Initial confidence is determined based on evidence count and quality
+- **Aggregate scores are calculated using relationship weighting:**
+  - Senior Feedback: 40% weight
+  - Peer Feedback: 35% weight  
+  - Junior Feedback: 25% weight
+- Dynamic weight adjustment occurs when relationship types are missing
+- Evidence quotes are collected and confidence levels determined
+- **Final aggregate scores are stored in the database**
 
-### 2. Aggregate Score Calculation
-Our weighted scoring system balances multiple factors:
+### 2. Reporting Phase (UI Display)
+**Hybrid Analytics Approach:**
+- **Default View**: Uses **pre-calculated aggregate scores** directly from database
+- **Relationship Filtering**: Dynamically processes individual relationship insights when filters are applied
+- **Employee Filtering**: Supported for both aggregate and relationship views
+- Maintains consistency with individual employee review pages
+- No recalculation occurs for aggregate scores (consistency guaranteed)
+- Relationship filtering enables analytical deep-dives into specific feedback sources
 
-#### Relationship Weights (40/35/25 Split)
-- Senior Feedback (40%): Prioritizes strategic oversight and experience
-- Peer Feedback (35%): Values day-to-day collaboration insights
-- Junior Feedback (25%): Incorporates upward management perspective
+**Team Analytics Views:**
+- **Aggregate View (Default)**: Shows pre-calculated weighted scores combining all relationship types
+- **Filtered View**: Shows scores from selected relationship types only (Senior/Peer/Junior)
+- **Combined Filtering**: Employee and relationship filters can be used together
 
-Weights are normalized based on available relationships. If a relationship type has no responses, its weight is redistributed proportionally among the available types.
+**Individual Review Pages:**
+- Display the same pre-calculated aggregate scores
+- Show breakdown by relationship type for transparency
+- Provide detailed evidence and confidence explanations
 
-#### Confidence Assessment
-Confidence levels are determined by:
-1. Total Evidence Count
-   - High: 10+ pieces of evidence
-   - Medium: 5-9 pieces of evidence
-   - Low: <5 pieces of evidence
+### 3. Why This Hybrid Approach?
+**Consistency**: Default view eliminates discrepancies between analytics and individual pages
+**Flexibility**: Relationship filtering enables analytical exploration
+**Performance**: Pre-calculated aggregates avoid real-time complex calculations
+**Data Integrity**: Single source of truth for official scores
+**User Choice**: Clear distinction between official (aggregate) and analytical (filtered) views
 
-2. Score Consistency
-   - Variance between relationship scores is calculated
-   - Low variance (<1.0) increases confidence
-   - High variance (>2.0) decreases confidence
+### 4. Current Capabilities
+- ✅ Team analytics with aggregate scores (matches individual review pages)
+- ✅ Dynamic filtering by relationship types (Senior/Peer/Junior)
+- ✅ Employee subset filtering
+- ✅ Combined employee + relationship filtering
+- ✅ Clear visual indicators for filter states
+- ✅ Maintains score calculation accuracy across all views
 
-3. Relationship Coverage
-   - High confidence requires at least 2 different relationship types
-   - Single relationship type limits confidence to medium/low
-
-#### Evidence Collection
-- Evidence quotes are combined from all relationship perspectives
-- Displayed with collapsible UI (2 quotes by default, expandable)
-- Maintains traceability to support scores
-
-#### Outlier Management
-Statistical outliers are detected and adjusted:
-- Extreme scores (>3σ from mean): 50% weight reduction
-- Moderate outliers (2-3σ from mean): 25% weight reduction
-- Normal scores: Full weight maintained
-- Adjustments are clearly indicated in the UI
-- Original scores are preserved for reference
-
-### 3. Display and Visualization
-- Scores shown with consistent precision (X.X/5.0 format)
-- Confidence levels visually indicated through colors and badges
-- Interactive tooltips explain methodology and evidence
-- Radar charts for team-wide pattern visualization
-- Collapsible sections for detailed evidence review
-
-#### Progress Bar Color Scheme
-Progress bars use a semantic color system to indicate performance levels:
-- Green (≥4.0): Significantly exceeding expectations
-- Blue (≥3.5): Exceeding expectations
-- Yellow (≥3.0): Meeting expectations
-- Orange (≥2.5): Approaching expectations
-- Red (<2.5): Needs improvement
-
-Confidence levels are reflected through opacity:
-- High confidence: 100% opacity
-- Medium confidence: 70% opacity
-- Low confidence: 40% opacity
-
-This dual-encoding (color + opacity) helps quickly identify both performance level and confidence in the assessment.
-
-### 4. Confidence Calculation
-Team-wide confidence levels are determined by:
-1. Evidence Count: Minimum threshold of 5 reviews
-2. Score Consistency: Variance analysis across reviews
-3. Relationship Mix: Diversity of feedback sources
-
-Final confidence is calculated as a weighted average:
-- High: ≥ 0.9 weighted confidence score
-- Medium: ≥ 0.7 weighted confidence score
-- Low: < 0.7 weighted confidence score
-
-### 5. Data Requirements
-- Minimum 5 reviews per employee for inclusion
-- Reviews must span multiple relationship types
-- Each review must provide specific examples
-- Regular review cycles for current data
-- Consistent scoring across all competencies
-- Proper relationship tagging for weighting
-- Complete competency coverage in feedback 
+### 5. Usage Recommendations
+**For Official Reviews**: Use default aggregate view (no filters)
+**For Management Insights**: Filter by relationship types to understand different perspectives
+**For Team Analysis**: Combine employee and relationship filters for targeted insights
+**For Consistency Checks**: Compare aggregate view with individual employee pages
 
 ## Score Weighting and Aggregation
 

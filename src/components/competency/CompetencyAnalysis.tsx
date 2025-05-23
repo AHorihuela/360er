@@ -53,11 +53,13 @@ export function CompetencyAnalysis({
     setExpandedCompetency(isCurrentlyExpanded ? null : name);
   };
 
-  // Memoize competency scores processing
+  // Memoize competency scores processing with hybrid approach
   const competencyScores = useMemo(() => {
-    const scores = new Map<string, ScoreWithOutlier[]>();
+    const allScores = new Map<string, ScoreWithOutlier[]>();
+    const filteredScores = new Map<string, ScoreWithOutlier[]>();
+    const relationshipScores = new Map<string, Map<string, ScoreWithOutlier[]>>();
 
-    // First, filter requests by employee if needed
+    // Filter requests by employee if needed
     const employeeFilteredRequests = filters?.employeeIds && filters.employeeIds.length > 0
       ? feedbackRequests.filter(request => filters?.employeeIds?.includes(request.employee_id) ?? false)
       : feedbackRequests;
@@ -66,69 +68,82 @@ export function CompetencyAnalysis({
       if (!request.analytics?.insights) return;
 
       request.analytics.insights.forEach(insight => {
-        // ONLY process aggregate insights to match individual review pages
-        // Skip individual relationship insights to avoid double-counting and discrepancies
-        if (insight.relationship !== 'aggregate') return;
-        
         insight.competencies.forEach(comp => {
-          if (!scores.has(comp.name)) {
-            scores.set(comp.name, []);
+          // Process aggregate insights (these are the "official" pre-calculated scores)
+          if (insight.relationship === 'aggregate') {
+            const score: ScoreWithOutlier = {
+              name: comp.name,
+              score: comp.score, // Use pre-calculated aggregate score directly
+              confidence: comp.confidence,
+              description: comp.description,
+              evidenceCount: comp.evidenceCount,
+              effectiveEvidenceCount: comp.evidenceCount,
+              relationship: 'aggregate',
+              evidenceQuotes: comp.evidenceQuotes ?? [],
+              hasOutliers: false,
+              adjustedWeight: RELATIONSHIP_WEIGHTS.aggregate
+            };
+
+            // Add to all scores
+            if (!allScores.has(comp.name)) {
+              allScores.set(comp.name, []);
+            }
+            allScores.get(comp.name)!.push(score);
+
+            // Add to filtered scores if no relationship filter applied
+            if (!filters?.relationships || filters.relationships.length === 0) {
+              if (!filteredScores.has(comp.name)) {
+                filteredScores.set(comp.name, []);
+              }
+              filteredScores.get(comp.name)!.push(score);
+            }
           }
           
-          const compScores = scores.get(comp.name)!;
-          const score: ScoreWithOutlier = {
-            name: comp.name,
-            score: comp.score, // Use the pre-calculated aggregate score directly
-            confidence: comp.confidence,
-            description: comp.description,
-            evidenceCount: comp.evidenceCount,
-            effectiveEvidenceCount: comp.evidenceCount,
-            relationship: 'aggregate', // Mark as aggregate to maintain consistency
-            evidenceQuotes: comp.evidenceQuotes ?? [],
-            hasOutliers: false,
-            adjustedWeight: RELATIONSHIP_WEIGHTS.aggregate // Use aggregate weight
-          };
-          compScores.push(score);
+          // Process individual relationship insights for filtering capability
+          if (insight.relationship !== 'aggregate') {
+            const relationshipType = insight.relationship.replace('_colleague', '');
+            const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
+
+            if (!relationshipScores.has(comp.name)) {
+              relationshipScores.set(comp.name, new Map());
+            }
+            if (!relationshipScores.get(comp.name)!.has(normalizedType)) {
+              relationshipScores.get(comp.name)!.set(normalizedType, []);
+            }
+
+            const score: ScoreWithOutlier = {
+              name: comp.name,
+              score: comp.score,
+              confidence: comp.confidence,
+              description: comp.description,
+              evidenceCount: comp.evidenceCount,
+              effectiveEvidenceCount: comp.evidenceCount,
+              relationship: normalizedType,
+              evidenceQuotes: comp.evidenceQuotes ?? [],
+              hasOutliers: false,
+              adjustedWeight: RELATIONSHIP_WEIGHTS[normalizedType as keyof typeof RELATIONSHIP_WEIGHTS] || 1
+            };
+
+            relationshipScores.get(comp.name)!.get(normalizedType)!.push(score);
+
+            // Add to filtered scores if relationship filter matches
+            if (filters?.relationships && filters.relationships.includes(normalizedType as any)) {
+              if (!filteredScores.has(comp.name)) {
+                filteredScores.set(comp.name, []);
+              }
+              filteredScores.get(comp.name)!.push(score);
+            }
+          }
         });
       });
     });
 
-    // Now apply filters and calculate scores
-    const filteredScores = new Map<string, ScoreWithOutlier[]>();
-    scores.forEach((compScores, compName) => {
-      const filtered = compScores.filter(score => {
-        // Filter by employee if needed (this is already done above but keeping for consistency)
-        if (filters?.employeeIds && filters.employeeIds.length > 0) {
-          const employeeId = feedbackRequests.find(r => 
-            r.analytics?.insights?.some(insight => 
-              insight.relationship === 'aggregate' &&
-              insight.competencies.some(comp => 
-                comp.name === score.name && 
-                comp.score === score.score
-              )
-            )
-          )?.employee_id;
-          
-          if (!employeeId || !filters.employeeIds.includes(employeeId)) {
-            return false;
-          }
-        }
-
-        // Note: We skip relationship filtering for aggregate scores since they represent
-        // the already-weighted combination of all relationship types
-        return true;
-      });
-      
-      if (filtered.length > 0) {
-        filteredScores.set(compName, filtered);
-      }
-    });
-
     return {
-      allScores: scores,
-      filteredScores
+      allScores,
+      filteredScores,
+      relationshipScores
     };
-  }, [feedbackRequests, filters?.employeeIds]);
+  }, [feedbackRequests, filters?.employeeIds, filters?.relationships]);
 
   // Memoize the processed data
   const {
@@ -216,87 +231,134 @@ export function CompetencyAnalysis({
     const includedReviewCount = reviewCount;
     const analyzedReviewCount = reviewCount;
 
-    // Calculate aggregate scores with consistent methodology
+    // Calculate aggregate scores with hybrid methodology
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
       const allCompScores = competencyScores.allScores.get(competencyName) || [];
       const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
       
-      // Use filtered scores when employee filters are applied, otherwise use all scores
-      const scoresToUse = filters?.employeeIds && filters.employeeIds.length > 0
-        ? filteredCompScores
+      // Determine which scores to use based on filter state
+      const hasRelationshipFilter = filters?.relationships && filters.relationships.length > 0;
+      const hasEmployeeFilter = filters?.employeeIds && filters.employeeIds.length > 0;
+      
+      // Use filtered scores when any filters are applied, otherwise use all scores
+      const scoresToUse = (hasRelationshipFilter || hasEmployeeFilter) 
+        ? filteredCompScores 
         : allCompScores;
 
       if (scoresToUse.length === 0) {
         return null;
       }
 
-      // Since we're using pre-calculated aggregate scores, we don't need outlier detection
-      // or re-weighting - just use the scores as-is
-      const totalScores = scoresToUse.length;
-      const averageScore = scoresToUse.reduce((sum, s) => sum + s.score, 0) / totalScores;
-      const evidenceCount = scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0);
-      
-      // Calculate basic variance for confidence assessment
-      const variance = scoresToUse.reduce((sum, s) => sum + Math.pow(s.score - averageScore, 2), 0) / totalScores;
-      const standardDeviation = Math.sqrt(variance);
+      // For aggregate scores (default), use the pre-calculated values directly
+      // For relationship-filtered scores, calculate averages appropriately
+      if (!hasRelationshipFilter && scoresToUse.length > 0 && scoresToUse[0].relationship === 'aggregate') {
+        // Use pre-calculated aggregate scores as-is (best for consistency)
+        const totalScores = scoresToUse.length;
+        const averageScore = scoresToUse.reduce((sum, s) => sum + s.score, 0) / totalScores;
+        const evidenceCount = scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0);
+        
+        // Determine overall confidence level based on individual score confidences
+        const confidenceCounts = scoresToUse.reduce((acc, s) => {
+          acc[s.confidence]++;
+          return acc;
+        }, { low: 0, medium: 0, high: 0 });
+        
+        let overallConfidence: 'low' | 'medium' | 'high';
+        if (confidenceCounts.high > totalScores / 2) {
+          overallConfidence = 'high';
+        } else if (confidenceCounts.low > totalScores / 2) {
+          overallConfidence = 'low';
+        } else {
+          overallConfidence = 'medium';
+        }
 
-      // Determine overall confidence level based on individual score confidences
-      const confidenceCounts = scoresToUse.reduce((acc, s) => {
-        acc[s.confidence]++;
-        return acc;
-      }, { low: 0, medium: 0, high: 0 });
-      
-      let overallConfidence: 'low' | 'medium' | 'high';
-      if (confidenceCounts.high > totalScores / 2) {
-        overallConfidence = 'high';
-      } else if (confidenceCounts.low > totalScores / 2) {
-        overallConfidence = 'low';
+        // Use the aggregate score directly (no re-calculation needed)
+        const firstScore = scoresToUse[0];
+        return {
+          ...firstScore,
+          score: Number(averageScore.toFixed(3)),
+          confidence: overallConfidence,
+          evidenceCount: evidenceCount,
+          effectiveEvidenceCount: evidenceCount,
+          scoreDistribution: scoresToUse.reduce((dist, s) => {
+            const roundedScore = Math.round(s.score);
+            dist[roundedScore] = (dist[roundedScore] || 0) + 1;
+            return dist;
+          }, {} as Record<number, number>),
+          evidenceQuotes: Array.from(new Set(scoresToUse.flatMap(s => s.evidenceQuotes ?? []))),
+          averageScore: averageScore,
+          scoreSpread: 0 // No spread for aggregate scores
+        } as ScoreWithOutlier;
       } else {
-        overallConfidence = 'medium';
+        // For relationship-filtered scores, calculate properly
+        const totalScores = scoresToUse.length;
+        const averageScore = scoresToUse.reduce((sum, s) => sum + s.score, 0) / totalScores;
+        const evidenceCount = scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0);
+        
+        // Calculate basic variance for relationship-filtered scores
+        const variance = scoresToUse.reduce((sum, s) => sum + Math.pow(s.score - averageScore, 2), 0) / totalScores;
+        const standardDeviation = Math.sqrt(variance);
+
+        // Determine overall confidence level
+        const confidenceCounts = scoresToUse.reduce((acc, s) => {
+          acc[s.confidence]++;
+          return acc;
+        }, { low: 0, medium: 0, high: 0 });
+        
+        let overallConfidence: 'low' | 'medium' | 'high';
+        if (confidenceCounts.high > totalScores / 2) {
+          overallConfidence = 'high';
+        } else if (confidenceCounts.low > totalScores / 2) {
+          overallConfidence = 'low';
+        } else {
+          overallConfidence = 'medium';
+        }
+
+        // Calculate score distribution
+        const scoreDistribution = scoresToUse.reduce((dist, s) => {
+          const roundedScore = Math.round(s.score);
+          dist[roundedScore] = (dist[roundedScore] || 0) + 1;
+          return dist;
+        }, {} as Record<number, number>);
+
+        // Combine evidence quotes from all scores
+        const evidenceQuotes = Array.from(new Set(scoresToUse.flatMap(s => s.evidenceQuotes ?? [])));
+
+        return {
+          name: competencyName,
+          score: Number(averageScore.toFixed(3)),
+          confidence: overallConfidence,
+          evidenceCount: evidenceCount,
+          effectiveEvidenceCount: evidenceCount,
+          relationship: hasRelationshipFilter ? scoresToUse[0].relationship : 'aggregate',
+          hasOutliers: false,
+          adjustmentDetails: undefined,
+          description: CORE_COMPETENCIES[COMPETENCY_NAME_TO_KEY[competencyName]]?.aspects?.join(' • ') || '',
+          confidenceMetrics: {
+            evidenceScore: Math.min(evidenceCount / 15, 1),
+            consistencyScore: Math.max(0, 1 - variance / 2),
+            relationshipScore: hasRelationshipFilter ? 0.7 : 0.9, // Lower for filtered views
+            finalScore: Math.min(evidenceCount / 15, 1) * 0.4 + Math.max(0, 1 - variance / 2) * 0.6,
+            factors: {
+              evidenceCount: evidenceCount,
+              variance: variance,
+              relationshipCount: hasRelationshipFilter ? 1 : 3,
+              distributionQuality: 1
+            }
+          },
+          relationshipBreakdown: hasRelationshipFilter ? {
+            [scoresToUse[0].relationship]: evidenceCount
+          } : {
+            senior: Math.round(evidenceCount * 0.4),
+            peer: Math.round(evidenceCount * 0.35),
+            junior: Math.round(evidenceCount * 0.25)
+          },
+          scoreDistribution,
+          averageScore,
+          scoreSpread: standardDeviation,
+          evidenceQuotes
+        } as ScoreWithOutlier;
       }
-
-      // Calculate score distribution
-      const scoreDistribution = scoresToUse.reduce((dist, s) => {
-        const roundedScore = Math.round(s.score);
-        dist[roundedScore] = (dist[roundedScore] || 0) + 1;
-        return dist;
-      }, {} as Record<number, number>);
-
-      // Combine evidence quotes from all scores
-      const evidenceQuotes = Array.from(new Set(scoresToUse.flatMap(s => s.evidenceQuotes ?? [])));
-
-      return {
-        name: competencyName,
-        score: Number(averageScore.toFixed(3)), // Use average of aggregate scores (no re-weighting)
-        confidence: overallConfidence,
-        evidenceCount: evidenceCount,
-        effectiveEvidenceCount: evidenceCount,
-        relationship: 'aggregate',
-        hasOutliers: false, // No outlier detection for pre-calculated aggregates
-        adjustmentDetails: undefined,
-        description: CORE_COMPETENCIES[COMPETENCY_NAME_TO_KEY[competencyName]]?.aspects?.join(' • ') || '',
-        confidenceMetrics: {
-          evidenceScore: Math.min(evidenceCount / 15, 1), // Simple evidence scoring
-          consistencyScore: Math.max(0, 1 - variance / 2),
-          relationshipScore: 0.9, // Assume good relationship coverage for aggregates
-          finalScore: Math.min(evidenceCount / 15, 1) * 0.4 + Math.max(0, 1 - variance / 2) * 0.6,
-          factors: {
-            evidenceCount: evidenceCount,
-            variance: variance,
-            relationshipCount: 3, // Aggregates typically include all relationship types
-            distributionQuality: 1
-          }
-        },
-        relationshipBreakdown: {
-          senior: Math.round(evidenceCount * 0.4), // Approximate breakdown based on weights
-          peer: Math.round(evidenceCount * 0.35),
-          junior: Math.round(evidenceCount * 0.25)
-        },
-        scoreDistribution,
-        averageScore,
-        scoreSpread: standardDeviation,
-        evidenceQuotes
-      } as ScoreWithOutlier;
     }).filter((score): score is ScoreWithOutlier => score !== null);
 
     // Calculate confidence metrics using all scores
@@ -374,8 +436,9 @@ export function CompetencyAnalysis({
                 <div>
                   <h4 className="text-sm font-medium mb-1">Methodology:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
-                    <li>Scores are pre-calculated aggregate values from individual employee analyses</li>
-                    <li>Each aggregate score combines senior (40%), peer (35%), and junior (25%) weighted feedback</li>
+                    <li>Default view uses pre-calculated aggregate scores (Senior 40%, Peer 35%, Junior 25%)</li>
+                    <li>Relationship filtering shows scores from selected feedback sources only</li>
+                    <li>Employee filtering supported for both aggregate and relationship views</li>
                     <li>Maintains consistency with individual employee review pages</li>
                     <li>Minimum {MIN_REVIEWS_REQUIRED} reviews per employee for inclusion</li>
                     <li>Confidence based on evidence count, score consistency, and feedback diversity</li>
@@ -383,10 +446,10 @@ export function CompetencyAnalysis({
                 </div>
 
                 <div className="bg-blue-50 p-3 rounded-lg">
-                  <h4 className="text-sm font-medium mb-1 text-blue-800">Note on Filters:</h4>
+                  <h4 className="text-sm font-medium mb-1 text-blue-800">Filtering Options:</h4>
                   <p className="text-xs text-blue-700">
-                    Relationship filters (senior/peer/junior) don't apply to team analysis since 
-                    these scores are pre-calculated aggregates that already incorporate all relationship types.
+                    <strong>No filters:</strong> Shows aggregate scores (recommended for official reviews)<br/>
+                    <strong>Relationship filters:</strong> Shows scores from specific feedback sources for detailed analysis
                   </p>
                 </div>
 
