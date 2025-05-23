@@ -353,10 +353,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Add the Master Account Toggle */}
-        <MasterAccountToggle 
-          viewingAllAccounts={viewingAllAccounts} 
-          setViewingAllAccounts={setViewingAllAccounts} 
-        />
+        <MasterAccountToggle />
 
         <Card className="mb-8">
           <CardHeader className="pb-4">
