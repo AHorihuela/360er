@@ -108,14 +108,15 @@ function EmployeeTable({
                     employee.id
                   )}
                   title="View Latest Review"
+                  className="relative"
                 >
                   <FileText className="h-4 w-4" />
+                  {employee.latest_feedback_request.response_count !== undefined && employee.latest_feedback_request.response_count > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {employee.latest_feedback_request.response_count}
+                    </span>
+                  )}
                 </Button>
-                {employee.latest_feedback_request.response_count !== undefined && (
-                  <Badge variant="secondary" className="text-xs">
-                    {employee.latest_feedback_request.response_count} review{employee.latest_feedback_request.response_count !== 1 ? 's' : ''}
-                  </Badge>
-                )}
               </div>
             )}
             {!isOtherTeam && (
@@ -549,7 +550,12 @@ export function EmployeesPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open);
+        if (!open) {
+          setEmployeeToDelete(null);
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -559,7 +565,12 @@ export function EmployeesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteDialog(false);
+              setEmployeeToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (employeeToDelete) {
