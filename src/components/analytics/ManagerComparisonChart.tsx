@@ -14,7 +14,9 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDown, ChevronUp, Users } from 'lucide-react';
 
 interface ManagerComparisonChartProps {
   managerScores: Array<{
@@ -36,6 +38,11 @@ interface ChartDataItem {
 
 export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: ManagerComparisonChartProps) {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>('overall');
+  const [showAll, setShowAll] = useState<boolean>(false);
+  
+  // Configuration for how many managers to show by default
+  const DEFAULT_VISIBLE_COUNT = 10;
+  const isLargeDataset = managerScores.length > DEFAULT_VISIBLE_COUNT;
 
   // Get all available questions from the first manager's questionScores
   const availableQuestions = useMemo(() => {
@@ -61,7 +68,7 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
 
   // Prepare data for the chart based on selected question
   const chartData = useMemo(() => {
-    return managerScores.map(manager => {
+    const allData = managerScores.map(manager => {
       if (selectedQuestionId === 'overall') {
         // Use overall average
         return {
@@ -87,7 +94,14 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
         };
       }
     }).sort((a, b) => b.score - a.score); // Sort by score descending
-  }, [managerScores, selectedQuestionId, questionIdToTextMap]);
+    
+    // Return limited data if not showing all and we have a large dataset
+    if (isLargeDataset && !showAll) {
+      return allData.slice(0, DEFAULT_VISIBLE_COUNT);
+    }
+    
+    return allData;
+  }, [managerScores, selectedQuestionId, questionIdToTextMap, showAll, isLargeDataset]);
 
   // Get the currently selected question text
   const selectedQuestionText = useMemo(() => {
@@ -117,7 +131,7 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
     return entry.score >= 2.5 ? entry.formattedScore : '';
   };
 
-  // Calculate dynamic height based on number of managers
+  // Calculate dynamic height based on number of managers being displayed
   const dynamicHeight = useMemo(() => {
     const baseHeight = 200; // Minimum height
     const itemHeight = 48; // Height per manager bar (including spacing)
@@ -135,35 +149,65 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle className="text-base">Manager Comparison</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-base">Manager Comparison</CardTitle>
+              {isLargeDataset && (
+                <Badge variant="secondary" className="text-xs">
+                  <Users className="h-3 w-3 mr-1" />
+                  {showAll ? `All ${managerScores.length}` : `Top ${DEFAULT_VISIBLE_COUNT} of ${managerScores.length}`}
+                </Badge>
+              )}
+            </div>
             {selectedQuestionId !== 'overall' && (
               <p className="text-sm text-muted-foreground line-clamp-2 max-w-[350px] sm:max-w-[400px]" title={selectedQuestionText}>
                 {selectedQuestionText}
               </p>
             )}
           </div>
-          <Select
-            value={selectedQuestionId}
-            onValueChange={setSelectedQuestionId}
-          >
-            <SelectTrigger className="w-full sm:w-[300px] h-8 text-xs">
-              <SelectValue placeholder="Select question" />
-            </SelectTrigger>
-            <SelectContent className="max-w-[95vw] w-[400px] max-h-[300px] overflow-y-auto" align="end">
-              {availableQuestions.map(question => (
-                <SelectItem 
-                  key={question.id} 
-                  value={question.id} 
-                  className="text-xs py-3"
-                  title={question.text}
-                >
-                  <div className="line-clamp-2">
-                    {question.text}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-2">
+            {isLargeDataset && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAll(!showAll)}
+                className="flex items-center gap-2 text-xs"
+              >
+                {showAll ? (
+                  <>
+                    <ChevronUp className="h-3 w-3" />
+                    Show Top {DEFAULT_VISIBLE_COUNT}
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3" />
+                    Show All {managerScores.length}
+                  </>
+                )}
+              </Button>
+            )}
+            <Select
+              value={selectedQuestionId}
+              onValueChange={setSelectedQuestionId}
+            >
+              <SelectTrigger className="w-full sm:w-[300px] h-8 text-xs">
+                <SelectValue placeholder="Select question" />
+              </SelectTrigger>
+              <SelectContent className="max-w-[95vw] w-[400px] max-h-[300px] overflow-y-auto" align="end">
+                {availableQuestions.map(question => (
+                  <SelectItem 
+                    key={question.id} 
+                    value={question.id} 
+                    className="text-xs py-3"
+                    title={question.text}
+                  >
+                    <div className="line-clamp-2">
+                      {question.text}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -258,6 +302,21 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
             </BarChart>
           </ResponsiveContainer>
         </div>
+        
+        {/* Show message when data is limited */}
+        {isLargeDataset && !showAll && (
+          <div className="mt-3 p-3 bg-muted/50 rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              Showing top {DEFAULT_VISIBLE_COUNT} highest-scoring managers. 
+              <button 
+                onClick={() => setShowAll(true)}
+                className="ml-1 text-primary hover:underline font-medium"
+              >
+                Click "Show All {managerScores.length}" to see complete data.
+              </button>
+            </p>
+          </div>
+        )}
         
         {/* Legend for score thresholds */}
         <div className="mt-3 flex flex-wrap justify-end items-center gap-6 text-xs text-muted-foreground">

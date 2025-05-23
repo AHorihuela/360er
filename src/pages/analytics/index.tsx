@@ -345,10 +345,10 @@ export default function AnalyticsPage() {
           </div>
 
           <Select value={selectedCycleId || ''} onValueChange={handleCycleChange}>
-            <SelectTrigger className="w-full md:w-[220px]">
+            <SelectTrigger className="w-full md:w-[350px]">
               <SelectValue placeholder="Select review cycle" />
             </SelectTrigger>
-            <SelectContent className="max-h-[300px] overflow-y-auto">
+            <SelectContent className="max-h-[300px] overflow-y-auto max-w-[400px]">
               {allReviewCycles.map((cycle) => (
                 <SelectItem key={cycle.id} value={cycle.id}>
                   <div className="flex items-center">
