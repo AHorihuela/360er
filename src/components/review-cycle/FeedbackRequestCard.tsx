@@ -145,7 +145,7 @@ export function FeedbackRequestCard({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          className="h-8 w-8 hover:bg-accent"
                           onClick={(e) => {
                             e.stopPropagation()
                             onDelete(request)
