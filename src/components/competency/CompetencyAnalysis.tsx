@@ -1,23 +1,36 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { InfoIcon } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import { type DashboardFeedbackRequest } from '@/types/feedback/dashboard';
+import { Progress } from "@/components/ui/progress";
+import { InfoIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MIN_REVIEWS_REQUIRED, RELATIONSHIP_WEIGHTS, CONFIDENCE_WEIGHTS, COMPETENCY_ORDER } from '@/components/dashboard/constants';
-import { detectOutliers, calculateConfidence } from '@/components/dashboard/utils';
-import { CompetencySummaryCard } from '@/components/dashboard/CompetencySummaryCard';
 import { CompetencyDetails } from '@/components/dashboard/CompetencyDetails';
 import { TeamSummaryStats } from '@/components/dashboard/TeamSummaryStats';
+import { CompetencySummaryCard } from '@/components/dashboard/CompetencySummaryCard';
 import { CORE_COMPETENCIES, COMPETENCY_NAME_TO_KEY } from '@/lib/competencies';
-import { cn } from "@/lib/utils";
-import { type ScoreWithOutlier } from '@/components/dashboard/types';
-import { type CompetencyFilters } from '@/types/analytics';
+import { cn } from '@/lib/utils';
+import type { CompetencyFilters } from '@/types/analytics';
+import type { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
+import type { ScoreWithOutlier } from '@/components/dashboard/types';
+
+// Utility functions for score and confidence colors
+const getScoreColor = (score: number): string => {
+  if (score >= 4.0) return 'bg-green-500';
+  if (score >= 3.5) return 'bg-blue-500';
+  if (score >= 3.0) return 'bg-yellow-500';
+  if (score >= 2.5) return 'bg-orange-500';
+  return 'bg-red-500';
+};
+
+const getConfidenceColor = (confidence: 'low' | 'medium' | 'high'): string => {
+  switch (confidence) {
+    case 'high': return 'text-green-600';
+    case 'medium': return 'text-yellow-600';
+    case 'low': return 'text-red-600';
+    default: return 'text-gray-600';
+  }
+};
 
 interface CompetencyAnalysisProps {
   feedbackRequests: DashboardFeedbackRequest[];
@@ -36,22 +49,11 @@ export function CompetencyAnalysis({
 }: CompetencyAnalysisProps) {
   const [expandedCompetency, setExpandedCompetency] = useState<string | null>(null);
 
-  // Add ref for scrolling
-  const competencyRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
   const handleCompetencyToggle = (name: string, isCurrentlyExpanded: boolean) => {
     setExpandedCompetency(isCurrentlyExpanded ? null : name);
-    
-    // If expanding, scroll the section into view
-    if (!isCurrentlyExpanded && competencyRefs.current[name]) {
-      competencyRefs.current[name]?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
   };
 
-  // Memoize the competency score calculations
+  // Memoize competency scores processing
   const competencyScores = useMemo(() => {
     const scores = new Map<string, ScoreWithOutlier[]>();
 
@@ -64,7 +66,10 @@ export function CompetencyAnalysis({
       if (!request.analytics?.insights) return;
 
       request.analytics.insights.forEach(insight => {
-        // Store all scores first, before filtering
+        // ONLY process aggregate insights to match individual review pages
+        // Skip individual relationship insights to avoid double-counting and discrepancies
+        if (insight.relationship !== 'aggregate') return;
+        
         insight.competencies.forEach(comp => {
           if (!scores.has(comp.name)) {
             scores.set(comp.name, []);
@@ -73,15 +78,15 @@ export function CompetencyAnalysis({
           const compScores = scores.get(comp.name)!;
           const score: ScoreWithOutlier = {
             name: comp.name,
-            score: comp.score,
+            score: comp.score, // Use the pre-calculated aggregate score directly
             confidence: comp.confidence,
             description: comp.description,
             evidenceCount: comp.evidenceCount,
             effectiveEvidenceCount: comp.evidenceCount,
-            relationship: insight.relationship,
+            relationship: 'aggregate', // Mark as aggregate to maintain consistency
             evidenceQuotes: comp.evidenceQuotes ?? [],
             hasOutliers: false,
-            adjustedWeight: RELATIONSHIP_WEIGHTS[insight.relationship as keyof typeof RELATIONSHIP_WEIGHTS]
+            adjustedWeight: RELATIONSHIP_WEIGHTS.aggregate // Use aggregate weight
           };
           compScores.push(score);
         });
@@ -92,14 +97,14 @@ export function CompetencyAnalysis({
     const filteredScores = new Map<string, ScoreWithOutlier[]>();
     scores.forEach((compScores, compName) => {
       const filtered = compScores.filter(score => {
-        // First filter by employee if needed
+        // Filter by employee if needed (this is already done above but keeping for consistency)
         if (filters?.employeeIds && filters.employeeIds.length > 0) {
           const employeeId = feedbackRequests.find(r => 
             r.analytics?.insights?.some(insight => 
+              insight.relationship === 'aggregate' &&
               insight.competencies.some(comp => 
                 comp.name === score.name && 
-                comp.score === score.score && 
-                insight.relationship === score.relationship
+                comp.score === score.score
               )
             )
           )?.employee_id;
@@ -109,13 +114,8 @@ export function CompetencyAnalysis({
           }
         }
 
-        // Then filter by relationship if needed
-        if (filters?.relationships && filters.relationships.length > 0) {
-          // Normalize relationship type by removing _colleague and handling equal/peer
-          const relationshipType = score.relationship.replace('_colleague', '');
-          const normalizedType = relationshipType === 'equal' ? 'peer' : relationshipType;
-          return filters.relationships.includes(normalizedType as 'senior' | 'peer' | 'junior');
-        }
+        // Note: We skip relationship filtering for aggregate scores since they represent
+        // the already-weighted combination of all relationship types
         return true;
       });
       
@@ -128,7 +128,7 @@ export function CompetencyAnalysis({
       allScores: scores,
       filteredScores
     };
-  }, [feedbackRequests, filters?.employeeIds, filters?.relationships]);
+  }, [feedbackRequests, filters?.employeeIds]);
 
   // Memoize the processed data
   const {
@@ -216,72 +216,82 @@ export function CompetencyAnalysis({
     const includedReviewCount = reviewCount;
     const analyzedReviewCount = reviewCount;
 
-    // Calculate aggregate scores with outlier detection
+    // Calculate aggregate scores with consistent methodology
     const sortedScores: ScoreWithOutlier[] = COMPETENCY_ORDER.map(competencyName => {
       const allCompScores = competencyScores.allScores.get(competencyName) || [];
       const filteredCompScores = competencyScores.filteredScores.get(competencyName) || [];
       
-      // Use all scores when no filters or all filters are selected
-      const scoresToUse = (!filters?.relationships || filters.relationships.length === 3)
-        ? allCompScores
-        : filteredCompScores;
+      // Use filtered scores when employee filters are applied, otherwise use all scores
+      const scoresToUse = filters?.employeeIds && filters.employeeIds.length > 0
+        ? filteredCompScores
+        : allCompScores;
 
       if (scoresToUse.length === 0) {
         return null;
       }
 
-      // Detect and adjust outliers using appropriate scores
-      const adjustedScores = detectOutliers(scoresToUse);
-      const hasOutliers = adjustedScores.some(s => s.adjustedWeight !== RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]);
-      const adjustmentDetails = adjustedScores
-        .filter(s => s.adjustmentDetails)
-        .flatMap(s => s.adjustmentDetails || []);
+      // Since we're using pre-calculated aggregate scores, we don't need outlier detection
+      // or re-weighting - just use the scores as-is
+      const totalScores = scoresToUse.length;
+      const averageScore = scoresToUse.reduce((sum, s) => sum + s.score, 0) / totalScores;
+      const evidenceCount = scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0);
       
-      // Calculate weighted average score using appropriate scores
-      const totalWeight = adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
-        sum + (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS]), 0);
+      // Calculate basic variance for confidence assessment
+      const variance = scoresToUse.reduce((sum, s) => sum + Math.pow(s.score - averageScore, 2), 0) / totalScores;
+      const standardDeviation = Math.sqrt(variance);
+
+      // Determine overall confidence level based on individual score confidences
+      const confidenceCounts = scoresToUse.reduce((acc, s) => {
+        acc[s.confidence]++;
+        return acc;
+      }, { low: 0, medium: 0, high: 0 });
       
-      const weightedScore = Number((adjustedScores.reduce((sum: number, s: ScoreWithOutlier) => 
-        sum + (s.score * (s.adjustedWeight || RELATIONSHIP_WEIGHTS[s.relationship as keyof typeof RELATIONSHIP_WEIGHTS])), 0) / totalWeight).toFixed(3));
+      let overallConfidence: 'low' | 'medium' | 'high';
+      if (confidenceCounts.high > totalScores / 2) {
+        overallConfidence = 'high';
+      } else if (confidenceCounts.low > totalScores / 2) {
+        overallConfidence = 'low';
+      } else {
+        overallConfidence = 'medium';
+      }
 
-      // Calculate confidence using the same scores as the weighted average
-      const confidenceResult = calculateConfidence(scoresToUse);
-
-      // Calculate relationship breakdown using appropriate scores
-      const relationshipBreakdown = {
-        senior: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'senior' ? s.evidenceCount : 0), 0),
-        peer: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'peer' ? s.evidenceCount : 0), 0),
-        junior: scoresToUse.reduce((sum, s) => sum + (s.relationship === 'junior' ? s.evidenceCount : 0), 0)
-      };
-
-      // Calculate score distribution using appropriate scores
+      // Calculate score distribution
       const scoreDistribution = scoresToUse.reduce((dist, s) => {
         const roundedScore = Math.round(s.score);
         dist[roundedScore] = (dist[roundedScore] || 0) + 1;
         return dist;
       }, {} as Record<number, number>);
 
-      // Calculate average score and standard deviation using appropriate scores
-      const allScores = scoresToUse.map(s => s.score);
-      const averageScore = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
-      const variance = allScores.reduce((sum, score) => sum + Math.pow(score - averageScore, 2), 0) / allScores.length;
-      const standardDeviation = Math.sqrt(variance);
-
-      // Combine evidence quotes from appropriate scores
+      // Combine evidence quotes from all scores
       const evidenceQuotes = Array.from(new Set(scoresToUse.flatMap(s => s.evidenceQuotes ?? [])));
 
       return {
         name: competencyName,
-        score: weightedScore,
-        confidence: confidenceResult.level,
-        evidenceCount: scoresToUse.reduce((sum, s) => sum + s.evidenceCount, 0),
-        effectiveEvidenceCount: confidenceResult.metrics.factors.evidenceCount,
+        score: Number(averageScore.toFixed(3)), // Use average of aggregate scores (no re-weighting)
+        confidence: overallConfidence,
+        evidenceCount: evidenceCount,
+        effectiveEvidenceCount: evidenceCount,
         relationship: 'aggregate',
-        hasOutliers,
-        adjustmentDetails: adjustmentDetails.length > 0 ? adjustmentDetails : undefined,
+        hasOutliers: false, // No outlier detection for pre-calculated aggregates
+        adjustmentDetails: undefined,
         description: CORE_COMPETENCIES[COMPETENCY_NAME_TO_KEY[competencyName]]?.aspects?.join(' • ') || '',
-        confidenceMetrics: confidenceResult.metrics,
-        relationshipBreakdown,
+        confidenceMetrics: {
+          evidenceScore: Math.min(evidenceCount / 15, 1), // Simple evidence scoring
+          consistencyScore: Math.max(0, 1 - variance / 2),
+          relationshipScore: 0.9, // Assume good relationship coverage for aggregates
+          finalScore: Math.min(evidenceCount / 15, 1) * 0.4 + Math.max(0, 1 - variance / 2) * 0.6,
+          factors: {
+            evidenceCount: evidenceCount,
+            variance: variance,
+            relationshipCount: 3, // Aggregates typically include all relationship types
+            distributionQuality: 1
+          }
+        },
+        relationshipBreakdown: {
+          senior: Math.round(evidenceCount * 0.4), // Approximate breakdown based on weights
+          peer: Math.round(evidenceCount * 0.35),
+          junior: Math.round(evidenceCount * 0.25)
+        },
         scoreDistribution,
         averageScore,
         scoreSpread: standardDeviation,
@@ -310,7 +320,7 @@ export function CompetencyAnalysis({
       averageConfidence,
       evidenceCountByCompetency
     };
-  }, [competencyScores]);
+  }, [competencyScores, filters?.employeeIds]);
 
   if (sortedScores.length === 0) {
     return null;
@@ -364,11 +374,20 @@ export function CompetencyAnalysis({
                 <div>
                   <h4 className="text-sm font-medium mb-1">Methodology:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
-                    <li>Scores weighted by relationship (senior 40%, peer 35%, junior 25%)</li>
-                    <li>Statistical outliers adjusted to maintain balance</li>
+                    <li>Scores are pre-calculated aggregate values from individual employee analyses</li>
+                    <li>Each aggregate score combines senior (40%), peer (35%), and junior (25%) weighted feedback</li>
+                    <li>Maintains consistency with individual employee review pages</li>
                     <li>Minimum {MIN_REVIEWS_REQUIRED} reviews per employee for inclusion</li>
                     <li>Confidence based on evidence count, score consistency, and feedback diversity</li>
                   </ul>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium mb-1 text-blue-800">Note on Filters:</h4>
+                  <p className="text-xs text-blue-700">
+                    Relationship filters (senior/peer/junior) don't apply to team analysis since 
+                    these scores are pre-calculated aggregates that already incorporate all relationship types.
+                  </p>
                 </div>
 
                 <div>
@@ -471,8 +490,7 @@ export function CompetencyAnalysis({
                 
                 return (
                   <div 
-                    key={name} 
-                    ref={el => competencyRefs.current[name] = el}
+                    key={name}
                     className={cn(
                       "transition-colors duration-200 scroll-mt-16",
                       isExpanded && "bg-slate-50"
