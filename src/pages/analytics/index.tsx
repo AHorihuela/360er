@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
   const { authState, user, isMasterAccount } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [allReviewCycles, setAllReviewCycles] = useState<ReviewCycle[]>([]);
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycle | null>(null);
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(() => {

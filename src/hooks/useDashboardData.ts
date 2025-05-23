@@ -117,7 +117,7 @@ export function useDashboardData() {
   const { toast } = useToast();
   const { user, isMasterAccount, viewingAllAccounts } = useAuth();
   
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeReviewCycle, setActiveReviewCycle] = useState<ReviewCycleWithFeedback | null>(null);
   const [employees, setEmployees] = useState<DashboardEmployee[]>([]);
   const [employeesData, setEmployeesData] = useState<DashboardEmployee[]>([]);

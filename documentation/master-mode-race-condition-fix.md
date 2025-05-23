@@ -8,9 +8,11 @@ The user reported that sometimes when navigating to `/dashboard`, the UI would "
 2. The dropdown list would only show the user's own reviews instead of all accounts' reviews
 3. The issue occurred intermittently, suggesting a race condition
 
+**Additional Issue:** When refreshing the dashboard, there was a brief flash of the onboarding screen ("Welcome to Squad360!") before the actual dashboard loaded.
+
 ## Root Cause Analysis
 
-After analyzing the console logs and codebase, the issue was identified as a **race condition between multiple `useEffect` hooks** in several components:
+After analyzing the console logs and codebase, the issues were identified as **race conditions between multiple `useEffect` hooks** and **incorrect loading state initialization**:
 
 ### The Race Condition Pattern
 
@@ -30,6 +32,15 @@ After analyzing the console logs and codebase, the issue was identified as a **r
    - Master account status check was asynchronous
    - Components were rendering and fetching data before the master status was confirmed
    - localStorage state could be out of sync with component state
+
+### The Onboarding Screen Flash Issue
+
+1. **Incorrect loading state initialization:**
+   - `isLoading` was initialized as `false` in `useDashboardData`
+   - `employeesData` started as empty array `[]`
+   - Component would render before data was fetched
+   - Since `!employeesData.length` was true, onboarding screen would show
+   - After 100ms + 50ms delays, data would load and dashboard would appear
 
 ## Solution Implementation
 
@@ -75,7 +86,19 @@ useEffect(() => {
 }, [isAuthReady, viewingAllAccounts, isMasterAccount, user?.id]);
 ```
 
-### 2. Enhanced ProtectedRoute
+### 2. Fixed Loading State Initialization
+
+**Before:**
+```typescript
+const [isLoading, setIsLoading] = useState(false); // Started as false, causing flash
+```
+
+**After:**
+```typescript
+const [isLoading, setIsLoading] = useState(true); // Start as true to prevent flash
+```
+
+### 3. Enhanced ProtectedRoute
 
 Added master account status checking before rendering components:
 
@@ -96,7 +119,7 @@ if (authState === 'Loading' || (authState === 'Authenticated' && !isMasterStatus
 }
 ```
 
-### 3. Improved State Synchronization
+### 4. Improved State Synchronization
 
 Added debugging and better state management in `useAuth`:
 
@@ -107,7 +130,7 @@ setIsMasterAccount: (isMaster: boolean) => {
 },
 ```
 
-### 4. Debouncing and Race Prevention
+### 5. Debouncing and Race Prevention
 
 - Added debouncing (50-100ms delays) to prevent rapid successive calls
 - Consolidated multiple effects into single effects
