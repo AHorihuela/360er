@@ -552,6 +552,11 @@ export function useDashboardData() {
     ? allReviewCycles.find(c => c.id === activeReviewCycle.id)?.users?.email
     : null;
 
+  // Get the current cycle's user_id
+  const currentCycleUserId = activeReviewCycle
+    ? allReviewCycles.find(c => c.id === activeReviewCycle.id)?.user_id
+    : null;
+
   return {
     isLoading,
     activeReviewCycle,
@@ -566,6 +571,7 @@ export function useDashboardData() {
     isMasterAccount,
     viewingAllAccounts,
     currentCycleUserEmail,
+    currentCycleUserId,
     handleCycleChange,
     handleAddEmployeeToCycle,
     fetchData

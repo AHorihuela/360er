@@ -7,12 +7,20 @@ interface OtherEmployeesProps {
   employeesData: DashboardEmployee[];
   activeReviewCycle: ReviewCycleWithFeedback | null;
   onAddEmployeeToCycle: (employeeId: string) => void;
+  isMasterAccount?: boolean;
+  viewingAllAccounts?: boolean;
+  currentUserId?: string;
+  activeReviewCycleUserId?: string;
 }
 
 export function OtherEmployees({ 
   employeesData, 
   activeReviewCycle, 
-  onAddEmployeeToCycle 
+  onAddEmployeeToCycle,
+  isMasterAccount = false,
+  viewingAllAccounts = false,
+  currentUserId,
+  activeReviewCycleUserId
 }: OtherEmployeesProps) {
   if (!activeReviewCycle) {
     return null;
@@ -25,6 +33,13 @@ export function OtherEmployees({
   if (otherEmployees.length === 0) {
     return null;
   }
+
+  // Check if we're in master mode viewing another user's cycle
+  const isViewingOtherUsersCycle = isMasterAccount && 
+    viewingAllAccounts && 
+    currentUserId && 
+    activeReviewCycleUserId && 
+    currentUserId !== activeReviewCycleUserId;
 
   return (
     <div className="space-y-4 mt-8 pt-8 border-t">
@@ -50,19 +65,21 @@ export function OtherEmployees({
                 </div>
               </div>
             </CardContent>
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-lg">
-              <Button
-                variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddEmployeeToCycle(employee.id);
-                }}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                Add to Current Cycle
-              </Button>
-            </div>
+            {/* Hover Overlay - Only show if user can actually add employees */}
+            {!isViewingOtherUsersCycle && (
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-lg">
+                <Button
+                  variant="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddEmployeeToCycle(employee.id);
+                  }}
+                  className="bg-white text-black hover:bg-white/90"
+                >
+                  Add to Current Cycle
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
       </div>

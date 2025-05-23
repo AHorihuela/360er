@@ -22,6 +22,7 @@ export function DashboardPage(): JSX.Element {
     isMasterAccount,
     viewingAllAccounts,
     currentCycleUserEmail,
+    currentCycleUserId,
     handleCycleChange,
     handleAddEmployeeToCycle
   } = useDashboardData();
@@ -98,6 +99,10 @@ export function DashboardPage(): JSX.Element {
           employeesData={employeesData}
           activeReviewCycle={activeReviewCycle}
           onAddEmployeeToCycle={handleAddEmployeeToCycle}
+          isMasterAccount={isMasterAccount}
+          viewingAllAccounts={viewingAllAccounts}
+          currentUserId={user?.id}
+          activeReviewCycleUserId={currentCycleUserId || undefined}
         />
       </div>
     </div>
