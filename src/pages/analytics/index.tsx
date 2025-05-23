@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { ManagerSurveyAnalytics } from "@/components/analytics/ManagerSurveyAnalytics";
 import { ReviewCycleType } from "@/types/survey";
-import { MasterAccountToggle } from "@/components/ui/MasterAccountToggle";
 import { Badge } from "@/components/ui/badge";
 
 // Map between base relationship types and analytics relationship types
@@ -351,9 +350,6 @@ export default function AnalyticsPage() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Add the Master Account Toggle */}
-        <MasterAccountToggle />
 
         <Card className="mb-8">
           <CardHeader className="pb-4">

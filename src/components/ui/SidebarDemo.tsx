@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { MasterAccountToggle } from "./MasterAccountToggle";
 
 export function SidebarDemo() {
   const navigate = useNavigate();
@@ -66,9 +65,6 @@ export function SidebarDemo() {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="px-2 py-2">
-              <MasterAccountToggle />
-            </div>
             <SidebarLink
               link={{
                 label: "Methodology",
