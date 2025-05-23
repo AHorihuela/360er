@@ -306,6 +306,41 @@ export function ReviewCyclesPage() {
           } as ReviewCycle;
         });
 
+      // Fetch user emails for cycles created by other users (in master mode)
+      if (isMasterAccount && viewingAllAccounts && processedCycles.length > 0) {
+        const otherUserIds = [...new Set(
+          processedCycles
+            .filter(cycle => cycle.user_id !== currentUserId)
+            .map(cycle => cycle.user_id)
+        )];
+
+        if (otherUserIds.length > 0) {
+          try {
+            const { data: usersData, error: usersError } = await supabase
+              .rpc('get_user_emails', { user_ids: otherUserIds });
+              
+            if (!usersError && usersData) {
+              // Map user emails to cycles
+              const userEmailMap = usersData.reduce((acc: Record<string, string>, user: { id: string; email: string }) => {
+                acc[user.id] = user.email;
+                return acc;
+              }, {});
+
+              // Add creator email to each cycle
+              processedCycles.forEach(cycle => {
+                if (cycle.user_id !== currentUserId) {
+                  (cycle as any).creatorEmail = userEmailMap[cycle.user_id] || 'Unknown User';
+                }
+              });
+            } else {
+              console.warn('Error fetching user emails:', usersError);
+            }
+          } catch (error) {
+            console.warn('Failed to fetch user emails:', error);
+          }
+        }
+      }
+
       setReviewCycles(processedCycles);
     } catch (error) {
       console.error('Error fetching review cycles:', error);
@@ -480,112 +515,46 @@ export function ReviewCyclesPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-6">
-            {reviewCycles.map((cycle) => {
-              // Check if cycle belongs to current user
-              const isOwnedByCurrentUser = cycle.user_id === user?.id;
+          <>
+            {/* Group cycles by ownership in Master Mode */}
+            {(() => {
+              const ownCycles = reviewCycles.filter(cycle => cycle.user_id === user?.id);
+              const otherCycles = reviewCycles.filter(cycle => cycle.user_id !== user?.id);
               
-              // Determine card styles based on ownership in master account mode
-              const cardStyles = 
-                isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser
-                  ? "relative cursor-pointer hover:border-primary/50 transition-colors border-amber-200 border-2" 
-                  : "relative cursor-pointer hover:border-primary/50 transition-colors";
-                  
-              return (
-                <Card 
-                  key={cycle.id} 
-                  className={cardStyles}
-                  onClick={() => navigate(`/reviews/${cycle.id}`)}
-                >
-                  <CardHeader className="pb-4">
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+              if (isMasterAccount && viewingAllAccounts && otherCycles.length > 0) {
+                return (
+                  <div className="space-y-8">
+                    {/* Your Review Cycles */}
+                    {ownCycles.length > 0 && (
                       <div>
-                        <CardTitle className="text-lg sm:text-xl">{cycle.title}</CardTitle>
-                        <div className="mt-2 space-y-1">
-                          <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                            <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-                            Due {formatDate(cycle.review_by_date)}
-                          </span>
-                          <span className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                            <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                            {cycle._count?.feedback_requests || 0} reviewees
-                          </span>
+                        <h3 className="text-lg font-semibold mb-4 text-green-700">Your Review Cycles</h3>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {ownCycles.map((cycle) => renderCycleCard(cycle, true))}
                         </div>
-                        
-                        {/* Owner badge for master account mode */}
-                        {isMasterAccount && viewingAllAccounts && (
-                          <Badge 
-                            variant={isOwnedByCurrentUser ? "default" : "outline"} 
-                            className={`mt-2 ${isOwnedByCurrentUser ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-amber-50 text-amber-800 hover:bg-amber-50"}`}
-                          >
-                            {isOwnedByCurrentUser ? "Your Review" : "Other User's Review"}
-                          </Badge>
-                        )}
                       </div>
-                      <Badge variant={getStatusColor(cycle)} className="flex-shrink-0">
-                        {getStatusText(cycle)}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span>Progress</span>
-                        <span>{calculateProgress(cycle)}%</span>
+                    )}
+                    
+                    {/* Other Teams' Review Cycles */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-blue-700">Other Teams' Review Cycles</h3>
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {otherCycles.map((cycle) => renderCycleCard(cycle, false))}
                       </div>
-                      <Progress value={calculateProgress(cycle)} className="h-2 sm:h-3" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        {(() => {
-                          const { completed, pending } = getResponseCounts(cycle);
-                          return (
-                            <>
-                              <span>{completed} reviews completed</span>
-                              <span>{pending} pending</span>
-                            </>
-                          );
-                        })()}
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        These review cycles belong to other accounts. You can view but cannot edit or delete them.
+                      </p>
                     </div>
-                  </CardContent>
-                  <CardFooter className="pt-0">
-                    <div className="flex items-center justify-between w-full">
-                      {/* Only show delete button for user's own reviews */}
-                      {(!isMasterAccount || !viewingAllAccounts || isOwnedByCurrentUser) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(cycle.id);
-                          }}
-                          disabled={isDeletingId === cycle.id}
-                          className="text-destructive hover:text-destructive-foreground"
-                        >
-                          {isDeletingId === cycle.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                      {/* If no delete button, add an empty div to maintain layout */}
-                      {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
-                        <div></div>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        Manage
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {reviewCycles.map((cycle) => renderCycleCard(cycle, true))}
+                  </div>
+                );
+              }
+            })()}
+          </>
         )}
       </div>
 
@@ -611,4 +580,97 @@ export function ReviewCyclesPage() {
       </AlertDialog>
     </div>
   );
+  
+  function renderCycleCard(cycle: ReviewCycle, isOwnedByCurrentUser: boolean) {
+    const { completed, pending } = getResponseCounts(cycle);
+    const progress = calculateProgress(cycle);
+    
+    return (
+      <Card 
+        key={cycle.id} 
+        className={`relative cursor-pointer hover:shadow-md transition-all duration-200 ${
+          !isOwnedByCurrentUser ? "border-blue-200 bg-blue-50/30" : ""
+        }`}
+        onClick={() => navigate(`/reviews/${cycle.id}`)}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base font-semibold truncate">{cycle.title}</CardTitle>
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                  Due {formatDate(cycle.review_by_date)}
+                </div>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Users className="mr-1 h-3 w-3 flex-shrink-0" />
+                  {cycle._count?.feedback_requests || 0} reviewees
+                </div>
+              </div>
+            </div>
+            <Badge variant={getStatusColor(cycle)} className="flex-shrink-0 text-xs">
+              {getStatusText(cycle)}
+            </Badge>
+          </div>
+          
+          {/* Owner badge for master account mode */}
+          {isMasterAccount && viewingAllAccounts && !isOwnedByCurrentUser && (
+            <Badge 
+              variant="outline" 
+              className="mt-2 bg-blue-100 text-blue-800 text-xs w-fit"
+            >
+              {(cycle as any).creatorEmail || 'Other Account'}
+            </Badge>
+          )}
+        </CardHeader>
+        
+        <CardContent className="py-3">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{completed} completed</span>
+              <span>{pending} pending</span>
+            </div>
+          </div>
+        </CardContent>
+        
+        <CardFooter className="pt-0 pb-3">
+          <div className="flex items-center justify-between w-full">
+            {/* Only show delete button for user's own reviews */}
+            {isOwnedByCurrentUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(cycle.id);
+                }}
+                disabled={isDeletingId === cycle.id}
+                className="text-destructive hover:text-destructive-foreground p-1 h-auto"
+              >
+                {isDeletingId === cycle.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+              </Button>
+            )}
+            {!isOwnedByCurrentUser && <div></div>}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs h-7"
+            >
+              Manage
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
 } 
