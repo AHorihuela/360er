@@ -234,18 +234,35 @@ export function useDashboardData() {
         
         setAllReviewCycles(reviewCycles);
         
-        const cycleToShow = selectedCycleId 
-          ? reviewCycles.find(c => c.id === selectedCycleId) 
-          : reviewCycles[0];
-
-        if (cycleToShow) {
-          console.log('[DEBUG] Selected cycle:', cycleToShow.id, cycleToShow.title);
+        let cycleToShow = null;
+        
+        // If we have a selectedCycleId, try to find it in the available cycles
+        if (selectedCycleId) {
+          cycleToShow = reviewCycles.find(c => c.id === selectedCycleId);
           
-          if (!selectedCycleId && cycleToShow === reviewCycles[0]) {
+          // If the selected cycle is not found (e.g., when switching from master mode back to user mode)
+          // automatically select the user's most recent cycle
+          if (!cycleToShow) {
+            console.log('[DEBUG] Selected cycle not found in available cycles, auto-selecting most recent');
+            cycleToShow = reviewCycles[0]; // Most recent cycle (ordered by created_at desc)
+            if (cycleToShow) {
+              console.log('[DEBUG] Auto-selecting cycle after mode switch:', cycleToShow.id, cycleToShow.title);
+              setSelectedCycleId(cycleToShow.id);
+              localStorage.setItem('selectedCycleId', cycleToShow.id);
+            }
+          }
+        } else {
+          // No selectedCycleId, select the most recent cycle
+          cycleToShow = reviewCycles[0];
+          if (cycleToShow) {
             console.log('[DEBUG] Auto-selecting most recent cycle:', cycleToShow.id);
             setSelectedCycleId(cycleToShow.id);
             localStorage.setItem('selectedCycleId', cycleToShow.id);
           }
+        }
+
+        if (cycleToShow) {
+          console.log('[DEBUG] Selected cycle:', cycleToShow.id, cycleToShow.title);
         } else if (selectedCycleId) {
           console.log('[DEBUG] Selected cycle not found in loaded cycles. Selected ID:', selectedCycleId);
         }
