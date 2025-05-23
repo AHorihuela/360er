@@ -1,8 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from '@/lib/supabase';
 import { FeedbackRequest } from '@/types/review';
 import { CycleAnalytics } from '@/components/review-cycle/CycleAnalytics';
@@ -14,6 +24,7 @@ import { useReviewCycle } from '@/hooks/useReviewCycle';
 
 export function ReviewCycleDetailsPage() {
   const { cycleId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { 
     isLoading,
@@ -31,6 +42,10 @@ export function ReviewCycleDetailsPage() {
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [employeeToRemove, setEmployeeToRemove] = useState<{ id: string; name: string } | null>(null);
+  
+  // Delete cycle state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (showAddEmployeesDialog) {
@@ -73,6 +88,59 @@ export function ReviewCycleDetailsPage() {
     }
   }
 
+  async function handleDeleteCycle() {
+    if (!cycleId || isMasterMode) return;
+    setShowDeleteDialog(true);
+  }
+
+  async function confirmDeleteCycle() {
+    if (!cycleId || isDeleting) return;
+    
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('review_cycles')
+        .delete()
+        .eq('id', cycleId);
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        
+        // Check for permission errors from RLS policies
+        if (error.code === 'PGRST301' || error.message.includes('permission') || error.message.includes('policy')) {
+          toast({
+            title: "Permission Denied",
+            description: "You don't have permission to delete this review cycle.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Review cycle deleted successfully",
+      });
+      navigate('/reviews');
+    } catch (error) {
+      console.error('Error deleting review cycle:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete review cycle",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  }
+
+  function handleCancelDelete() {
+    setShowDeleteDialog(false);
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -100,19 +168,40 @@ export function ReviewCycleDetailsPage() {
     <div className="container mx-auto py-6 space-y-8">
       {renderMasterModeIndicator()}
       
-      <div className="flex justify-between items-center">
-        <EditableTitle
-          title={reviewCycle.title}
-          dueDate={reviewCycle.review_by_date}
-          type={reviewCycle.type}
-          onSave={updateTitle}
-          readOnly={isMasterMode} // Make title read-only in master mode
-        />
+      {/* Header with back button */}
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="ghost" onClick={() => navigate('/reviews')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Review Cycles
+        </Button>
+      </div>
+
+      {/* Title and action buttons */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="flex-1">
+          <EditableTitle
+            title={reviewCycle.title}
+            dueDate={reviewCycle.review_by_date}
+            type={reviewCycle.type}
+            onSave={updateTitle}
+            readOnly={isMasterMode} // Make title read-only in master mode
+          />
+        </div>
         {!isMasterMode && (
-          <Button onClick={() => setShowAddEmployeesDialog(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Employee
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowAddEmployeesDialog(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Employee
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteCycle}
+              disabled={isDeleting}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Cycle
+            </Button>
+          </div>
         )}
       </div>
 
@@ -344,6 +433,32 @@ export function ReviewCycleDetailsPage() {
           }
         }}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        if (!open) {
+          handleCancelDelete();
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Review Cycle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this review cycle? This action will permanently delete 
+              the cycle and all associated feedback requests and responses. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteCycle}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Review Cycle'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 
