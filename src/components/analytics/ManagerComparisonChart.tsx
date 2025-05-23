@@ -117,6 +117,15 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
     return entry.score >= 2.5 ? entry.formattedScore : '';
   };
 
+  // Calculate dynamic height based on number of managers
+  const dynamicHeight = useMemo(() => {
+    const baseHeight = 200; // Minimum height
+    const itemHeight = 48; // Height per manager bar (including spacing)
+    const padding = 80; // Top and bottom padding for axes and labels
+    
+    return Math.max(baseHeight, (chartData.length * itemHeight) + padding);
+  }, [chartData.length]);
+
   if (managerScores.length === 0) {
     return null;
   }
@@ -158,13 +167,13 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px] mt-2">
+        <div style={{ height: `${dynamicHeight}px` }} className="mt-2">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
-              margin={{ top: 10, right: 50, left: 120, bottom: 5 }}
-              barSize={24}
+              margin={{ top: 20, right: 60, left: 140, bottom: 20 }}
+              barSize={Math.min(32, Math.max(20, 400 / chartData.length))}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
               <XAxis
@@ -179,11 +188,13 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
               <YAxis
                 type="category"
                 dataKey="name"
-                width={120}
+                width={140}
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 stroke="#94a3b8"
+                interval={0}
+                tick={{ fontSize: 12, width: 140 }}
               />
               {/* Add reference lines for score benchmarks */}
               <ReferenceLine x={3} stroke="#f59e0b" strokeDasharray="3 3" />
