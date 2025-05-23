@@ -110,6 +110,7 @@ export function ReviewCyclesPage() {
   const [cycleToDelete, setCycleToDelete] = useState<string | null>(null);
   const { user, isMasterAccount, viewingAllAccounts } = useAuth();
   const [isUserLoaded, setIsUserLoaded] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
     async function initialLoad() {
@@ -134,17 +135,36 @@ export function ReviewCyclesPage() {
     initialLoad();
   }, [navigate]);
   
+  // Consolidated effect that waits for both auth and user data to be ready
   useEffect(() => {
-    if (!isUserLoaded || !user?.id) return;
+    // Mark auth as ready when we have user state and master account status is determined
+    if (isUserLoaded && user?.id) {
+      // Small delay to ensure master account status has been checked
+      const timer = setTimeout(() => {
+        setIsAuthReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isUserLoaded, user?.id, isMasterAccount]);
+  
+  // Single effect for data fetching with debounce
+  useEffect(() => {
+    if (!isAuthReady || !user?.id) return;
     
-    console.log('[DEBUG] Fetching cycles after change:', { 
+    console.log('[DEBUG] Auth ready, fetching cycles:', { 
       viewingAllAccounts, 
       isMasterAccount, 
       isUserLoaded,
       userId: user?.id 
     });
-    fetchReviewCycles(user.id);
-  }, [isUserLoaded, viewingAllAccounts, isMasterAccount, user?.id]);
+    
+    // Debounce multiple rapid calls
+    const timer = setTimeout(() => {
+      fetchReviewCycles(user.id);
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [isAuthReady, viewingAllAccounts, isMasterAccount, user?.id]);
 
   async function fetchReviewCycles(currentUserId: string) {
     try {

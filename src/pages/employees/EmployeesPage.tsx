@@ -217,8 +217,13 @@ export function EmployeesPage() {
   });
 
   useEffect(() => {
-    fetchEmployees();
-  }, [viewingAllAccounts]);
+    // Debounce the fetchEmployees call to prevent race conditions
+    const timer = setTimeout(() => {
+      fetchEmployees();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [viewingAllAccounts, isMasterAccount]);
 
   async function fetchEmployees(): Promise<void> {
     try {

@@ -128,6 +128,7 @@ export function useDashboardData() {
   const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
   const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   
   useEffect(() => {
     async function initialLoad() {
@@ -152,12 +153,36 @@ export function useDashboardData() {
     initialLoad();
   }, [navigate, toast]);
   
+  // Consolidated effect that waits for both auth and user data to be ready
   useEffect(() => {
-    if (!isUserLoaded || !user?.id) return;
+    // Mark auth as ready when we have user state and master account status is determined
+    if (isUserLoaded && user?.id) {
+      // Small delay to ensure master account status has been checked
+      const timer = setTimeout(() => {
+        setIsAuthReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isUserLoaded, user?.id, isMasterAccount]);
+  
+  // Single effect for data fetching with debounce
+  useEffect(() => {
+    if (!isAuthReady || !user?.id) return;
     
-    console.log('[DEBUG] Fetching data after change:', { viewingAllAccounts });
-    fetchData();
-  }, [isUserLoaded, viewingAllAccounts, user?.id]);
+    console.log('[DEBUG] Auth ready, fetching data:', { 
+      viewingAllAccounts, 
+      isMasterAccount, 
+      isUserLoaded,
+      userId: user?.id 
+    });
+    
+    // Debounce multiple rapid calls
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [isAuthReady, viewingAllAccounts, isMasterAccount, user?.id]);
 
   const fetchData = async (): Promise<void> => {
     if (!user?.id) return;
@@ -539,13 +564,6 @@ export function useDashboardData() {
       }
     }
   }, [allReviewCycles, selectedCycleId, isMasterAccount, viewingAllAccounts]);
-
-  useEffect(() => {
-    if (user?.id) {
-      console.log('[DEBUG] Master account or viewing mode changed, refreshing data');
-      fetchData();
-    }
-  }, [viewingAllAccounts, isMasterAccount, user?.id]);
 
   // Get the current cycle's user email for display in master mode
   const currentCycleUserEmail = isMasterAccount && viewingAllAccounts && activeReviewCycle

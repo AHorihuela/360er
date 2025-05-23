@@ -65,6 +65,20 @@ export default function AnalyticsPage() {
     }
   }, [authState, navigate]);
 
+  // Sync viewingAllAccounts with the global auth state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const savedState = localStorage.getItem('masterViewingAllAccounts');
+      const currentState = savedState === 'true';
+      if (currentState !== viewingAllAccounts) {
+        console.log('[DEBUG] Analytics: Syncing viewing all accounts state:', currentState);
+        setViewingAllAccounts(currentState);
+      }
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, [viewingAllAccounts]);
+
   // Fetch all review cycles with feedback data
   useEffect(() => {
     async function fetchReviewCycles() {
@@ -72,7 +86,7 @@ export default function AnalyticsPage() {
       
       setIsLoading(true);
       try {
-        console.log("[DEBUG] Fetching review cycles for analytics:", { user: user.id, viewingAllAccounts });
+        console.log("[DEBUG] Fetching review cycles for analytics:", { user: user.id, viewingAllAccounts, isMasterAccount });
         
         // Build query to fetch review cycles
         let query = supabase

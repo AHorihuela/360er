@@ -24,8 +24,12 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   viewingAllAccounts: localStorage.getItem('masterViewingAllAccounts') === 'true',
   setAuthState: (state: AuthState) => set({ authState: state }),
   setUser: (user: User | null) => set({ user }),
-  setIsMasterAccount: (isMaster: boolean) => set({ isMasterAccount: isMaster }),
+  setIsMasterAccount: (isMaster: boolean) => {
+    console.log('[DEBUG] Setting isMasterAccount:', isMaster);
+    set({ isMasterAccount: isMaster });
+  },
   setViewingAllAccounts: (viewing: boolean) => {
+    console.log('[DEBUG] Setting viewingAllAccounts:', viewing);
     set({ viewingAllAccounts: viewing });
     localStorage.setItem('masterViewingAllAccounts', viewing.toString());
   },
@@ -33,9 +37,12 @@ const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       // Skip check if userId is not valid
       if (!userId || userId.length < 10) {
+        console.log('[DEBUG] Invalid userId for master account check:', userId);
         set({ isMasterAccount: false });
         return false;
       }
+      
+      console.log('[DEBUG] Checking master account status for user:', userId);
       
       const { data, error } = await supabase
         .from('user_roles')
@@ -45,6 +52,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       
       // No data means not a master account - not an error
       if (!data) {
+        console.log('[DEBUG] No user role found - not a master account');
         set({ isMasterAccount: false });
         return false;
       }
@@ -56,10 +64,12 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       }
       
       const isMaster = data?.role === 'master';
+      console.log('[DEBUG] Master account check result:', { userId, role: data?.role, isMaster });
       set({ isMasterAccount: isMaster });
       
       // If user is not a master account, ensure viewingAllAccounts is false
       if (!isMaster && get().viewingAllAccounts) {
+        console.log('[DEBUG] User is not master account, disabling viewingAllAccounts');
         set({ viewingAllAccounts: false });
         localStorage.removeItem('masterViewingAllAccounts');
       }

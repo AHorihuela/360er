@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,17 +8,27 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-  const { authState, user, checkMasterAccountStatus } = useAuth();
+  const { authState, user, isMasterAccount, checkMasterAccountStatus } = useAuth();
+  const [isMasterStatusChecked, setIsMasterStatusChecked] = useState(false);
 
   // Only check master account status when we have a user and auth is confirmed
   useEffect(() => {
     if (authState === 'Authenticated' && user?.id) {
-      checkMasterAccountStatus(user.id);
+      console.log('[DEBUG] ProtectedRoute: Checking master account status for user:', user.id);
+      checkMasterAccountStatus(user.id).then((isMaster) => {
+        console.log('[DEBUG] ProtectedRoute: Master account status checked:', isMaster);
+        setIsMasterStatusChecked(true);
+      }).catch((error) => {
+        console.error('Error checking master account status in ProtectedRoute:', error);
+        setIsMasterStatusChecked(true); // Still allow access even if check fails
+      });
+    } else {
+      setIsMasterStatusChecked(false);
     }
   }, [authState, user?.id, checkMasterAccountStatus]);
 
-  // Still loading auth state
-  if (authState === 'Loading') {
+  // Still loading auth state or master account status
+  if (authState === 'Loading' || (authState === 'Authenticated' && !isMasterStatusChecked)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-lg">Loading...</div>
