@@ -31,6 +31,7 @@ export function ReviewCycleDetailsPage() {
     reviewCycle,
     feedbackRequests, 
     updateTitle,
+    updateCycle,
     removeEmployee,
     setFeedbackRequests,
     isMasterMode,
@@ -209,7 +210,13 @@ export function ReviewCycleDetailsPage() {
             title={reviewCycle.title}
             dueDate={reviewCycle.review_by_date}
             type={reviewCycle.type}
-            onSave={updateTitle}
+            onSave={async (newTitle: string, newDueDate?: string) => {
+              if (newDueDate) {
+                await updateCycle(newTitle, newDueDate);
+              } else {
+                await updateCycle(newTitle);
+              }
+            }}
             readOnly={isMasterMode} // Make title read-only in master mode
           />
         </div>
@@ -487,4 +494,4 @@ export function ReviewCycleDetailsPage() {
       </AlertDialog>
     </div>
   );
-} 
+}

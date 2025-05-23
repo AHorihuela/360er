@@ -120,29 +120,46 @@ export function useReviewCycle(cycleId: string | undefined) {
     }
   }, [cycleId, toast])
 
-  const updateTitle = async (newTitle: string): Promise<void> => {
+  const updateCycle = async (newTitle?: string, newDueDate?: string): Promise<void> => {
     // Don't try to update if cycleId is missing or "new"
     if (!cycleId || cycleId === 'new') {
       return;
     }
     
     try {
+      const updateData: any = {}
+      if (newTitle !== undefined) updateData.title = newTitle
+      if (newDueDate !== undefined) updateData.review_by_date = newDueDate
+
       const { error } = await supabase
         .from('review_cycles')
-        .update({ title: newTitle })
+        .update(updateData)
         .eq('id', cycleId)
 
       if (error) throw error
-      setReviewCycle(prev => prev ? { ...prev, title: newTitle } : null)
+      
+      setReviewCycle(prev => {
+        if (!prev) return null
+        return {
+          ...prev,
+          ...(newTitle !== undefined && { title: newTitle }),
+          ...(newDueDate !== undefined && { review_by_date: newDueDate })
+        }
+      })
     } catch (error) {
-      console.error('Error updating title:', error)
+      console.error('Error updating review cycle:', error)
       toast({
         title: "Error",
-        description: "Failed to update review cycle title",
+        description: "Failed to update review cycle",
         variant: "destructive",
       })
       throw error
     }
+  }
+
+  // Keep backward compatibility
+  const updateTitle = async (newTitle: string): Promise<void> => {
+    await updateCycle(newTitle)
   }
 
   const removeEmployee = async (requestId: string) => {
@@ -181,6 +198,7 @@ export function useReviewCycle(cycleId: string | undefined) {
     reviewCycle,
     feedbackRequests,
     updateTitle,
+    updateCycle,
     removeEmployee,
     setFeedbackRequests,
     isMasterMode,
