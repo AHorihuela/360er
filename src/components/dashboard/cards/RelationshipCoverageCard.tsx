@@ -18,7 +18,7 @@ export function RelationshipCoverageCard({ score }: RelationshipCoverageCardProp
         <TooltipTrigger asChild>
           <div className="p-6 bg-background rounded-lg border relative group hover:border-blue-200 transition-colors cursor-help">
             <div className="absolute inset-x-0 bottom-0 h-1 bg-blue-100 transform origin-left transition-transform duration-500 group-hover:scale-x-100" 
-                 style={{ width: `${((score.confidenceMetrics?.factors.relationshipCount || 0) / 3) * 100}%` }} />
+                 style={{ width: `${Math.min(((score.confidenceMetrics?.factors.relationshipCount || 0) / 3) * 100, 100)}%` }} />
             <div className="flex items-center gap-2 mb-4">
               <div className="p-2 rounded-full bg-blue-50">
                 <Users className="h-4 w-4 text-blue-500" />

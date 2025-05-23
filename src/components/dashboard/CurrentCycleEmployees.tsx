@@ -46,11 +46,11 @@ export function CurrentCycleEmployees({ employees, activeReviewCycleId }: Curren
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span>Feedback Progress</span>
                   <span className="font-medium">
-                    {employee.total_reviews === 0 ? '0' : Math.round((employee.completed_reviews / employee.total_reviews) * 100)}%
+                    {employee.total_reviews === 0 ? '0' : Math.min(Math.round((employee.completed_reviews / employee.total_reviews) * 100), 100)}%
                   </span>
                 </div>
                 <Progress 
-                  value={employee.total_reviews === 0 ? 0 : (employee.completed_reviews / employee.total_reviews) * 100} 
+                  value={employee.total_reviews === 0 ? 0 : Math.min((employee.completed_reviews / employee.total_reviews) * 100, 100)} 
                   className="h-2 sm:h-3"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">

@@ -28,11 +28,11 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
           <div className="flex justify-between text-sm">
             <span>Overall Completion</span>
             <span className="font-medium">
-              {activeReviewCycle.total_requests === 0 ? '0' : Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100)}%
+              {activeReviewCycle.total_requests === 0 ? '0' : Math.min(Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100), 100)}%
             </span>
           </div>
           <Progress 
-            value={activeReviewCycle.total_requests === 0 ? 0 : (activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100} 
+            value={activeReviewCycle.total_requests === 0 ? 0 : Math.min((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100, 100)} 
             className="h-3"
           />
           <div className="flex justify-between text-xs text-muted-foreground">

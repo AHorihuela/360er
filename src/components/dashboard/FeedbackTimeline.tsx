@@ -73,7 +73,7 @@ export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pend
               <div className="w-16 h-2 rounded-full bg-secondary">
                 <div 
                   className="h-full rounded-full bg-primary transition-all" 
-                  style={{ width: `${completionPercentage}%` }}
+                  style={{ width: `${Math.min(completionPercentage, 100)}%` }}
                 />
               </div>
               <span className="text-sm font-medium">{completionPercentage}%</span>

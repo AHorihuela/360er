@@ -36,7 +36,7 @@ export function MinimumReviewsMessage({ feedbackResponses }: Props) {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium text-primary">
-                    {Math.round((feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100)}%
+                    {Math.min(Math.round((feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100), 100)}%
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     {MINIMUM_REVIEWS_REQUIRED - feedbackResponses.length} more needed
@@ -44,7 +44,7 @@ export function MinimumReviewsMessage({ feedbackResponses }: Props) {
                 </div>
               </div>
               <Progress 
-                value={(feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100} 
+                value={Math.min((feedbackResponses.length / MINIMUM_REVIEWS_REQUIRED) * 100, 100)} 
                 className="h-2"
               />
             </div>
