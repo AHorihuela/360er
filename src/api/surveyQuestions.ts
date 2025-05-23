@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, anonymousClient } from '@/lib/supabase';
 import { ReviewCycleType, SurveyQuestion, QuestionOption } from '@/types/survey';
 
 /**
@@ -9,7 +9,7 @@ import { ReviewCycleType, SurveyQuestion, QuestionOption } from '@/types/survey'
 export async function getSurveyQuestions(type: ReviewCycleType): Promise<SurveyQuestion[]> {
   console.log('Fetching survey questions for type:', type);
   
-  const { data, error } = await supabase
+  const { data, error } = await anonymousClient
     .from('survey_questions')
     .select('*')
     .eq('review_cycle_type', type)
@@ -89,14 +89,14 @@ export async function submitSurveyResponses(
 ) {
   // Determine if there are open-ended responses that need to go into strengths/areas_for_improvement
   // This maintains backward compatibility with the existing system
-  const strengthsQuestion = await supabase
+  const strengthsQuestion = await anonymousClient
     .from('survey_questions')
     .select('*')
     .eq('review_cycle_type', '360_review')
     .eq('question_text', 'What are this person\'s strengths?')
     .single();
   
-  const areasQuestion = await supabase
+  const areasQuestion = await anonymousClient
     .from('survey_questions')
     .select('*')
     .eq('review_cycle_type', '360_review')
@@ -107,7 +107,7 @@ export async function submitSurveyResponses(
   const strengths = strengthsQuestion?.data?.id ? responses[strengthsQuestion.data.id] as string : '';
   const areas_for_improvement = areasQuestion?.data?.id ? responses[areasQuestion.data.id] as string : '';
   
-  const { data, error } = await supabase
+  const { data, error } = await anonymousClient
     .from('feedback_responses')
     .insert({
       feedback_request_id: feedbackRequestId,
