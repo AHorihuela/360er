@@ -126,15 +126,6 @@ export function ReviewCycleSelector({
           </div>
         </div>
       </div>
-      
-      {/* Display master account mode badge if viewing all accounts */}
-      {isMasterAccount && viewingAllAccounts && (
-        <div className="flex justify-end">
-          <Badge variant="outline" className="bg-amber-100">
-            Master Account Mode
-          </Badge>
-        </div>
-      )}
     </div>
   );
 } 
