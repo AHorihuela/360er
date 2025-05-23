@@ -41,6 +41,7 @@ interface Employee {
   latest_feedback_request: {
     id: string;
     review_cycle_id: string;
+    response_count?: number;
   } | null;
 }
 
@@ -57,6 +58,9 @@ interface EmployeeTableProps {
   onViewReview: (cycleId: string, employeeId: string) => void;
   isDeleteLoading: boolean;
   employeeToDelete: string | null;
+  isMasterAccount?: boolean;
+  viewingAllAccounts?: boolean;
+  currentUserId?: string;
 }
 
 function EmployeeTable({ 
@@ -65,60 +69,129 @@ function EmployeeTable({
   onDelete, 
   onViewReview,
   isDeleteLoading,
-  employeeToDelete
+  employeeToDelete,
+  isMasterAccount = false,
+  viewingAllAccounts = false,
+  currentUserId
 }: EmployeeTableProps) {
-  return (
-    <div className="rounded-lg border">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="p-4 text-left font-medium">Name</th>
-            <th className="p-4 text-left font-medium">Role</th>
-            <th className="p-4 text-left font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map((employee) => (
-            <tr key={employee.id} className="border-b">
-              <td className="p-4">{employee.name}</td>
-              <td className="p-4">{employee.role}</td>
-              <td className="p-4">
-                <div className="flex gap-2">
-                  {employee.latest_feedback_request?.review_cycle_id && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onViewReview(
-                        employee.latest_feedback_request!.review_cycle_id,
-                        employee.id
-                      )}
-                      title="View Latest Review"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
+  // Group employees by ownership when in master mode
+  const groupedEmployees = isMasterAccount && viewingAllAccounts && currentUserId
+    ? {
+        myTeam: employees.filter(emp => emp.user_id === currentUserId),
+        otherTeams: employees.filter(emp => emp.user_id !== currentUserId)
+      }
+    : { myTeam: employees, otherTeams: [] };
+
+  const renderEmployeeRows = (employeeList: Employee[], isOtherTeam = false) => {
+    return employeeList.map((employee) => (
+      <tr key={employee.id} className={`border-b ${isOtherTeam ? 'bg-blue-50/30' : ''}`}>
+        <td className="p-4">
+          <div className="flex items-center gap-2">
+            {employee.name}
+            {isOtherTeam && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 text-xs">
+                Other Account
+              </Badge>
+            )}
+          </div>
+        </td>
+        <td className="p-4">{employee.role}</td>
+        <td className="p-4">
+          <div className="flex gap-2">
+            {employee.latest_feedback_request?.review_cycle_id && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewReview(
+                    employee.latest_feedback_request!.review_cycle_id,
+                    employee.id
                   )}
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onEdit(employee)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onDelete(employee.id)}
-                    disabled={isDeleteLoading && employeeToDelete === employee.id}
-                    className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  title="View Latest Review"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+                {employee.latest_feedback_request.response_count !== undefined && (
+                  <Badge variant="secondary" className="text-xs">
+                    {employee.latest_feedback_request.response_count} review{employee.latest_feedback_request.response_count !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            )}
+            {!isOtherTeam && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onEdit(employee)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onDelete(employee.id)}
+                  disabled={isDeleteLoading && employeeToDelete === employee.id}
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    ));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* My Team Section */}
+      {groupedEmployees.myTeam.length > 0 && (
+        <div>
+          {isMasterAccount && viewingAllAccounts && groupedEmployees.otherTeams.length > 0 && (
+            <h3 className="text-lg font-semibold mb-4 text-green-700">My Team</h3>
+          )}
+          <div className="rounded-lg border">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="p-4 text-left font-medium">Name</th>
+                  <th className="p-4 text-left font-medium">Role</th>
+                  <th className="p-4 text-left font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {renderEmployeeRows(groupedEmployees.myTeam, false)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Other Teams Section */}
+      {groupedEmployees.otherTeams.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-blue-700">Other Teams</h3>
+          <div className="rounded-lg border border-blue-200">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-blue-50/50">
+                  <th className="p-4 text-left font-medium">Name</th>
+                  <th className="p-4 text-left font-medium">Role</th>
+                  <th className="p-4 text-left font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {renderEmployeeRows(groupedEmployees.otherTeams, true)}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            These team members belong to other accounts. You can view their reviews but cannot edit or delete them.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -192,6 +265,34 @@ export function EmployeesPage() {
             )[0] || null
           : null
       }));
+
+      // Fetch feedback response counts for latest feedback requests
+      const latestFeedbackRequestIds = processedData
+        .filter(emp => emp.latest_feedback_request)
+        .map(emp => emp.latest_feedback_request!.id);
+
+      if (latestFeedbackRequestIds.length > 0) {
+        const { data: responseCounts, error: responseError } = await supabase
+          .from('feedback_responses')
+          .select('feedback_request_id')
+          .in('feedback_request_id', latestFeedbackRequestIds);
+
+        if (!responseError && responseCounts) {
+          // Count responses per feedback request
+          const responseCountMap = responseCounts.reduce((acc, response) => {
+            acc[response.feedback_request_id] = (acc[response.feedback_request_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          // Add response counts to processed data
+          processedData.forEach(employee => {
+            if (employee.latest_feedback_request) {
+              employee.latest_feedback_request.response_count = 
+                responseCountMap[employee.latest_feedback_request.id] || 0;
+            }
+          });
+        }
+      }
       
       setEmployees(processedData);
     } catch (error) {
@@ -394,6 +495,9 @@ export function EmployeesPage() {
             onViewReview={handleViewReview}
             isDeleteLoading={isDeleteLoading}
             employeeToDelete={employeeToDelete}
+            isMasterAccount={isMasterAccount}
+            viewingAllAccounts={viewingAllAccounts}
+            currentUserId={user?.id}
           />
         )}
       </div>
