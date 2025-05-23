@@ -445,6 +445,11 @@ export function ReviewCyclesPage() {
     }
   }
 
+  function handleCancelDelete() {
+    setShowDeleteDialog(false);
+    setCycleToDelete(null);
+  }
+
   function getStatusColor(cycle: ReviewCycle): "default" | "destructive" | "secondary" {
     const now = new Date();
     const reviewByDate = new Date(cycle.review_by_date);
@@ -596,7 +601,11 @@ export function ReviewCyclesPage() {
         )}
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        if (!open) {
+          handleCancelDelete();
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -606,7 +615,7 @@ export function ReviewCyclesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90"
