@@ -5,6 +5,9 @@ import { ActiveReviewCycleCard } from '@/components/dashboard/ActiveReviewCycleC
 import { CurrentCycleEmployees } from '@/components/dashboard/CurrentCycleEmployees';
 import { OtherEmployees } from '@/components/dashboard/OtherEmployees';
 import { AnalyticsSection } from '@/components/dashboard/AnalyticsSection';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Mail } from 'lucide-react';
 
 export function DashboardPage(): JSX.Element {
   const {
@@ -18,6 +21,7 @@ export function DashboardPage(): JSX.Element {
     user,
     isMasterAccount,
     viewingAllAccounts,
+    currentCycleUserEmail,
     handleCycleChange,
     handleAddEmployeeToCycle
   } = useDashboardData();
@@ -48,6 +52,23 @@ export function DashboardPage(): JSX.Element {
           viewingAllAccounts={viewingAllAccounts}
           currentUserId={user?.id || ''}
         />
+        
+        {/* Master Account Info - Show creator's email when in master mode */}
+        {currentCycleUserEmail && activeReviewCycle && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                  Master View
+                </Badge>
+                <Mail className="h-4 w-4 text-amber-700" />
+                <span className="text-amber-800">
+                  Review cycle created by: <span className="font-medium">{currentCycleUserEmail}</span>
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {/* Active Review Cycle Progress */}
         {activeReviewCycle && (
