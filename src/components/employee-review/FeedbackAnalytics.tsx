@@ -46,11 +46,36 @@ export function FeedbackAnalytics({
     isLoading: true
   });
 
-  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    aggregate: true,
-    senior: false,
-    peer: false,
-    junior: false
+  // Create a unique storage key for this feedback request
+  const storageKey = `feedbackAnalytics_expanded_${feedbackRequestId}`;
+  
+  const [expandedSections, setExpandedSections] = useState<ExpandedSections>(() => {
+    // Initialize from localStorage or use defaults
+    if (typeof window !== 'undefined') {
+      try {
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          return { 
+            // Provide defaults in case saved state is incomplete
+            aggregate: true,
+            senior: false,
+            peer: false,
+            junior: false,
+            ...JSON.parse(savedState) 
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to parse saved expanded sections state:', error);
+      }
+    }
+    
+    // Default state
+    return {
+      aggregate: true,
+      senior: false,
+      peer: false,
+      junior: false
+    };
   });
 
   const cleanupRef = useRef<(() => void) | undefined>();
@@ -91,6 +116,17 @@ export function FeedbackAnalytics({
                             !state.isLoading
     };
   }, [feedbackResponses, state]);
+
+  // Save expanded sections state to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(expandedSections));
+      } catch (error) {
+        console.warn('Failed to save expanded sections state:', error);
+      }
+    }
+  }, [expandedSections, storageKey]);
 
   const toggleSection = useCallback((relationship: NormalizedRelationshipType) => {
     setExpandedSections(prev => ({
