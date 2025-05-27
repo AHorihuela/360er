@@ -505,7 +505,6 @@ export function EmployeeReviewDetailsPage() {
       {/* Report Section */}
       <section id="ai-report" className="space-y-4 py-6">
         <AIReport 
-          key={`report-${aiReport?.created_at || 'new'}`}
           feedbackRequest={{
             id: feedbackRequest?.id || '',
             employee: feedbackRequest?.employee,

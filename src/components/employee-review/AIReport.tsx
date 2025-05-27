@@ -109,8 +109,28 @@ export function AIReport({
         content: latestReport.content,
         created_at: latestReport.updated_at
       });
+    } else if (!feedbackRequest.ai_reports || feedbackRequest.ai_reports.length === 0) {
+      // Clear local state if no reports exist
+      setAiReport(null);
     }
   }, [feedbackRequest.ai_reports]);
+
+  // Add page leave warning during AI report generation
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isGeneratingReport) {
+        const message = 'AI report generation is in progress. Leaving now will cancel the generation. Are you sure you want to leave?';
+        event.preventDefault();
+        event.returnValue = message;
+        return message;
+      }
+    };
+
+    if (isGeneratingReport) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [isGeneratingReport]);
 
   const handleReportChange = debounce(async (newContent: string) => {
     if (!feedbackRequest?.id) return;
@@ -315,10 +335,17 @@ export function AIReport({
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground text-center mt-4 px-4">
-                    This process typically takes 30-45 seconds to complete.
-                    We're using AI to carefully analyze all feedback and generate comprehensive insights.
-                  </p>
+                  <div className="space-y-3 mt-4 px-4">
+                    <p className="text-sm text-muted-foreground text-center">
+                      This process typically takes 30-45 seconds to complete.
+                      We're using AI to carefully analyze all feedback and generate comprehensive insights.
+                    </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <p className="text-sm text-amber-800 text-center font-medium">
+                        ⚠️ Please do not leave or refresh this page while the report is being generated
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
