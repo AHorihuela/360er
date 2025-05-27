@@ -47,6 +47,21 @@ function getStatusVariant(status?: string): "default" | "secondary" | "destructi
   }
 }
 
+function formatStatusText(status?: string): string {
+  switch (status) {
+    case 'in_progress':
+      return 'In Progress';
+    case 'completed':
+      return 'Completed';
+    case 'exceeded':
+      return 'Exceeded';
+    case 'pending':
+      return 'Pending';
+    default:
+      return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+  }
+}
+
 // Helper function to render the survey type badge
 function getSurveyTypeBadge(type?: ReviewCycleType) {
   return type === 'manager_effectiveness' ? (
@@ -572,7 +587,7 @@ export function EmployeeReviewDetailsPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
                   <Badge variant={getStatusVariant(feedbackRequest?.status)}>
-                    {feedbackRequest?.status}
+                    {formatStatusText(feedbackRequest?.status)}
                   </Badge>
                 </div>
 
