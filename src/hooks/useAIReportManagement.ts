@@ -119,6 +119,100 @@ export function useAIReportManagement({
         return;
       }
 
+      // Debug: Log current authentication state
+      console.log('Debug: Starting report generation for:', {
+        feedbackRequestId: feedbackRequest.id,
+        hasResponses: feedbackRequest.feedback?.length > 0
+      });
+
+      // Verify user authentication before proceeding
+      let currentSession = null;
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      
+      console.log('Debug: Initial session check:', { session: !!session, authError });
+
+      if (authError || !session) {
+        // Try to refresh the session
+        console.log('Session not found, attempting to refresh...');
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        console.log('Debug: Session refresh attempt:', { 
+          refreshedSession: !!refreshedSession, 
+          refreshError 
+        });
+        
+        if (refreshError || !refreshedSession) {
+          // Try one more time with a sign-in check
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          console.log('Debug: User check:', { user: !!user, userError });
+          
+          if (userError || !user) {
+            throw new Error('User not authenticated. Please log out and log back in.');
+          }
+          
+          throw new Error('Session expired. Please refresh the page and try again.');
+        }
+        
+        console.log('Session refreshed successfully');
+        currentSession = refreshedSession;
+      } else {
+        currentSession = session;
+      }
+
+      console.log('Debug: Using session for user:', currentSession.user.id);
+
+      // Verify user has access to the feedback request
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('feedback_requests')
+        .select(`
+          id,
+          review_cycle_id,
+          review_cycles!inner(user_id)
+        `)
+        .eq('id', feedbackRequest.id)
+        .single();
+
+      console.log('Debug: Access verification:', { 
+        verifyData: !!verifyData, 
+        verifyError,
+        reviewCycleOwner: verifyData ? (verifyData.review_cycles as any).user_id : null,
+        currentUser: currentSession.user.id
+      });
+
+      if (verifyError || !verifyData) {
+        throw new Error('Access denied: Cannot access this feedback request.');
+      }
+
+      // Check if user owns the feedback request OR is a master account (in dev mode)
+      const isOwner = (verifyData.review_cycles as any).user_id === currentSession.user.id;
+      
+      if (!isOwner) {
+        // In development mode, check if user is a master account
+        if (import.meta.env.DEV) {
+          console.log('Debug: Checking master account status for development bypass...');
+          
+          try {
+            const { data: masterCheck, error: masterError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', currentSession.user.id)
+              .eq('role', 'master')
+              .single();
+            
+            if (!masterError && masterCheck) {
+              console.log('Debug: Development bypass granted - user is master account');
+              // Continue with report generation
+            } else {
+              throw new Error('Access denied: You do not own this feedback request.');
+            }
+          } catch (error) {
+            throw new Error('Access denied: You do not own this feedback request.');
+          }
+        } else {
+          throw new Error('Access denied: You do not own this feedback request.');
+        }
+      }
+
       setGenerationStep(1);
 
       // Create or update the report entry

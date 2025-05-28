@@ -20,7 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon, Users } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon, Users, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
@@ -33,6 +33,7 @@ import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
 import { ReviewCycleType, SurveyQuestion } from '@/types/survey';
 import { ManagerSurveyAnalytics } from '@/components/employee-review/ManagerSurveyAnalytics';
+import { generateChartMarkdownForReport } from '@/utils/chartToPDF';
 
 function getStatusVariant(status?: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -412,10 +413,81 @@ export function EmployeeReviewDetailsPage() {
 
   const handleExportPDF = async () => {
     if (!aiReport?.content || !feedbackRequest?.employee?.name) return;
+    
+    // Prepare chart options for manager surveys
+    const pdfOptions = {
+      includeCharts: isManagerSurvey && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0,
+      surveyType: reviewCycle?.type,
+      feedbackResponses: feedbackRequest?.feedback as CoreFeedbackResponse[],
+      questionIdToTextMap: surveyQuestions,
+      questionOrder: surveyQuestionOrder
+    };
+    
     await exportToPDF(
       aiReport.content,
-      `${feedbackRequest.employee.name}_Feedback_Report.pdf`
+      `${feedbackRequest.employee.name}_Feedback_Report.pdf`,
+      pdfOptions
     );
+  };
+
+  const handleTestChartGeneration = async () => {
+    if (!isManagerSurvey || !feedbackRequest?.feedback || !Object.keys(surveyQuestions).length) {
+      toast({
+        title: "Cannot generate charts",
+        description: "This feature is only available for manager surveys with response data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const chartMarkdown = await generateChartMarkdownForReport(
+        feedbackRequest.feedback as CoreFeedbackResponse[],
+        surveyQuestions,
+        surveyQuestionOrder
+      );
+      
+      // Open a new window to display the generated markdown
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>Chart Preview - ${feedbackRequest.employee?.name}</title>
+              <style>
+                body { font-family: system-ui, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                img { max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+                pre { background: #f3f4f6; padding: 16px; border-radius: 8px; overflow-x: auto; }
+              </style>
+            </head>
+            <body>
+              <h1>Chart Preview</h1>
+              <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <strong>Generated Markdown:</strong>
+                <pre>${chartMarkdown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+              </div>
+              <div style="border-top: 2px solid #e5e7eb; padding-top: 20px;">
+                <strong>Rendered Output:</strong>
+                <div style="margin-top: 16px;">${chartMarkdown.replace(/\n/g, '<br>')}</div>
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      }
+      
+      toast({
+        title: "Charts generated successfully",
+        description: "Chart preview opened in new window",
+      });
+    } catch (error) {
+      console.error('Chart generation error:', error);
+      toast({
+        title: "Chart generation failed",
+        description: "Unable to generate charts. Check console for details.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (error) {
@@ -475,6 +547,18 @@ export function EmployeeReviewDetailsPage() {
             <Copy className="h-3.5 w-3.5" />
             Copy Link
           </Button>
+          {isManagerSurvey && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
+            <Button
+              key="test-charts"
+              variant="outline"
+              size="sm"
+              onClick={handleTestChartGeneration}
+              className="h-8 text-xs flex items-center gap-1.5"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Preview Charts
+            </Button>
+          )}
           <Button
             key="ai-report"
             variant="ghost"

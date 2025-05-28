@@ -1,6 +1,21 @@
 import { cleanMarkdownForPDF } from './report';
+import { generateManagerSurveyCharts } from './chartToPDF';
+import { CoreFeedbackResponse } from '@/types/feedback/base';
+import { ReviewCycleType } from '@/types/survey';
 
-export async function exportToPDF(content: string, filename: string) {
+interface PDFExportOptions {
+  includeCharts?: boolean;
+  surveyType?: ReviewCycleType;
+  feedbackResponses?: CoreFeedbackResponse[];
+  questionIdToTextMap?: Record<string, string>;
+  questionOrder?: Record<string, number>;
+}
+
+export async function exportToPDF(
+  content: string, 
+  filename: string, 
+  options: PDFExportOptions = {}
+) {
   // Import required modules
   const [html2pdf, { marked }] = await Promise.all([
     import('html2pdf.js'),
@@ -18,11 +33,85 @@ export async function exportToPDF(content: string, filename: string) {
   });
 
   // Clean up the markdown content
-  const cleanedContent = cleanMarkdownForPDF(content);
+  let cleanedContent = cleanMarkdownForPDF(content);
+  
+  // Generate charts if this is a manager survey and we have the necessary data
+  let chartsHtml = '';
+  if (
+    options.includeCharts && 
+    options.surveyType === 'manager_effectiveness' &&
+    options.feedbackResponses && 
+    options.questionIdToTextMap && 
+    options.questionOrder &&
+    options.feedbackResponses.length > 0
+  ) {
+    try {
+      const { summaryChart, distributionChart, chartData } = await generateManagerSurveyCharts(
+        options.feedbackResponses,
+        options.questionIdToTextMap,
+        options.questionOrder
+      );
+      
+      chartsHtml = `
+        <div class="charts-section" style="page-break-before: always; margin-top: 20px;">
+          <h2 style="margin-bottom: 20px; color: #111827; font-size: 20px; font-weight: bold;">Survey Analytics</h2>
+          
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="${summaryChart}" alt="Overall Summary Chart" style="max-width: 400px; height: auto; margin: 0 auto; display: block; border: 1px solid #e5e7eb; border-radius: 8px;" />
+            <p style="font-size: 12px; color: #6b7280; margin-top: 8px; font-style: italic;">Overall manager effectiveness score based on ${chartData.totalResponses} responses</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #111827; font-size: 16px; font-weight: bold; margin-bottom: 16px;">Question-by-Question Analysis</h3>
+            <img src="${distributionChart}" alt="Question Distribution Chart" style="max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 8px;" />
+            <p style="font-size: 12px; color: #6b7280; margin-top: 8px; font-style: italic;">Response distribution for each survey question showing percentage breakdown</p>
+          </div>
+          
+          <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin-top: 20px;">
+            <h4 style="color: #111827; font-size: 14px; font-weight: bold; margin-bottom: 8px;">How to Read the Charts:</h4>
+            <ul style="font-size: 12px; color: #374151; margin: 0; padding-left: 20px;">
+              <li><strong>Summary Chart:</strong> Shows the overall effectiveness score as a percentage of the maximum possible score (5.0)</li>
+              <li><strong>Distribution Chart:</strong> Each question shows the percentage of responses for each rating level (1-5 scale)</li>
+              <li><strong>Color Coding:</strong> Green (4-5) = Strong performance, Yellow (3) = Neutral, Red (1-2) = Needs improvement</li>
+            </ul>
+          </div>
+        </div>
+      `;
+      
+      // Insert charts before the main content or at a specific location
+      if (cleanedContent.includes('## Survey Data') || cleanedContent.includes('## Analytics')) {
+        // Insert charts after survey data section
+        cleanedContent = cleanedContent.replace(
+          /(## Survey Data[\s\S]*?)(?=\n## |$)/,
+          `$1\n\n${chartsHtml.replace(/<[^>]*>/g, (tag) => tag.replace(/style="[^"]*"/g, ''))}\n\n`
+        );
+      } else {
+        // Insert charts at the beginning after any executive summary
+        const lines = cleanedContent.split('\n');
+        let insertIndex = 0;
+        
+        // Find a good insertion point (after executive summary or at beginning)
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith('## ') && !lines[i].includes('Executive') && !lines[i].includes('Summary')) {
+            insertIndex = i;
+            break;
+          }
+        }
+        
+        if (insertIndex > 0) {
+          lines.splice(insertIndex, 0, '\n## Survey Analytics\n\n*[Charts showing quantitative analysis of survey responses]*\n');
+          cleanedContent = lines.join('\n');
+        }
+      }
+    } catch (error) {
+      console.warn('Could not generate charts for PDF:', error);
+      // Continue without charts
+    }
+  }
   
   const htmlContent = marked.parse(cleanedContent);
   if (typeof htmlContent === 'string') {
-    tempDiv.innerHTML = htmlContent;
+    tempDiv.innerHTML = htmlContent + chartsHtml;
   }
   
   // Add custom styles for PDF
@@ -56,6 +145,13 @@ export async function exportToPDF(content: string, filename: string) {
     h3 { 
       font-size: 16px; 
       margin: 16px 0 8px 0; 
+      font-weight: bold;
+      page-break-after: avoid;
+      line-height: 1.3;
+    }
+    h4 { 
+      font-size: 14px; 
+      margin: 14px 0 6px 0; 
       font-weight: bold;
       page-break-after: avoid;
       line-height: 1.3;
@@ -122,12 +218,53 @@ export async function exportToPDF(content: string, filename: string) {
     h1 + p {
       margin-top: 12px;
     }
+    /* Charts section styling */
+    .charts-section {
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+    .charts-section img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    .charts-section p {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      font-style: italic;
+      margin: 8px 0;
+    }
     /* Ensure content doesn't overflow page margins */
     div {
       max-width: 100%;
       word-wrap: break-word;
     }
+    /* Chart explanation box */
+    .chart-explanation {
+      background-color: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #3b82f6;
+    }
+    .chart-explanation h4 {
+      color: #111827;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .chart-explanation ul {
+      font-size: 12px;
+      color: #374151;
+      margin: 0;
+      padding-left: 20px;
+    }
   `;
+  
   tempDiv.appendChild(style);
   document.body.appendChild(tempDiv);
 
@@ -139,7 +276,8 @@ export async function exportToPDF(content: string, filename: string) {
       scale: 2,
       useCORS: true,
       logging: false,
-      letterRendering: true
+      letterRendering: true,
+      allowTaint: true // Allow data URLs for charts
     },
     jsPDF: { 
       unit: 'in', 
@@ -150,9 +288,9 @@ export async function exportToPDF(content: string, filename: string) {
     },
     pagebreak: {
       mode: ['avoid-all', 'css', 'legacy'],
-      before: ['#page-break-before'],
+      before: ['#page-break-before', '.charts-section'],
       after: ['#page-break-after'],
-      avoid: ['li', 'img', 'table', 'tr']
+      avoid: ['li', 'img', 'table', 'tr', '.chart-explanation']
     }
   };
 
