@@ -325,4 +325,51 @@ The employee shows great potential.`;
     // Ensure no merging between sections
     expect(result).not.toMatch(/### Ordered Items.*### Unordered Items/);
   });
+
+  it('prevents bullet points from becoming headings after edit and refresh', () => {
+    // This test simulates the exact issue reported by the user:
+    // 1. User has content with H2 heading followed by bullet points
+    // 2. User edits the H2 heading (adds a letter)
+    // 3. Content gets saved and reloaded
+    // 4. Bullet points should NOT become H2 headings
+    
+    const originalMarkdown = `## Key Strengths
+
+- **Leadership excellence** in team management
+- Strong analytical abilities
+- Effective communication skills`;
+
+    // Simulate user editing the heading (adding a letter)
+    const editedMarkdown = `## Key Strengthss
+
+- **Leadership excellence** in team management
+- Strong analytical abilities
+- Effective communication skills`;
+
+    // Convert to HTML (simulates what happens in the editor)
+    const html = md.render(editedMarkdown);
+    
+    // Convert back to markdown (simulates save/reload cycle)
+    const resultMarkdown = convertHtmlToMarkdown(html);
+    
+    // Verify the structure is preserved
+    expect(resultMarkdown).toMatch(/## Key Strengthss/);
+    expect(resultMarkdown).toMatch(/- \*\*Leadership excellence\*\*/);
+    expect(resultMarkdown).toMatch(/- Strong analytical abilities/);
+    expect(resultMarkdown).toMatch(/- Effective communication skills/);
+    
+    // Most importantly: bullet points should NOT become headings
+    expect(resultMarkdown).not.toMatch(/## \*\*Leadership excellence\*\*/);
+    expect(resultMarkdown).not.toMatch(/## Strong analytical abilities/);
+    expect(resultMarkdown).not.toMatch(/## Effective communication skills/);
+    
+    // Verify proper structure preservation
+    const lines = resultMarkdown.split('\n');
+    const headingIndex = lines.findIndex(line => line.includes('## Key Strengthss'));
+    const firstBulletIndex = lines.findIndex(line => line.includes('- **Leadership excellence**'));
+    
+    // Heading and bullets should be on different lines and in correct order
+    expect(firstBulletIndex).toBeGreaterThan(headingIndex);
+    expect(firstBulletIndex - headingIndex).toBeGreaterThanOrEqual(1);
+  });
 }); 

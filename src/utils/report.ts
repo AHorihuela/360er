@@ -23,8 +23,14 @@ export function getFeedbackDate(feedback: CoreFeedbackResponse): number {
 
 export function cleanMarkdownContent(content: string): string {
   return content
-    .replace(/^(#{1,6})\s*(.+?)(?:\s*#*\s*)$/gm, '$1 $2\n') // Add newline after headings
-    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+    // More careful heading cleanup - only clean up excessive trailing hashes
+    .replace(/^(#{1,6})\s*(.+?)\s*#{2,}\s*$/gm, '$1 $2') // Remove trailing hashes but preserve single trailing hash
+    .replace(/^(#{1,6})\s*(.+?)\s*#\s*$/gm, '$1 $2') // Remove single trailing hash with spaces
+    // Ensure headings have proper spacing but don't force newlines that might break structure
+    .replace(/^(#{1,6}\s+.+)$/gm, '$1') // Keep headings as-is, just clean them
+    // Clean up excessive newlines but preserve intentional spacing
+    .replace(/\n{4,}/g, '\n\n\n') // Replace 4+ newlines with 3 (allows for heading spacing)
+    .replace(/\n{3}(?=#{1,6})/g, '\n\n') // Reduce to 2 newlines before headings
     .trim();
 }
 
