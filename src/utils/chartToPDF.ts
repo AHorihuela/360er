@@ -84,7 +84,7 @@ export async function generateDistributionChart(
   return new Promise((resolve) => {
     // Calculate dynamic height based on content - made more compact
     const padding = 40; // Reduced padding
-    const titleHeight = 50; // Reduced title height
+    const titleHeight = 20; // Reduced title height since we're removing the title
     const legendHeight = 60; // Reduced legend height
     const itemHeight = 100; // Reduced height per question for better compactness
     const minHeight = 500; // Reduced minimum height
@@ -115,12 +115,7 @@ export async function generateDistributionChart(
       5: '#10b981'  // emerald-500
     };
     
-    // Title
-    ctx.fillStyle = '#111827';
-    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Manager Effectiveness Survey Results', width / 2, 35);
+    // No title - we'll use the markdown heading instead
     
     // Reset text alignment for questions
     ctx.textAlign = 'left';
@@ -367,11 +362,17 @@ export async function generateChartMarkdownForReport(
     );
     
     return `
+<div class="page-break-before">
+
 ## Survey Analytics Dashboard
 
 ![Overall Summary Chart](${summaryChart})
 
 **Overall Score: ${chartData.overallAverage}/5.0** based on ${chartData.totalResponses} survey responses
+
+</div>
+
+<div class="page-break-before">
 
 ### Question-by-Question Analysis
 
@@ -398,6 +399,8 @@ ${chartData.questionMetrics
   .join('\n\n')}
 
 *Charts show quantitative analysis of ${chartData.totalResponses} survey responses. The data visualization provides insights into team perception patterns and helps identify specific areas for development.*
+
+</div>
 `;
   } catch (error) {
     console.warn('Could not generate chart markdown:', error);

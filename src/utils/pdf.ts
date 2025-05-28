@@ -60,6 +60,7 @@ export async function exportToPDF(
         );
         
         // Insert charts after the main content but before any existing footer
+        // The chart content now has its own page break structure
         cleanedContent = `${cleanedContent}\n\n${chartMarkdown}`;
         console.log('Charts added to PDF content');
         
@@ -214,9 +215,36 @@ export async function exportToPDF(
       page-break-inside: avoid;
       page-break-before: auto;
     }
-    /* Force page break before analytics dashboard to avoid orphaned headings */
-    h2:contains("Survey Analytics Dashboard") {
-      page-break-before: page;
+    /* Force page break before charts section - using class instead of :contains() */
+    .page-break-before {
+      page-break-before: page !important;
+    }
+    /* Ensure the first heading in the charts section starts properly */
+    .page-break-before h2:first-child {
+      margin-top: 0;
+      padding-top: 0;
+    }
+    /* Keep chart sections together - prevent orphaned headings */
+    .page-break-before h3 {
+      page-break-before: auto;
+      page-break-after: avoid;
+      page-break-inside: avoid;
+      margin-top: 32px;
+      margin-bottom: 16px;
+    }
+    /* Ensure chart images stay with their headings */
+    .page-break-before h3 + p + img {
+      page-break-before: avoid;
+      margin-top: 8px;
+    }
+    /* Keep the entire chart section together when possible */
+    .page-break-before > * {
+      page-break-inside: avoid;
+    }
+    /* Specific handling for question analysis section */
+    .page-break-before h3:nth-of-type(1) {
+      page-break-before: auto;
+      margin-top: 40px;
     }
     /* Italic text styling for chart descriptions */
     p em, p i {
@@ -225,7 +253,7 @@ export async function exportToPDF(
       font-size: 14px;
     }
     /* Better formatting for recommendations */
-    h2:contains("Recommendations") {
+    h2 {
       page-break-before: auto;
       margin-top: 24px;
     }
@@ -246,7 +274,7 @@ export async function exportToPDF(
       color: #374151;
     }
     /* Ensure recommendation list items don't break awkwardly */
-    ul li:contains("•") {
+    ul li {
       orphans: 2;
       widows: 2;
     }
