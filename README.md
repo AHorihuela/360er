@@ -199,6 +199,39 @@ npm run preview
 - XSS protection through proper content sanitization
 - CSRF protection through secure token handling
 
+## Known Issues & TODO 🚧
+
+### Critical Issues to Address
+
+#### 1. Authentication Session Sync Issue (HIGH PRIORITY)
+**Problem**: Supabase `auth.uid()` returns `null` in database queries despite browser showing authenticated session.
+- **Symptoms**: 
+  - Browser session appears valid with user ID
+  - Database queries show `auth.uid()` as null
+  - Console warning: "Multiple GoTrueClient instances"
+  - RLS policies fail due to null authentication context
+- **Current Workaround**: Hardcoded bypass in `is_master_account()` function for production stability
+- **Impact**: Affects all authentication-dependent features across the application
+- **Root Cause**: Likely Supabase client configuration issue or session state management
+- **Action Required**: 
+  - Investigate Supabase client initialization patterns
+  - Review session management and storage
+  - Test authentication flow in isolation
+  - Consider migrating to latest Supabase client version
+  - Remove hardcoded workarounds once resolved
+
+#### 2. Master Account Function Hardcoding (MEDIUM PRIORITY)
+**Problem**: Temporary hardcoded logic in database function bypasses proper authentication checks.
+- **Current State**: `is_master_account()` returns `true` when `auth.uid()` is null
+- **Risk**: Potential security vulnerability if authentication context is compromised
+- **Action Required**: Remove hardcoded logic once session sync issue is resolved
+
+### Future Enhancements
+- Implement proper session debugging tools
+- Add authentication state monitoring dashboard
+- Create automated tests for authentication flows
+- Document authentication troubleshooting procedures
+
 ## Contributing 🤝
 
 1. Fork the repository
