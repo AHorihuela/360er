@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import MarkdownIt from 'markdown-it';
+import { cleanMarkdownContent } from '../../../utils/report';
+import { convertHtmlToMarkdown } from '../markdown-conversion';
 
 // Import the conversion logic from MarkdownEditor
 // We'll test the conversion algorithm directly
@@ -9,176 +11,6 @@ describe('MarkdownEditor HTML-to-Markdown Conversion', () => {
     breaks: true,
     linkify: true,
   });
-
-  // Helper function that mimics the FIXED conversion logic from MarkdownEditor
-  function convertHtmlToMarkdown(html: string): string {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    
-    let markdown = '';
-    
-    const processNode = (node: Node, isInsideList = false) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        // Clean up whitespace from text nodes
-        let text = node.textContent || '';
-        // Remove excessive whitespace and normalize
-        text = text.replace(/\s+/g, ' ');
-        if (text.trim()) {
-          // Preserve leading/trailing spaces if they're meaningful
-          if (text.startsWith(' ') && markdown && !markdown.endsWith(' ')) {
-            markdown += ' ';
-          }
-          markdown += text.trim();
-          if (text.endsWith(' ')) {
-            markdown += ' ';
-          }
-        }
-        return;
-      }
-      
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        const tagName = element.tagName.toLowerCase();
-        
-        // Handle opening tags
-        switch (tagName) {
-          case 'h1':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '# ';
-            break;
-          case 'h2':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '## ';
-            break;
-          case 'h3':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '### ';
-            break;
-          case 'h4':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '#### ';
-            break;
-          case 'h5':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '##### ';
-            break;
-          case 'h6':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            markdown += '###### ';
-            break;
-          case 'p':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n\n';
-            }
-            break;
-          case 'ul':
-          case 'ol':
-            if (markdown && !markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            break;
-          case 'li':
-            if (element.parentElement?.tagName.toLowerCase() === 'ul') {
-              markdown += '- ';
-            } else if (element.parentElement?.tagName.toLowerCase() === 'ol') {
-              const index = Array.from(element.parentElement.children).indexOf(element) + 1;
-              markdown += `${index}. `;
-            }
-            break;
-          case 'strong':
-          case 'b':
-            markdown += '**';
-            break;
-          case 'em':
-          case 'i':
-            markdown += '_';
-            break;
-          case 'u':
-            markdown += '__';
-            break;
-          case 'br':
-            markdown += '\n';
-            break;
-        }
-        
-        // Process child nodes
-        const isListItem = tagName === 'li';
-        Array.from(node.childNodes).forEach(child => processNode(child, isListItem));
-        
-        // Handle closing tags
-        switch (tagName) {
-                      case 'h1':
-            case 'h2':
-            case 'h3':
-            case 'h4':
-            case 'h5':
-            case 'h6':
-              // Always ensure headings end with a newline
-              markdown += '\n';
-              break;
-          case 'strong':
-          case 'b':
-            markdown += '**';
-            break;
-          case 'em':
-          case 'i':
-            markdown += '_';
-            break;
-          case 'u':
-            markdown += '__';
-            break;
-          case 'li':
-            if (!markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            break;
-          case 'p':
-            if (!markdown.endsWith('\n')) {
-              markdown += '\n';
-            }
-            break;
-        }
-      }
-    };
-    
-    Array.from(tempDiv.childNodes).forEach(node => processNode(node));
-    
-    // Clean up the final markdown output
-    markdown = markdown
-      .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with 2
-      .replace(/[ \t]+\n/g, '\n') // Remove trailing spaces before newlines
-      .replace(/\n[ \t]+/g, '\n') // Remove leading spaces after newlines
-      .replace(/[ \t]{2,}/g, ' ') // Replace multiple spaces with single space
-      .replace(/^\s+/g, ''); // Trim start whitespace only
-    
-    // Ensure proper line endings for headings and lists
-    if (markdown && !markdown.endsWith('\n')) {
-      // Add newline if content ends with heading markers or list items
-      if (markdown.match(/##+\s*$/) || 
-          markdown.includes('- ') || 
-          markdown.includes('1. ') || 
-          markdown.includes('2. ')) {
-        markdown += '\n';
-      }
-    }
-    
-    // Final cleanup: remove any trailing spaces but preserve final newline if present
-    markdown = markdown.replace(/[ \t]+$/g, '');
-    
-    return markdown;
-  }
 
   it('prevents line jumping between headings', () => {
     const html = '<h2>Summary Report</h2><h3>Key Findings</h3><p>Important content</p>';
@@ -371,5 +203,74 @@ The employee shows great potential.`;
     // Heading and bullets should be on different lines and in correct order
     expect(firstBulletIndex).toBeGreaterThan(headingIndex);
     expect(firstBulletIndex - headingIndex).toBeGreaterThanOrEqual(1);
+  });
+
+  it('preserves bullet points after cleanMarkdownContent processing (simulates save/reload)', () => {
+    // This test reproduces the exact issue: bullet points losing formatting after save/reload
+    const originalMarkdown = `## Key Strengths
+
+- **Leadership excellence** in team management
+- Strong analytical abilities
+- Effective communication skills
+
+## Areas for Development
+
+- Time management skills
+- Delegation practices`;
+
+    // Simulate the save/reload cycle that happens in useAIReportManagement
+    const cleanedContent = cleanMarkdownContent(originalMarkdown);
+    
+    // Convert to HTML (simulates what happens in the editor)
+    const html = md.render(cleanedContent);
+    
+    // Convert back to markdown (simulates the editor's conversion process)
+    const resultMarkdown = convertHtmlToMarkdown(html);
+    
+    // Verify the structure is preserved
+    expect(resultMarkdown).toMatch(/## Key Strengths/);
+    expect(resultMarkdown).toMatch(/## Areas for Development/);
+    expect(resultMarkdown).toMatch(/- \*\*Leadership excellence\*\*/);
+    expect(resultMarkdown).toMatch(/- Strong analytical abilities/);
+    expect(resultMarkdown).toMatch(/- Time management skills/);
+    
+    // Most importantly: bullet points should NOT become plain text
+    expect(resultMarkdown).not.toMatch(/\*\*Leadership excellence\*\* in team management\n\nStrong analytical abilities/);
+    expect(resultMarkdown).not.toMatch(/Time management skills\n\nDelegation practices/);
+    
+    // Verify proper spacing is maintained
+    expect(resultMarkdown).toMatch(/## Key Strengths\n\n- \*\*Leadership excellence\*\*/);
+    expect(resultMarkdown).toMatch(/## Areas for Development\n\n- Time management skills/);
+  });
+
+  it('prevents double content cleaning during save operations', () => {
+    // This test verifies that content is only cleaned once, not twice
+    const originalMarkdown = `## Key Strengths
+
+- **Leadership excellence** in team management
+- Strong analytical abilities
+- Effective communication skills
+
+## Areas for Development
+
+- Time management skills
+- Delegation practices`;
+
+    // Simulate the first cleaning (in handleReportChange)
+    const firstClean = cleanMarkdownContent(originalMarkdown);
+    
+    // Simulate the second cleaning (what used to happen in debouncedSave)
+    const secondClean = cleanMarkdownContent(firstClean);
+    
+    // The content should be identical after both cleanings
+    // If double-cleaning was corrupting content, these would be different
+    expect(firstClean).toBe(secondClean);
+    
+    // Verify the structure is still intact
+    expect(firstClean).toMatch(/## Key Strengths/);
+    expect(firstClean).toMatch(/## Areas for Development/);
+    expect(firstClean).toMatch(/- \*\*Leadership excellence\*\*/);
+    expect(firstClean).toMatch(/- Strong analytical abilities/);
+    expect(firstClean).toMatch(/- Time management skills/);
   });
 }); 

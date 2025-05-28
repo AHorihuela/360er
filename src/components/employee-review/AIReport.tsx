@@ -3,12 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Sparkles, RefreshCw, FileDown, ChevronDown } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { FeedbackResponse } from '@/types/feedback';
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
 import { useToast } from '@/components/ui/use-toast';
-import { debounce } from 'lodash';
 import { ReviewCycleType } from '@/types/survey';
 
 interface Props {
@@ -32,6 +30,7 @@ interface Props {
   startTime: number | null;
   elapsedSeconds: number;
   surveyType?: ReviewCycleType;
+  isSaving?: boolean;
 }
 
 const generationSteps = [
@@ -53,7 +52,8 @@ export function AIReport({
   isGeneratingReport,
   generationStep,
   elapsedSeconds,
-  surveyType
+  surveyType,
+  isSaving = false
 }: Props) {
   const { toast } = useToast();
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
@@ -132,38 +132,19 @@ export function AIReport({
     }
   }, [isGeneratingReport]);
 
-  const handleReportChange = debounce(async (newContent: string) => {
-    if (!feedbackRequest?.id) return;
+  const handleReportChange = (newContent: string) => {
+    // Update local state immediately for responsive UI
+    setAiReport(prev => prev ? {
+      ...prev,
+      content: newContent
+    } : null);
 
-    try {
-      const { error } = await supabase
-        .from('ai_reports')
-        .update({
-          content: newContent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('feedback_request_id', feedbackRequest.id);
-
-      if (error) throw error;
-
-      setAiReport(prev => prev ? {
-        ...prev,
-        content: newContent
-      } : null);
-
-      if (onReportChange) {
-        onReportChange(newContent);
-      }
-
-    } catch (error) {
-      console.error('Error saving report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save report changes",
-        variant: "destructive",
-      });
+    // Call the parent's change handler (from useAIReportManagement)
+    // which handles the debounced save to database
+    if (onReportChange) {
+      onReportChange(newContent);
     }
-  }, 1000);
+  };
 
   // Handle generate report with immediate loading state
   const handleGenerateReport = () => {
@@ -226,10 +207,8 @@ export function AIReport({
                   <div className="w-full">
                     <MarkdownEditor
                       value={aiReport.content}
-                      onChange={(value) => {
-                        handleReportChange(value);
-                        onReportChange?.(value);
-                      }}
+                      onChange={handleReportChange}
+                      isSaving={isSaving}
                       actionButtons={
                         <>
                           <Button

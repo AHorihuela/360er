@@ -374,6 +374,8 @@ export function EmployeeReviewDetailsPage() {
     generationStep,
     startTime,
     elapsedSeconds,
+    error: aiReportError,
+    isSaving,
     handleReportChange,
     handleGenerateReport,
     setAiReport
@@ -550,6 +552,7 @@ export function EmployeeReviewDetailsPage() {
           startTime={startTime}
           elapsedSeconds={elapsedSeconds}
           surveyType={reviewCycle?.type}
+          isSaving={isSaving}
         />
       </section>
 

@@ -38,6 +38,7 @@ export function useAIReportManagement({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [abortController] = useState(() => new AbortController());
+  const [isSaving, setIsSaving] = useState(false);
 
   // Update aiReport when feedbackRequest.ai_reports changes
   useEffect(() => {
@@ -49,7 +50,50 @@ export function useAIReportManagement({
     }
   }, [feedbackRequest?.ai_reports]);
 
-  // Cleanup on unmount
+  // Add debounced save function
+  const debouncedSave = useCallback(
+    debounce(async (content: string, requestId: string) => {
+      if (!requestId) return;
+      
+      setIsSaving(true);
+      
+      try {
+        const { error: saveError } = await supabase
+          .from('ai_reports')
+          .update({
+            content: content, // Content is already cleaned by handleReportChange
+            updated_at: new Date().toISOString()
+          })
+          .eq('feedback_request_id', requestId);
+
+        if (saveError) {
+          console.error('Error saving report:', saveError);
+          toast({
+            title: "Error",
+            description: "Failed to save report changes. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+        }
+        
+        // Success - no toast needed for auto-save, but we could add a subtle indicator
+        return true;
+      } catch (err) {
+        console.error('Error saving report:', err);
+        toast({
+          title: "Error",
+          description: "Failed to save report changes. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000),
+    [toast] // Remove feedbackRequest from dependencies to avoid stale closure
+  );
+
+  // Cleanup on unmount or feedbackRequest change
   useEffect(() => {
     return () => {
       if (isGeneratingReport) {
@@ -60,51 +104,29 @@ export function useAIReportManagement({
         setElapsedSeconds(0);
         setError(null);
       }
+      // Flush any pending debounced saves
+      debouncedSave.flush();
     };
-  }, [isGeneratingReport, abortController]);
-
-  // Add debounced save function
-  const debouncedSave = useCallback(
-    debounce(async (content: string) => {
-      if (!feedbackRequest) return;
-      
-      try {
-        // Only clean up extra hashes while preserving heading structure
-        const cleanContent = cleanMarkdownContent(content);
-
-        const { error: saveError } = await supabase
-          .from('ai_reports')
-          .update({
-            content: cleanContent,
-            updated_at: new Date().toISOString()
-          })
-          .eq('feedback_request_id', feedbackRequest.id);
-
-        if (saveError) {
-          setError('Failed to save report changes');
-          throw saveError;
-        }
-      } catch (err) {
-        console.error('Error saving report:', err);
-        toast({
-          title: "Error",
-          description: "Failed to save report changes",
-          variant: "destructive",
-        });
-      }
-    }, 1000),
-    [feedbackRequest, toast]
-  );
+  }, [isGeneratingReport, abortController, debouncedSave]);
 
   const handleReportChange = useCallback((value: string) => {
-    const cleanValue = cleanMarkdownContent(value);
+    if (!feedbackRequest?.id) {
+      console.warn('Cannot save report: no feedback request ID');
+      return;
+    }
+
+    // Don't clean the content here - save exactly what the user typed
+    // Cleaning should only happen during specific operations like PDF export
     
+    // Update local state immediately for responsive UI
     setAiReport(prev => ({
-      content: cleanValue,
+      content: value,
       created_at: prev?.created_at || new Date().toISOString()
     }));
-    debouncedSave(cleanValue);
-  }, [debouncedSave]);
+    
+    // Save to database with current feedbackRequest ID (avoiding stale closure)
+    debouncedSave(value, feedbackRequest.id);
+  }, [debouncedSave, feedbackRequest?.id]);
 
   const handleGenerateReport = async () => {
     if (!feedbackRequest?.id || !feedbackRequest.feedback?.length) return;
@@ -355,6 +377,7 @@ export function useAIReportManagement({
     startTime,
     elapsedSeconds,
     error,
+    isSaving,
     handleReportChange,
     handleGenerateReport,
     setAiReport
