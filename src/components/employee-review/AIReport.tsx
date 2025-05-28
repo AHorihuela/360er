@@ -37,7 +37,6 @@ const generationSteps = [
   "Analyzing feedback responses...",
   "Identifying key themes and patterns...",
   "Evaluating performance metrics...",
-  "Generating charts and visualizations...",
   "Finalizing comprehensive report..."
 ];
 

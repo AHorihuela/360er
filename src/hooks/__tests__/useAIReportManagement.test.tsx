@@ -15,35 +15,38 @@ vi.mock('../../lib/openai', () => ({
   })
 }));
 
-vi.mock('../../lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({
-        data: {
-          session: {
-            user: { id: 'test-user-id' }
-          }
-        },
-        error: null
-      })
-    },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: { user_id: 'test-user-id' },
-            error: null
-          })
+// Mock Supabase
+const mockSupabase = {
+  auth: {
+    getSession: vi.fn().mockResolvedValue({
+      data: { session: { user: { id: 'test-user-id' } } },
+      error: null
+    }),
+    refreshSession: vi.fn(),
+    getUser: vi.fn()
+  },
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: '123',
+            review_cycle_id: 'cycle-123',
+            review_cycles: { user_id: 'test-user-id' }
+          },
+          error: null
         })
-      }),
-      upsert: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ data: {}, error: null })
-      }),
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ data: {}, error: null })
-      })
-    })
-  }
+      }))
+    })),
+    upsert: vi.fn().mockResolvedValue({ error: null }),
+    update: vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null })
+    }))
+  }))
+};
+
+vi.mock('../../lib/supabase', () => ({
+  supabase: mockSupabase
 }));
 
 // Mock toast

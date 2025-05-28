@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { generateAIReport } from '../lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
-import { cleanMarkdownContent } from '../utils/report';
 import { ReviewCycleType } from '../types/survey';
 import { CoreFeedbackResponse } from '../types/feedback/base';
 
