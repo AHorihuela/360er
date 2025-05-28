@@ -38,8 +38,8 @@ const generationSteps = [
   "Analyzing feedback responses...",
   "Identifying key themes and patterns...",
   "Evaluating performance metrics...",
-  "Generating comprehensive insights...",
-  "Finalizing report..."
+  "Generating charts and visualizations...",
+  "Finalizing comprehensive report..."
 ];
 
 // Key for localStorage

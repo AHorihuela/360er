@@ -45,9 +45,10 @@ export interface AIReportType {
 export const GENERATION_STEPS = [
   "Analyzing feedback responses...",
   "Identifying key themes and patterns...",
-  "Generating comprehensive insights...",
-  "Preparing final report..."
+  "Evaluating performance metrics...",
+  "Generating charts and visualizations...",
+  "Finalizing comprehensive report..."
 ] as const;
 
-export type GenerationStep = 0 | 1 | 2 | 3;
-export type GenerationSteps = readonly [string, string, string, string]; 
+export type GenerationStep = 0 | 1 | 2 | 3 | 4;
+export type GenerationSteps = readonly [string, string, string, string, string]; 

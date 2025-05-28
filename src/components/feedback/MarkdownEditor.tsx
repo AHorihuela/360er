@@ -12,7 +12,7 @@ interface MarkdownEditorProps {
 }
 
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   breaks: true,
   linkify: true,
 });
@@ -32,8 +32,13 @@ export function MarkdownEditor({ value, onChange, actionButtons }: MarkdownEdito
   // Memoize the initial content to prevent unnecessary editor recreations
   const initialContent = useMemo(() => {
     log('🔧 Creating initial content with length:', value?.length || 0);
-    return md.render(value || '');
-  }, []); // Empty dependency array - only create once
+    log('🔧 Content preview:', value?.substring(0, 200) || 'empty');
+    log('🔧 Content has images:', value?.includes('![') || false);
+    const rendered = md.render(value || '');
+    log('🔧 Rendered HTML preview:', rendered.substring(0, 200) || 'empty');
+    log('🔧 Rendered HTML has img tags:', rendered.includes('<img') || false);
+    return rendered;
+  }, [value]); // Depend on value so it updates when content changes
 
   // Memoize editor configuration to prevent recreation
   const editorConfig = useMemo(() => ({
@@ -217,6 +222,19 @@ export function MarkdownEditor({ value, onChange, actionButtons }: MarkdownEdito
           case 'br':
             markdown += '\n';
             break;
+          case 'img':
+            const src = element.getAttribute('src') || '';
+            const alt = element.getAttribute('alt') || '';
+            if (src) {
+              if (markdown && !markdown.endsWith('\n')) {
+                markdown += '\n\n';
+              }
+              markdown += `![${alt}](${src})`;
+              if (!markdown.endsWith('\n')) {
+                markdown += '\n\n';
+              }
+            }
+            return; // Don't process children for img elements
         }
         
         // Process child nodes

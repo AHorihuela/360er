@@ -6,17 +6,22 @@ import { debounce } from 'lodash';
 import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
 import { cleanMarkdownContent } from '../utils/report';
 import { ReviewCycleType } from '../types/survey';
+import { CoreFeedbackResponse } from '../types/feedback/base';
 
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
   surveyType?: ReviewCycleType;
   onSuccessfulGeneration?: () => Promise<void>;
+  surveyQuestions?: Record<string, string>;
+  surveyQuestionOrder?: Record<string, number>;
 }
 
 export function useAIReportManagement({ 
   feedbackRequest, 
   surveyType,
-  onSuccessfulGeneration 
+  onSuccessfulGeneration,
+  surveyQuestions,
+  surveyQuestionOrder
 }: UseAIReportManagementProps) {
   const { toast } = useToast();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -254,14 +259,16 @@ export function useAIReportManagement({
         return;
       }
 
-      setGenerationStep(2);
+      // Charts will be generated during PDF export only, not embedded in markdown
+      const finalReportContent = reportContent;
+
+      setGenerationStep(3); // Final step - saving report
 
       const currentTime = new Date().toISOString();
-      const formattedReport = reportContent.trim();
 
       // Update state first to ensure immediate UI update
       setAiReport({
-        content: formattedReport,
+        content: finalReportContent,
         created_at: currentTime
       });
 
@@ -269,7 +276,7 @@ export function useAIReportManagement({
       const { error: finalizeError } = await supabase
         .from('ai_reports')
         .update({
-          content: formattedReport,
+          content: finalReportContent,
           status: 'completed',
           is_final: true,
           updated_at: currentTime

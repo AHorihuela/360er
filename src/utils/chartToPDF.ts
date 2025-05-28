@@ -78,16 +78,16 @@ export function processManagerSurveyData(
 // Generate a canvas-based chart for distribution bars
 export async function generateDistributionChart(
   questionMetrics: ChartData[], 
-  width: number = 800, 
+  width: number = 700, // Reduced from 800 for better page fit
   height?: number
 ): Promise<string> {
   return new Promise((resolve) => {
-    // Calculate dynamic height based on content
-    const padding = 60;
-    const titleHeight = 60;
-    const legendHeight = 80; // Increased for color legend
-    const itemHeight = 120; // Fixed height per question for consistency
-    const minHeight = 600;
+    // Calculate dynamic height based on content - made more compact
+    const padding = 40; // Reduced padding
+    const titleHeight = 50; // Reduced title height
+    const legendHeight = 60; // Reduced legend height
+    const itemHeight = 100; // Reduced height per question for better compactness
+    const minHeight = 500; // Reduced minimum height
     
     // Calculate required height
     const calculatedHeight = titleHeight + (questionMetrics.length * itemHeight) + legendHeight + (padding * 2);
@@ -213,16 +213,17 @@ export async function generateDistributionChart(
     });
     
     // Legend at the bottom - positioned from bottom of canvas
-    const legendY = finalHeight - 50;
+    const legendY = finalHeight - 30; // Reduced space for legend
     ctx.fillStyle = '#374151';
-    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
+    // Simplified legend text
     ctx.fillText('Scale: 5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = Strongly Disagree', width / 2, legendY);
     
-    // Color legend - positioned above text legend
-    const colorLegendY = legendY - 25;
-    const colorBoxSize = 12;
-    const colorSpacing = 120;
+    // Color legend - positioned above text legend (simplified)
+    const colorLegendY = legendY - 20; // Reduced spacing
+    const colorBoxSize = 10; // Smaller boxes
+    const colorSpacing = 100; // Tighter spacing
     const startX = (width - (5 * colorSpacing)) / 2;
     
     [5, 4, 3, 2, 1].forEach((score, index) => {
@@ -234,9 +235,9 @@ export async function generateDistributionChart(
       
       // Draw score label
       ctx.fillStyle = '#374151';
-      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(score.toString(), x + colorBoxSize + 4, colorLegendY + 2);
+      ctx.fillText(score.toString(), x + colorBoxSize + 3, colorLegendY + 2);
     });
     
     // Convert to base64 image
@@ -248,8 +249,8 @@ export async function generateDistributionChart(
 export async function generateOverallSummaryChart(
   overallAverage: number,
   totalResponses: number,
-  width: number = 450,
-  height: number = 350
+  width: number = 400,
+  height: number = 300
 ): Promise<string> {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
@@ -320,11 +321,6 @@ export async function generateOverallSummaryChart(
     ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillText('Manager Effectiveness Summary', centerX, 35);
     
-    // Add scale reference at bottom
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Scale: 1.0 - 5.0 (5.0 = Strongly Agree)', centerX, height - 20);
-    
     resolve(canvas.toDataURL('image/png', 0.9));
   });
 }
@@ -373,25 +369,15 @@ export async function generateChartMarkdownForReport(
     return `
 ## Survey Analytics Dashboard
 
-### Overall Manager Effectiveness Score
-
 ![Overall Summary Chart](${summaryChart})
 
 **Overall Score: ${chartData.overallAverage}/5.0** based on ${chartData.totalResponses} survey responses
-
-The overall effectiveness score represents the average rating across all quantitative survey questions. This provides a high-level view of manager performance according to team feedback.
 
 ### Question-by-Question Analysis
 
 ![Response Distribution Chart](${distributionChart})
 
-The distribution chart above shows the breakdown of responses for each survey question, displaying the percentage of responses at each rating level (1-5 scale):
-
-- **Green (4-5):** Strong performance areas
-- **Yellow (3):** Neutral/moderate performance  
-- **Red (1-2):** Areas needing improvement
-
-### Key Insights from Quantitative Data
+**Key Insights from Quantitative Data:**
 
 ${chartData.questionMetrics
   .sort((a, b) => b.average - a.average)
@@ -410,8 +396,6 @@ ${chartData.questionMetrics
     return `${rank} ${question.questionText} (Average: ${question.average}/5.0)`;
   })
   .join('\n\n')}
-
----
 
 *Charts show quantitative analysis of ${chartData.totalResponses} survey responses. The data visualization provides insights into team perception patterns and helps identify specific areas for development.*
 `;

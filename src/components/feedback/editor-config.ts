@@ -1,6 +1,7 @@
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import Image from '@tiptap/extension-image';
 
 export const editorExtensions = [
   StarterKit.configure({
@@ -38,6 +39,13 @@ export const editorExtensions = [
   Underline,
   TextAlign.configure({
     types: ['heading', 'paragraph'],
+  }),
+  Image.configure({
+    inline: false,
+    allowBase64: true,
+    HTMLAttributes: {
+      class: 'max-w-full h-auto rounded-lg border border-gray-200 my-4 mx-auto block',
+    },
   }),
 ];
 
