@@ -163,4 +163,43 @@ describe('generateAIReport', () => {
     // Uses fallback values
     expect(result).toContain('# Manager Effectiveness Report for  ()');
   });
+
+  it('uses actual question text when surveyQuestions mapping is provided', async () => {
+    const mockFeedbackResponses: CoreFeedbackResponse[] = [
+      {
+        id: 'response1',
+        feedback_request_id: 'request1',
+        session_id: 'session1',
+        submitted_at: '2023-07-01T00:00:00Z',
+        status: 'submitted',
+        relationship: 'equal_colleague',
+        strengths: 'Great communication',
+        areas_for_improvement: 'Could delegate more',
+        created_at: '2023-07-01T00:00:00Z',
+        responses: {
+          'q1': 5,
+          'q2': 4,
+          'q3': 'Provides detailed feedback'
+        }
+      }
+    ];
+
+    const surveyQuestions = {
+      'q1': 'How effectively does this manager communicate with the team?',
+      'q2': 'How well does this manager delegate tasks?',
+      'q3': 'What additional feedback would you like to provide?'
+    };
+
+    const result = await generateAIReport(
+      'Jane Doe', 
+      'Manager', 
+      mockFeedbackResponses, 
+      'manager_effectiveness',
+      surveyQuestions
+    );
+    
+    // Should contain actual question text
+    expect(result).toContain('# Manager Effectiveness Report for Jane Doe (Manager)');
+    expect(result).toContain('Mocked AI response content');
+  });
 }); 

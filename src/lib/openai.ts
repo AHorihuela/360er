@@ -54,7 +54,8 @@ ${formatGroupFeedback(groupedFeedback.junior, 'Junior')}`;
 function formatManagerSurveyForPrompt(
   managerName: string,
   managerRole: string,
-  feedback: CoreFeedbackResponse[]
+  feedback: CoreFeedbackResponse[],
+  surveyQuestions?: Record<string, string>
 ): string {
   // Get all numeric responses, calculate averages
   const likertResponses: Record<string, { values: number[], questionText: string }> = {};
@@ -69,11 +70,12 @@ function formatManagerSurveyForPrompt(
       // Handle numeric (Likert) responses
       if (typeof value === 'number') {
         if (!likertResponses[questionId]) {
-          // Try to extract question text from the question ID if possible
-          // This would be better if we had a way to look up the text from the database
+          // Use actual question text from surveyQuestions mapping if available
+          const questionText = surveyQuestions?.[questionId] || `Question ${questionId.substring(0, 8)}...`;
+          console.log(`Debug: Question ${questionId} mapped to: "${questionText}"`);
           likertResponses[questionId] = { 
             values: [], 
-            questionText: `Question ${questionId.substring(0, 8)}...` 
+            questionText
           };
         }
         likertResponses[questionId].values.push(value);
@@ -81,9 +83,12 @@ function formatManagerSurveyForPrompt(
       // Handle string (open-ended) responses
       else if (typeof value === 'string' && value.trim()) {
         if (!openEndedResponses[questionId]) {
+          // Use actual question text from surveyQuestions mapping if available
+          const questionText = surveyQuestions?.[questionId] || `Question ${questionId.substring(0, 8)}...`;
+          console.log(`Debug: Question ${questionId} mapped to: "${questionText}"`);
           openEndedResponses[questionId] = { 
             responses: [], 
-            questionText: `Question ${questionId.substring(0, 8)}...` 
+            questionText
           };
         }
         openEndedResponses[questionId].responses.push(value.trim());
@@ -326,7 +331,8 @@ export async function generateAIReport(
   employeeName: string,
   employeeRole: string,
   feedback: CoreFeedbackResponse[],
-  surveyType?: string
+  surveyType?: string,
+  surveyQuestions?: Record<string, string>
 ): Promise<string> {
   try {
     console.log('Generating report for survey type:', surveyType);
@@ -338,7 +344,7 @@ export async function generateAIReport(
     
     if (surveyType === 'manager_effectiveness') {
       console.log('Formatting manager effectiveness survey for prompt...');
-      formattedFeedback = formatManagerSurveyForPrompt(employeeName, employeeRole, feedback);
+      formattedFeedback = formatManagerSurveyForPrompt(employeeName, employeeRole, feedback, surveyQuestions);
       systemPrompt = MANAGER_SYSTEM_PROMPT;
       reportTitle = `# Manager Effectiveness Report for ${employeeName} (${employeeRole})`;
     } else {
@@ -349,6 +355,7 @@ export async function generateAIReport(
     }
 
     console.log('Sending request to OpenAI...');
+    console.log('Debug: Formatted feedback content:', formattedFeedback.substring(0, 500) + '...');
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
       messages: [

@@ -266,7 +266,8 @@ export function useAIReportManagement({
         feedbackRequest.employee?.name || 'Unknown Employee',
         feedbackRequest.employee?.role || 'Unknown Role',
         feedbackRequest.feedback,
-        surveyType
+        surveyType,
+        surveyQuestions
       );
 
       if (!reportContent) {
