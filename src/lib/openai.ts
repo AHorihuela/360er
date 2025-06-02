@@ -72,7 +72,6 @@ function formatManagerSurveyForPrompt(
         if (!likertResponses[questionId]) {
           // Use actual question text from surveyQuestions mapping if available
           const questionText = surveyQuestions?.[questionId] || `Question ${questionId.substring(0, 8)}...`;
-          console.log(`Debug: Question ${questionId} mapped to: "${questionText}"`);
           likertResponses[questionId] = { 
             values: [], 
             questionText
@@ -85,7 +84,6 @@ function formatManagerSurveyForPrompt(
         if (!openEndedResponses[questionId]) {
           // Use actual question text from surveyQuestions mapping if available
           const questionText = surveyQuestions?.[questionId] || `Question ${questionId.substring(0, 8)}...`;
-          console.log(`Debug: Question ${questionId} mapped to: "${questionText}"`);
           openEndedResponses[questionId] = { 
             responses: [], 
             questionText
@@ -355,7 +353,6 @@ export async function generateAIReport(
     }
 
     console.log('Sending request to OpenAI...');
-    console.log('Debug: Formatted feedback content:', formattedFeedback.substring(0, 500) + '...');
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
       messages: [
@@ -385,8 +382,8 @@ export async function generateAIReport(
 
     // Ensure consistent header formatting
     markdownContent = markdownContent
-      .replace(/^###\s+(?!\*\*)/gm, '### **')
-      .replace(/^###\s+\*\*\s+/gm, '### **');
+      .replace(/^###\s+\*{2,}/gm, '### **') // Replace any multiple ** with just **
+      .replace(/^###\s+(?!\*\*)/gm, '### **'); // Add ** to headers that don't have it
 
     console.log('Final markdown:', markdownContent.substring(0, 200) + '...');
     if (!markdownContent.trim()) {
