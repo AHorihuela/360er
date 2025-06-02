@@ -54,6 +54,7 @@ export default function AnalyticsPage() {
   const [selectedRelationships, setSelectedRelationships] = useState<BaseRelationshipType[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [surveyQuestions, setSurveyQuestions] = useState<Record<string, string>>({});
+  const [minReviewCount, setMinReviewCount] = useState<number>(1);
   const [viewingAllAccounts, setViewingAllAccounts] = useState<boolean>(() => {
     const savedState = localStorage.getItem('masterViewingAllAccounts');
     return savedState === 'true';
@@ -298,6 +299,8 @@ export default function AnalyticsPage() {
     setSelectedEmployeeIds([]);
     // Reset selected relationships
     setSelectedRelationships([]);
+    // Reset minimum review count
+    setMinReviewCount(1);
   };
 
   if (authState !== "Authenticated") {
@@ -369,7 +372,7 @@ export default function AnalyticsPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle>Filters</CardTitle>
-              {(selectedRelationships.length > 0 || selectedEmployeeIds.length > 0) && (
+              {(selectedRelationships.length > 0 || selectedEmployeeIds.length > 0 || (isManagerSurvey && minReviewCount > 1)) && (
                 <Button 
                   variant="ghost" 
                   size="sm"
@@ -485,6 +488,31 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Review Count Filter for Manager Surveys */}
+              {isManagerSurvey && (
+                <div className="min-w-[200px]">
+                  <label htmlFor="review-count" className="text-sm font-medium block mb-2">
+                    Minimum Review Count
+                  </label>
+                  <Select
+                    value={minReviewCount.toString()}
+                    onValueChange={(value) => setMinReviewCount(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select minimum reviews" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">≥ 1 review</SelectItem>
+                      <SelectItem value="2">≥ 2 reviews</SelectItem>
+                      <SelectItem value="3">≥ 3 reviews</SelectItem>
+                      <SelectItem value="4">≥ 4 reviews</SelectItem>
+                      <SelectItem value="5">≥ 5 reviews</SelectItem>
+                      <SelectItem value="10">≥ 10 reviews</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -496,6 +524,7 @@ export default function AnalyticsPage() {
               feedbackRequests={activeReviewCycle!.feedback_requests as DashboardFeedbackRequest[]}
               questionIdToTextMap={surveyQuestions}
               employeeFilters={selectedEmployeeIds}
+              minReviewCount={minReviewCount}
             />
           ) : (
             <Card>

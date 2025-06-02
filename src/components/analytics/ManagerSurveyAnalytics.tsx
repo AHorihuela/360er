@@ -17,6 +17,7 @@ interface ManagerSurveyAnalyticsProps {
   feedbackRequests: DashboardFeedbackRequest[];
   questionIdToTextMap: Record<string, string>;
   employeeFilters?: string[];
+  minReviewCount?: number;
 }
 
 // Helper function to get color based on score
@@ -44,7 +45,8 @@ function getScoreColor(score: number): { bg: string, border: string, text: strin
 export function ManagerSurveyAnalytics({ 
   feedbackRequests, 
   questionIdToTextMap,
-  employeeFilters = []
+  employeeFilters = [],
+  minReviewCount = 1
 }: ManagerSurveyAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
   
@@ -162,18 +164,71 @@ export function ManagerSurveyAnalytics({
       0
     );
     
-    // Sort managers by score
-    const sortedManagers = Object.values(managerScores)
+    // Filter managers by minimum review count and sort by score
+    const filteredManagers = Object.values(managerScores)
+      .filter(manager => manager.responsesCount >= minReviewCount)
       .sort((a, b) => b.averageScore - a.averageScore);
     
+    // Recalculate overall average and question averages for filtered managers
+    const filteredQuestionAverages = Object.entries(allNumericResponses).map(([questionId, scores]) => {
+      // Get scores only from managers that meet the minimum review count
+      const filteredScores: number[] = [];
+      Object.values(managerScores).forEach(manager => {
+        if (manager.responsesCount >= minReviewCount && manager.questionScores[questionId]) {
+          filteredScores.push(...manager.questionScores[questionId]);
+        }
+      });
+      
+      if (filteredScores.length === 0) {
+        return {
+          questionId,
+          questionText: questionIdToTextMap[questionId] || `Question ${questionId}`,
+          average: 0,
+          count: 0,
+          distribution: {},
+          scores: []
+        };
+      }
+      
+      const average = filteredScores.reduce((sum, score) => sum + score, 0) / filteredScores.length;
+      return {
+        questionId,
+        questionText: questionIdToTextMap[questionId] || `Question ${questionId}`,
+        average,
+        count: filteredScores.length,
+        distribution: filteredScores.reduce((dist, score) => {
+          dist[score] = (dist[score] || 0) + 1;
+          return dist;
+        }, {} as Record<number, number>),
+        scores: filteredScores
+      };
+    }).sort((a, b) => b.average - a.average);
+    
+    // Calculate overall average for filtered data
+    const filteredOverallAverage = filteredQuestionAverages.length > 0 
+      ? filteredQuestionAverages.reduce(
+          (sum, q) => sum + q.average * q.count, 
+          0
+        ) / filteredQuestionAverages.reduce(
+          (sum, q) => sum + q.count, 
+          0
+        )
+      : 0;
+    
+    // Calculate total responses for filtered managers
+    const filteredTotalResponses = filteredManagers.reduce(
+      (sum, manager) => sum + manager.responsesCount, 
+      0
+    );
+    
     return {
-      overallAverage,
-      questionAverages,
-      totalResponses,
-      totalManagers,
-      managerScores: sortedManagers
+      overallAverage: filteredOverallAverage,
+      questionAverages: filteredQuestionAverages,
+      totalResponses: filteredTotalResponses,
+      totalManagers: filteredManagers.length,
+      managerScores: filteredManagers
     };
-  }, [filteredRequests, questionIdToTextMap]);
+  }, [filteredRequests, questionIdToTextMap, minReviewCount]);
   
   // If no data, show a message
   if (analyticsData.totalResponses === 0) {
