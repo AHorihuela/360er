@@ -75,6 +75,22 @@ export async function exportToPDF(
   const htmlContent = marked.parse(cleanedContent);
   if (typeof htmlContent === 'string') {
     tempDiv.innerHTML = htmlContent;
+    
+    // Fix H2 spacing issues specifically - this is the targeted fix for the spacing problem
+    const h2Elements = tempDiv.querySelectorAll('h2');
+    h2Elements.forEach(h2 => {
+      if (h2.textContent) {
+        // Apply spacing fixes specifically to H2 text content
+        h2.textContent = h2.textContent
+          .replace(/OverallAssessment/g, 'Overall Assessment')
+          .replace(/ManagerEffectiveness/g, 'Manager Effectiveness') 
+          .replace(/SurveyAnalytics/g, 'Survey Analytics')
+          .replace(/RecommendedActions/g, 'Recommended Actions')
+          .replace(/ActionPlan/g, 'Action Plan')
+          .replace(/KeyInsights/g, 'Key Insights')
+          .replace(/([a-z])([A-Z])/g, '$1 $2'); // General camelCase fix
+      }
+    });
   }
   
   // Add custom styles for PDF
