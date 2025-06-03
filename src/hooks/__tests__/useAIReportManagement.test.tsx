@@ -15,38 +15,36 @@ vi.mock('../../lib/openai', () => ({
   })
 }));
 
-// Mock Supabase
-const mockSupabase = {
-  auth: {
-    getSession: vi.fn().mockResolvedValue({
-      data: { session: { user: { id: 'test-user-id' } } },
-      error: null
-    }),
-    refreshSession: vi.fn(),
-    getUser: vi.fn()
-  },
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({
-          data: {
-            id: '123',
-            review_cycle_id: 'cycle-123',
-            review_cycles: { user_id: 'test-user-id' }
-          },
-          error: null
-        })
-      }))
-    })),
-    upsert: vi.fn().mockResolvedValue({ error: null }),
-    update: vi.fn(() => ({
-      eq: vi.fn().mockResolvedValue({ error: null })
-    }))
-  }))
-};
-
+// Mock Supabase - define inline to avoid hoisting issues
 vi.mock('../../lib/supabase', () => ({
-  supabase: mockSupabase
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { user: { id: 'test-user-id' } } },
+        error: null
+      }),
+      refreshSession: vi.fn(),
+      getUser: vi.fn()
+    },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: '123',
+              review_cycle_id: 'cycle-123',
+              review_cycles: { user_id: 'test-user-id' }
+            },
+            error: null
+          })
+        }))
+      })),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      update: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ error: null })
+      }))
+    }))
+  }
 }));
 
 // Mock toast
@@ -198,23 +196,19 @@ describe('useAIReportManagement', () => {
       await promise;
     });
 
-    // Check that generateAIReport was called with the correct survey type
     expect(generateAIReport).toHaveBeenCalledWith(
-      'John Doe',
-      'Developer',
+      mockFeedbackRequest.employee?.name,
+      mockFeedbackRequest.employee?.role,
       mockFeedbackRequest.feedback,
       'manager_effectiveness'
     );
   });
 
-  it('resets timer on error', async () => {
-    // Set up the rejected promise without throwing immediately
-    const testError = new Error('Test error');
-    
-    // Use mockImplementationOnce to avoid unhandled rejection
-    const originalMock = vi.mocked(generateAIReport);
-    vi.mocked(generateAIReport).mockImplementationOnce(() => Promise.reject(testError));
-    
+  it('handles errors during report generation', async () => {
+    // Mock generateAIReport to throw an error
+    const mockGenerateAIReport = vi.mocked(generateAIReport);
+    mockGenerateAIReport.mockRejectedValueOnce(new Error('API Error'));
+
     const { result } = renderHook(() => useAIReportManagement({ 
       feedbackRequest: mockFeedbackRequest,
       surveyType: '360_review'
@@ -222,28 +216,92 @@ describe('useAIReportManagement', () => {
       wrapper: Wrapper
     });
 
-    // Start generating report
     await act(async () => {
       try {
         await result.current.handleGenerateReport();
-      } catch (e) {
-        // Expected error, catch it to prevent test failure
+      } catch {
+        // Expected error
       }
+      await vi.runAllTimersAsync();
     });
 
-    // Wait for React to update state after error handling
-    await vi.runAllTimersAsync();
-
-    // Timer should be reset after error
+    expect(result.current.error).toBe('API Error');
     expect(result.current.isGeneratingReport).toBe(false);
-    expect(result.current.startTime).toBeNull();
+    expect(result.current.aiReport).toBeNull();
+  });
+
+  it('tracks elapsed time during generation', async () => {
+    const { result } = renderHook(() => useAIReportManagement({ 
+      feedbackRequest: mockFeedbackRequest,
+      surveyType: '360_review'
+    }), {
+      wrapper: Wrapper
+    });
+
+    let generatePromise: Promise<void>;
+
+    await act(async () => {
+      generatePromise = result.current.handleGenerateReport();
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(result.current.isGeneratingReport).toBe(true);
+    expect(result.current.elapsedSeconds).toBeGreaterThan(0);
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+      await generatePromise;
+    });
+
+    expect(result.current.isGeneratingReport).toBe(false);
     expect(result.current.elapsedSeconds).toBe(0);
-    
-    // Check that the toast was called with the right error message
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Error',
-      description: 'Error generating report: Test error',
+  });
+
+  it('shows success toast when report is generated', async () => {
+    const { result } = renderHook(() => useAIReportManagement({ 
+      feedbackRequest: mockFeedbackRequest,
+      surveyType: '360_review'
+    }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      const promise = result.current.handleGenerateReport();
+      await vi.runAllTimersAsync();
+      await promise;
+    });
+
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Report generated successfully',
+      description: 'The AI report has been generated and is now visible below.',
+      variant: 'default'
+    });
+  });
+
+  it('shows error toast when generation fails', async () => {
+    const mockGenerateAIReport = vi.mocked(generateAIReport);
+    mockGenerateAIReport.mockRejectedValueOnce(new Error('Generation failed'));
+
+    const { result } = renderHook(() => useAIReportManagement({ 
+      feedbackRequest: mockFeedbackRequest,
+      surveyType: '360_review'
+    }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      try {
+        await result.current.handleGenerateReport();
+      } catch {
+        // Expected error
+      }
+      await vi.runAllTimersAsync();
+    });
+
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Error generating report',
+      description: 'Generation failed',
       variant: 'destructive'
-    }));
+    });
   });
 }); 
