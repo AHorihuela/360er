@@ -62,7 +62,7 @@ export function useFeedbackPreSubmissionAnalysis({ feedbackRequestId }: UseFeedb
       callbacks.onStepComplete();
       
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4o",
         messages: [
           { 
             role: "system", 
@@ -147,7 +147,7 @@ ${feedbackData.areas_for_improvement}`
             strengths: feedbackData.strengths,
             areas_for_improvement: feedbackData.areas_for_improvement,
             analysis: analysis,
-            model_version: 'gpt-4',
+            model_version: 'gpt-4o',
             prompt_version: '1.0'
           });
       } catch (error) {

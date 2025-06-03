@@ -37,7 +37,7 @@ app.post('/api/analyze-feedback', async (req, res) => {
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { 
@@ -79,7 +79,7 @@ Provide your response in this exact JSON format:
           strengths: strengths,
           areas_for_improvement: areas_for_improvement,
           analysis: analysis,
-          model_version: 'gpt-4',
+          model_version: 'gpt-4o',
           prompt_version: '1.0'
         });
     } catch (error) {

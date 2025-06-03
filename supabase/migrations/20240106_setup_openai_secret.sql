@@ -67,7 +67,7 @@ BEGIN
             'Content-Type', 'application/json'
         ),
         body := jsonb_build_object(
-            'model', 'gpt-4',
+            'model', 'gpt-4o',
             'messages', json_build_array(
                 jsonb_build_object(
                     'role', 'system',

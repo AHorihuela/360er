@@ -43,7 +43,7 @@ export default async function handler(req: any, res: any) {
     const { strengths, areas_for_improvement } = req.body;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Please analyze this feedback:
@@ -67,7 +67,7 @@ ${areas_for_improvement}` }
         strengths: strengths,
         areas_for_improvement: areas_for_improvement,
         analysis: analysis,
-        model_version: 'gpt-4',
+        model_version: 'gpt-4o',
         prompt_version: '1.0'
       });
 

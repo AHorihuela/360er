@@ -370,7 +370,7 @@ describe('Feedback Processing Utils', () => {
       );
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4o",
         messages: expect.arrayContaining([
           expect.objectContaining({
             role: "system",
@@ -478,7 +478,7 @@ describe('Feedback Processing Utils', () => {
       const result = await analyzeAggregatePatterns(feedbackResponses, mockOpenAI as any);
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4o",
         messages: expect.arrayContaining([
           expect.objectContaining({
             role: "system",

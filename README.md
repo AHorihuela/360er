@@ -120,7 +120,7 @@ For detailed information about our analysis methodology and feedback framework, 
 - Supabase for database and authentication
 - Row Level Security (RLS) policies
 - Real-time data synchronization
-- OpenAI GPT-4 for report generation
+- OpenAI GPT-4o for report generation
 - Express.js for API endpoints
 - tRPC for type-safe API calls
 
