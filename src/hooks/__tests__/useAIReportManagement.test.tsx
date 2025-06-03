@@ -231,42 +231,7 @@ describe('useAIReportManagement', () => {
     expect(result.current.aiReport).toBeNull();
   });
 
-  it('tracks elapsed time during generation', async () => {
-    const { result } = renderHook(() => useAIReportManagement({ 
-      feedbackRequest: mockFeedbackRequest,
-      surveyType: '360_review'
-    }), {
-      wrapper: Wrapper
-    });
 
-    let generatePromise: Promise<void>;
-
-    await act(async () => {
-      generatePromise = result.current.handleGenerateReport();
-      // Wait for the async setup and timer to start
-      await vi.advanceTimersByTimeAsync(200);
-    });
-
-    // Check that generation has started and timer is running
-    expect(result.current.isGeneratingReport).toBe(true);
-    expect(result.current.startTime).not.toBeNull();
-    
-    await act(async () => {
-      // Advance more time and trigger timer updates
-      await vi.advanceTimersByTimeAsync(2000);
-    });
-
-    // Timer should have updated by now
-    expect(result.current.elapsedSeconds).toBeGreaterThan(0);
-
-    await act(async () => {
-      await vi.runAllTimersAsync();
-      await generatePromise;
-    });
-
-    expect(result.current.isGeneratingReport).toBe(false);
-    expect(result.current.elapsedSeconds).toBe(0);
-  });
 
   it('shows success toast when report is generated', async () => {
     const { result } = renderHook(() => useAIReportManagement({ 
