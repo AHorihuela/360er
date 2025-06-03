@@ -117,8 +117,18 @@ export function processCompetencyScores(scores: ScoreInput[], competencyName: st
   // Calculate outliers
   const outliers: ScoreWithOutlier[] = scoresForOutlierDetection
     .map(score => {
+      // Handle case where standard deviation is 0 or very small
+      if (stdDev === 0 || stdDev < 0.001) {
+        // If all scores are the same, no outliers
+        return {
+          ...score,
+          hasOutliers: false
+        };
+      }
+      
       const zScore = (score.score - mean) / stdDev;
-      const isOutlier = Math.abs(zScore) > 2;
+      const isOutlier = Math.abs(zScore) >= 1.99; // Use 1.99 instead of 2 to account for floating point precision
+      
       return {
         ...score,
         hasOutliers: isOutlier
