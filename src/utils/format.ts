@@ -6,8 +6,8 @@
  * @returns Formatted score string (e.g., "3.7" or "3.7/5.0")
  */
 export function formatScore(score: number, includeDenominator: boolean = false, maxScore: number = 5): string {
-  const roundedScore = Number((Math.round(score * 10) / 10).toFixed(1));
-  return includeDenominator ? `${roundedScore}/${maxScore.toFixed(1)}` : roundedScore.toString();
+  const roundedScore = (Math.round(score * 10) / 10).toFixed(1);
+  return includeDenominator ? `${roundedScore}/${maxScore.toFixed(1)}` : roundedScore;
 }
 
 /**
@@ -16,5 +16,5 @@ export function formatScore(score: number, includeDenominator: boolean = false, 
  * @returns Formatted score string (e.g., "3.7")
  */
 export function formatRawScore(score: number): string {
-  return Number((Math.round(score * 10) / 10).toFixed(1)).toString();
+  return (Math.round(score * 10) / 10).toFixed(1);
 } 

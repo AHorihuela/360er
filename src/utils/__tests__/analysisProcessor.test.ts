@@ -99,7 +99,7 @@ describe('Analysis Processor Utils', () => {
   describe('processAnalysis', () => {
     describe('Successful Analysis Flow', () => {
       beforeEach(async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         (analyzeRelationshipFeedback as any).mockResolvedValue({
           key_insights: ['Insight 1'],
           competency_scores: [
@@ -135,7 +135,7 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should analyze all relationship types', async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
 
         await processAnalysis(
           'test-request-id',
@@ -204,7 +204,7 @@ describe('Analysis Processor Utils', () => {
 
     describe('Error Handling', () => {
       it('should handle OpenAI API errors', async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         (analyzeRelationshipFeedback as any).mockRejectedValue(new Error('OpenAI API error'));
 
         await processAnalysis(
@@ -219,7 +219,7 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should handle database errors', async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         const { supabase } = await import('@/lib/supabase');
         
         (analyzeRelationshipFeedback as any).mockResolvedValue({
@@ -243,7 +243,7 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should handle unknown errors gracefully', async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         (analyzeRelationshipFeedback as any).mockRejectedValue('Unknown error type');
 
         await processAnalysis(
@@ -294,7 +294,7 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         expect(analyzeRelationshipFeedback).toHaveBeenCalledWith(
           'senior',
           partialGroupedFeedback.senior,
@@ -396,7 +396,7 @@ describe('Analysis Processor Utils', () => {
 
     describe('Aggregate Insights Calculation', () => {
       beforeEach(async () => {
-        const { analyzeRelationshipFeedback } = await import('./feedback');
+        const { analyzeRelationshipFeedback } = await import('../feedback');
         (analyzeRelationshipFeedback as any).mockImplementation((relationship) => {
           return Promise.resolve({
             key_insights: [`${relationship} insight`],
