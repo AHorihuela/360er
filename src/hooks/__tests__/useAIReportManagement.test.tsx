@@ -200,7 +200,8 @@ describe('useAIReportManagement', () => {
       mockFeedbackRequest.employee?.name,
       mockFeedbackRequest.employee?.role,
       mockFeedbackRequest.feedback,
-      'manager_effectiveness'
+      'manager_effectiveness',
+      undefined
     );
   });
 
@@ -225,7 +226,7 @@ describe('useAIReportManagement', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(result.current.error).toBe('API Error');
+    expect(result.current.error).toBe('Error generating report: API Error');
     expect(result.current.isGeneratingReport).toBe(false);
     expect(result.current.aiReport).toBeNull();
   });
@@ -242,10 +243,20 @@ describe('useAIReportManagement', () => {
 
     await act(async () => {
       generatePromise = result.current.handleGenerateReport();
-      await vi.advanceTimersByTimeAsync(100);
+      // Wait for the async setup and timer to start
+      await vi.advanceTimersByTimeAsync(200);
     });
 
+    // Check that generation has started and timer is running
     expect(result.current.isGeneratingReport).toBe(true);
+    expect(result.current.startTime).not.toBeNull();
+    
+    await act(async () => {
+      // Advance more time and trigger timer updates
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    // Timer should have updated by now
     expect(result.current.elapsedSeconds).toBeGreaterThan(0);
 
     await act(async () => {
@@ -299,8 +310,8 @@ describe('useAIReportManagement', () => {
     });
 
     expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error generating report',
-      description: 'Generation failed',
+      title: 'Error',
+      description: 'Error generating report: Generation failed',
       variant: 'destructive'
     });
   });
