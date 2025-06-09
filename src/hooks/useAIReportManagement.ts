@@ -6,6 +6,7 @@ import { debounce } from 'lodash';
 import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
 import { ReviewCycleType } from '../types/survey';
 import { CoreFeedbackResponse } from '../types/feedback/base';
+import { useAuth } from './useAuth';
 
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
@@ -23,6 +24,7 @@ export function useAIReportManagement({
   surveyQuestionOrder
 }: UseAIReportManagementProps) {
   const { toast } = useToast();
+  const { checkMasterAccountStatus } = useAuth();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<AIReportType | null>(() => {
     // Initialize with existing report if available
@@ -209,32 +211,23 @@ export function useAIReportManagement({
         throw new Error('Access denied: Cannot access this feedback request.');
       }
 
-      // Check if user owns the feedback request OR is a master account (in dev mode)
+      // Check if user owns the feedback request OR is a master account
       const isOwner = (verifyData.review_cycles as any).user_id === currentSession.user.id;
       
       if (!isOwner) {
-        // In development mode, check if user is a master account
-        if (import.meta.env.DEV) {
-          console.log('Debug: Checking master account status for development bypass...');
+        console.log('Debug: User does not own feedback request, checking master account status...');
+        
+        try {
+          const isMasterAccount = await checkMasterAccountStatus(currentSession.user.id);
           
-          try {
-            const { data: masterCheck, error: masterError } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', currentSession.user.id)
-              .eq('role', 'master')
-              .single();
-            
-            if (!masterError && masterCheck) {
-              console.log('Debug: Development bypass granted - user is master account');
-              // Continue with report generation
-            } else {
-              throw new Error('Access denied: You do not own this feedback request.');
-            }
-          } catch (error) {
+          if (isMasterAccount) {
+            console.log('Debug: Access granted - user is master account');
+            // Continue with report generation
+          } else {
             throw new Error('Access denied: You do not own this feedback request.');
           }
-        } else {
+        } catch (error) {
+          console.error('Debug: Error checking master account status:', error);
           throw new Error('Access denied: You do not own this feedback request.');
         }
       }

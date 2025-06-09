@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useAIReportManagement } from '../useAIReportManagement';
 import { generateAIReport } from '../../lib/openai';
+import { supabase } from '../../lib/supabase';
 import { FeedbackRequest } from '@/types/reviews/employee-review';
 import { ReactNode } from 'react';
 
@@ -58,6 +59,14 @@ vi.mock('../../components/ui/use-toast', () => ({
 // Mock the toaster component to prevent React rendering issues
 vi.mock('../../components/ui/toaster', () => ({
   Toaster: () => null
+}));
+
+// Mock useAuth
+const mockCheckMasterAccountStatus = vi.fn();
+vi.mock('../useAuth', () => ({
+  useAuth: () => ({
+    checkMasterAccountStatus: mockCheckMasterAccountStatus
+  })
 }));
 
 const mockFeedbackRequest: FeedbackRequest = {
@@ -277,6 +286,108 @@ describe('useAIReportManagement', () => {
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Error',
       description: 'Error generating report: Generation failed',
+      variant: 'destructive'
+    });
+  });
+
+  it('allows master accounts to generate reports for feedback requests they do not own', async () => {
+    // Mock the feedback request to belong to a different user
+    const mockSupabase = vi.mocked(supabase);
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: '123',
+              review_cycle_id: 'cycle-123',
+              review_cycles: { user_id: 'different-user-id' } // Different from the current user
+            },
+            error: null
+          })
+        })
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null })
+      })
+    } as any);
+
+    // Mock checkMasterAccountStatus to return true (user is a master account)
+    mockCheckMasterAccountStatus.mockResolvedValue(true);
+
+    const { result } = renderHook(() => useAIReportManagement({ 
+      feedbackRequest: mockFeedbackRequest,
+      surveyType: '360_review'
+    }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      const promise = result.current.handleGenerateReport();
+      await vi.runAllTimersAsync();
+      await promise;
+    });
+
+    // Should successfully generate report
+    expect(result.current.aiReport).not.toBeNull();
+    expect(result.current.aiReport?.content).toBe('Mocked AI Report Content');
+    expect(mockCheckMasterAccountStatus).toHaveBeenCalledWith('test-user-id');
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Report generated successfully',
+      description: 'The AI report has been generated and is now visible below.',
+      variant: 'default'
+    });
+  });
+
+  it('denies access to non-master accounts for feedback requests they do not own', async () => {
+    // Mock the feedback request to belong to a different user
+    const mockSupabase = vi.mocked(supabase);
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              id: '123',
+              review_cycle_id: 'cycle-123',
+              review_cycles: { user_id: 'different-user-id' } // Different from the current user
+            },
+            error: null
+          })
+        })
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null })
+      })
+    } as any);
+
+    // Mock checkMasterAccountStatus to return false (user is not a master account)
+    mockCheckMasterAccountStatus.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useAIReportManagement({ 
+      feedbackRequest: mockFeedbackRequest,
+      surveyType: '360_review'
+    }), {
+      wrapper: Wrapper
+    });
+
+    await act(async () => {
+      try {
+        await result.current.handleGenerateReport();
+      } catch {
+        // Expected error
+      }
+      await vi.runAllTimersAsync();
+    });
+
+    // Should fail with access denied error
+    expect(result.current.error).toBe('Error generating report: Access denied: You do not own this feedback request.');
+    expect(result.current.isGeneratingReport).toBe(false);
+    expect(result.current.aiReport).toBeNull();
+    expect(mockCheckMasterAccountStatus).toHaveBeenCalledWith('test-user-id');
+    expect(mockToast).toHaveBeenCalledWith({
+      title: 'Error',
+      description: 'Error generating report: Access denied: You do not own this feedback request.',
       variant: 'destructive'
     });
   });
