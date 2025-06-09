@@ -14,9 +14,22 @@ import { ReviewCycleType, SurveyQuestion, StructuredResponses } from '@/types/su
 import { DynamicSurveyForm } from '@/components/survey/DynamicSurveyForm';
 import { getSurveyQuestions, submitSurveyResponses } from '@/api/surveyQuestions';
 import { Button } from '@/components/ui/button';
+import { debugFeedbackRequestState, validateDueDateAccess, testDatabasePolicyEnforcement } from '@/utils/dueDateValidation';
 
 function generateSessionId() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// Helper function to check if review cycle is still accepting submissions
+function isReviewCycleOpen(reviewByDate: string): boolean {
+  const dueDate = new Date(reviewByDate);
+  const currentDate = new Date();
+  
+  // Set both dates to midnight for fair comparison
+  dueDate.setHours(23, 59, 59, 999); // End of due date
+  currentDate.setHours(0, 0, 0, 0);   // Start of current date
+  
+  return currentDate <= dueDate;
 }
 
 export function FeedbackFormPage() {
@@ -29,6 +42,7 @@ export function FeedbackFormPage() {
   const [sessionId] = useState(() => generateSessionId());
   const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestion[]>([]);
   const [isSurveySubmitting, setIsSurveySubmitting] = useState(false);
+  const [isDueDatePassed, setIsDueDatePassed] = useState(false);
 
   const { submitFeedback, isSubmitting } = useFeedbackSubmission();
   const {
@@ -68,20 +82,34 @@ export function FeedbackFormPage() {
 
         const request = await fetchFeedbackRequest();
         
-        if (request && request.review_cycle && 'type' in request.review_cycle) {
-          // Fetch questions based on the review cycle type
-          const cycleType = request.review_cycle.type as unknown as ReviewCycleType;
-          console.log('FeedbackFormPage - Found review cycle type:', cycleType);
+        if (request && request.review_cycle) {
+          // Removed debug function that was creating test records in database
           
-          try {
-            const questions = await getSurveyQuestions(cycleType);
-            console.log('FeedbackFormPage - Loaded survey questions:', questions);
-            setSurveyQuestions(questions);
-          } catch (error) {
-            console.error('FeedbackFormPage - Error loading survey questions:', error);
+          // Check if due date has passed
+          const isOpen = isReviewCycleOpen(request.review_cycle.review_by_date);
+          setIsDueDatePassed(!isOpen);
+          
+          if (!isOpen) {
+            console.log('Review cycle due date has passed:', request.review_cycle.review_by_date);
+            // Don't show toast - the dedicated "Feedback Period Closed" page is sufficient
+            return;
           }
-        } else {
-          console.warn('FeedbackFormPage - Unable to determine review cycle type from:', request?.review_cycle);
+          
+          if ('type' in request.review_cycle) {
+            // Fetch questions based on the review cycle type
+            const cycleType = request.review_cycle.type as unknown as ReviewCycleType;
+            console.log('FeedbackFormPage - Found review cycle type:', cycleType);
+            
+            try {
+              const questions = await getSurveyQuestions(cycleType);
+              console.log('FeedbackFormPage - Loaded survey questions:', questions);
+              setSurveyQuestions(questions);
+            } catch (error) {
+              console.error('FeedbackFormPage - Error loading survey questions:', error);
+            }
+          } else {
+            console.warn('FeedbackFormPage - Unable to determine review cycle type from:', request?.review_cycle);
+          }
         }
       } catch (error) {
         console.error('Error fetching feedback request:', error);
@@ -480,6 +508,48 @@ export function FeedbackFormPage() {
         <p className="max-w-md text-muted-foreground">
           This feedback link is invalid or has expired. Please check the URL and try again.
         </p>
+      </div>
+    );
+  }
+
+  if (isDueDatePassed) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          {/* Icon */}
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+            <svg 
+              className="h-8 w-8 text-orange-600" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={1.5} 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" 
+              />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-gray-900">
+            Feedback Period Closed
+          </h1>
+
+          {/* Message */}
+          <p className="text-gray-600">
+            This review closed on{' '}
+            <span className="font-medium text-gray-900">
+              {new Date(feedbackRequest.review_cycle.review_by_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </span>.
+          </p>
+        </div>
       </div>
     );
   }
