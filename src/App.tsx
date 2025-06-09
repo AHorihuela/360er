@@ -24,6 +24,7 @@ import UpdatePasswordPage from '@/pages/auth/UpdatePasswordPage';
 import AnalyticsPage from '@/pages/analytics';
 import { MethodologyExplanation } from '@/components/methodology/MethodologyExplanation';
 import { Badge } from '@/components/ui/badge';
+import { Analytics } from '@vercel/analytics/react';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -590,6 +591,7 @@ function App() {
           <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
         </Routes>
       </Router>
+      <Analytics />
       <Toaster />
     </>
   );
