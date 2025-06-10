@@ -525,6 +525,8 @@ export default function AnalyticsPage() {
               questionIdToTextMap={surveyQuestions}
               employeeFilters={selectedEmployeeIds}
               minReviewCount={minReviewCount}
+              reviewCycleId={activeReviewCycle!.id}
+              enableNavigation={true}
             />
           ) : (
             <Card>

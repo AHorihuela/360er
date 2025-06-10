@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -18,6 +19,8 @@ interface ManagerSurveyAnalyticsProps {
   questionIdToTextMap: Record<string, string>;
   employeeFilters?: string[];
   minReviewCount?: number;
+  reviewCycleId?: string;
+  enableNavigation?: boolean;
 }
 
 // Helper function to get color based on score
@@ -46,9 +49,23 @@ export function ManagerSurveyAnalytics({
   feedbackRequests, 
   questionIdToTextMap,
   employeeFilters = [],
-  minReviewCount = 1
+  minReviewCount = 1,
+  reviewCycleId,
+  enableNavigation = true
 }: ManagerSurveyAnalyticsProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const navigate = useNavigate();
+  
+  // Function to handle manager name clicks
+  const handleManagerClick = (manager: { employeeId: string; reviewCycleId: string; name: string }) => {
+    if (!enableNavigation || !manager.employeeId || !manager.reviewCycleId) {
+      console.warn('Navigation disabled or missing required data for manager:', manager.name);
+      return;
+    }
+    
+    // Navigate to the detailed review page
+    navigate(`/reviews/${manager.reviewCycleId}/employee/${manager.employeeId}`);
+  };
   
   // Apply employee filters
   const filteredRequests = useMemo(() => {
@@ -70,7 +87,10 @@ export function ManagerSurveyAnalytics({
       name: string,
       averageScore: number,
       responsesCount: number,
-      questionScores: Record<string, number[]>
+      questionScores: Record<string, number[]>,
+      // Navigation data
+      employeeId: string,
+      reviewCycleId: string
     }> = {};
     
     filteredRequests.forEach(request => {
@@ -85,7 +105,10 @@ export function ManagerSurveyAnalytics({
           name: managerName,
           averageScore: 0,
           responsesCount: 0,
-          questionScores: {}
+          questionScores: {},
+          // Add navigation data
+          employeeId: request.employee_id,
+          reviewCycleId: request.review_cycle_id
         };
         totalManagers++;
       }
@@ -384,6 +407,8 @@ export function ManagerSurveyAnalytics({
                 <ManagerComparisonChart 
                   managerScores={analyticsData.managerScores}
                   questionIdToTextMap={questionIdToTextMap}
+                  reviewCycleId={reviewCycleId}
+                  enableNavigation={enableNavigation}
                 />
               </div>
             )}
@@ -398,7 +423,16 @@ export function ManagerSurveyAnalytics({
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-base font-medium">{analyticsData.managerScores[0].name}</h3>
+                      <h3 
+                        className={cn(
+                          "text-base font-medium",
+                          enableNavigation && "cursor-pointer hover:text-primary transition-colors"
+                        )}
+                        onClick={() => enableNavigation && handleManagerClick(analyticsData.managerScores[0])}
+                        title={enableNavigation ? "Click to view detailed review" : undefined}
+                      >
+                        {analyticsData.managerScores[0].name}
+                      </h3>
                       <div className={cn(
                         "text-sm font-medium px-2 py-1 rounded",
                         getScoreColor(analyticsData.managerScores[0].averageScore).bg,
@@ -420,7 +454,14 @@ export function ManagerSurveyAnalytics({
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-base font-medium">
+                      <h3 
+                        className={cn(
+                          "text-base font-medium",
+                          enableNavigation && "cursor-pointer hover:text-primary transition-colors"
+                        )}
+                        onClick={() => enableNavigation && handleManagerClick(analyticsData.managerScores[analyticsData.managerScores.length - 1])}
+                        title={enableNavigation ? "Click to view detailed review" : undefined}
+                      >
                         {analyticsData.managerScores[analyticsData.managerScores.length - 1].name}
                       </h3>
                       <div className={cn(
@@ -532,7 +573,16 @@ export function ManagerSurveyAnalytics({
                   <Card key={manager.name} className="overflow-hidden">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-base">{manager.name}</CardTitle>
+                        <CardTitle 
+                          className={cn(
+                            "text-base",
+                            enableNavigation && "cursor-pointer hover:text-primary transition-colors"
+                          )}
+                          onClick={() => enableNavigation && handleManagerClick(manager)}
+                          title={enableNavigation ? "Click to view detailed review" : undefined}
+                        >
+                          {manager.name}
+                        </CardTitle>
                         <div className={cn(
                           "text-sm font-medium px-2 py-1 rounded",
                           scoreColor.bg,

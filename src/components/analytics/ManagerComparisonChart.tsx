@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ResponsiveContainer, 
@@ -24,8 +25,14 @@ interface ManagerComparisonChartProps {
     averageScore: number;
     responsesCount: number;
     questionScores: Record<string, number[]>;
+    // Navigation data
+    employeeId: string;
+    reviewCycleId: string;
   }>;
   questionIdToTextMap: Record<string, string>;
+  // New props for navigation
+  reviewCycleId?: string;
+  enableNavigation?: boolean;
 }
 
 interface ChartDataItem {
@@ -36,9 +43,26 @@ interface ChartDataItem {
   formattedScore: string;
 }
 
-export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: ManagerComparisonChartProps) {
+export function ManagerComparisonChart({ 
+  managerScores, 
+  questionIdToTextMap, 
+  reviewCycleId,
+  enableNavigation = true 
+}: ManagerComparisonChartProps) {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>('overall');
   const [showAll, setShowAll] = useState<boolean>(false);
+  const navigate = useNavigate();
+  
+  // Function to handle manager name clicks
+  const handleManagerClick = (manager: { employeeId: string; reviewCycleId: string; name: string }) => {
+    if (!enableNavigation || !manager.employeeId || !manager.reviewCycleId) {
+      console.warn('Navigation disabled or missing required data for manager:', manager.name);
+      return;
+    }
+    
+    // Navigate to the detailed review page
+    navigate(`/reviews/${manager.reviewCycleId}/employee/${manager.employeeId}`);
+  };
   
   // Configuration for how many managers to show by default
   const DEFAULT_VISIBLE_COUNT = 10;
@@ -238,7 +262,44 @@ export function ManagerComparisonChart({ managerScores, questionIdToTextMap }: M
                 axisLine={false}
                 stroke="#94a3b8"
                 interval={0}
-                tick={{ fontSize: 12, width: 140 }}
+                tick={(props) => {
+                  const { x, y, payload } = props;
+                  const manager = managerScores.find(m => m.name === payload.value);
+                  
+                  return (
+                    <g transform={`translate(${x},${y})`}>
+                      <text
+                        x={0}
+                        y={0}
+                        dy={4}
+                        textAnchor="end"
+                        fill="#94a3b8"
+                        fontSize={12}
+                        style={{
+                          fontFamily: 'inherit',
+                          cursor: enableNavigation ? 'pointer' : 'default'
+                        }}
+                        onClick={() => {
+                          if (manager && enableNavigation) {
+                            handleManagerClick(manager);
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          if (enableNavigation) {
+                            (e.target as SVGTextElement).style.fill = '#64748b';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (enableNavigation) {
+                            (e.target as SVGTextElement).style.fill = '#94a3b8';
+                          }
+                        }}
+                      >
+                        {payload.value}
+                      </text>
+                    </g>
+                  );
+                }}
               />
               {/* Add reference lines for score benchmarks */}
               <ReferenceLine x={3} stroke="#f59e0b" strokeDasharray="3 3" />
