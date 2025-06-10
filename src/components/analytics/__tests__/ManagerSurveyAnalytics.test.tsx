@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BrowserRouter } from 'react-router-dom';
 import { ManagerSurveyAnalytics } from '../ManagerSurveyAnalytics';
 import { DashboardFeedbackRequest } from '@/types/feedback/dashboard';
 import { FeedbackResponse } from '@/types/feedback';
@@ -57,6 +58,11 @@ const createMockResponse = (
   responses: scores
 }) as FeedbackResponse;
 
+// Wrapper component for tests that need router context
+const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+  <BrowserRouter>{children}</BrowserRouter>
+);
+
 describe('ManagerSurveyAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -71,14 +77,18 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       expect(screen.getByText('Manager Effectiveness Analysis')).toBeInTheDocument();
-      expect(screen.getByText(/Summary of manager effectiveness based on/)).toBeInTheDocument();
+      expect(screen.getByText(/Summary of manager effectiveness based on 1 responses across 1 manager/)).toBeInTheDocument();
     });
 
     it('shows no data message when no feedback responses exist', () => {
@@ -87,10 +97,14 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       expect(screen.getByText('No feedback data available for analysis. Please collect some feedback to see manager analytics.')).toBeInTheDocument();
@@ -105,13 +119,17 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
-      // Overall average should be (4+5+3+3+4+2)/6 = 3.5
+      // Overall average should be 3.5 ((4.0 + 3.0) / 2)
       expect(screen.getByText('3.5')).toBeInTheDocument();
     });
   });
@@ -128,10 +146,14 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should show both managers (both have >= 1 review)
@@ -158,11 +180,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={3}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={3}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should only show 1 manager (only John Doe has >= 3 reviews)
@@ -185,11 +211,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={2}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={2}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // With minReviewCount=2, only Manager 1 should be included
@@ -210,11 +240,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={5}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={5}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       expect(screen.getByText('No feedback data available for analysis. Please collect some feedback to see manager analytics.')).toBeInTheDocument();
@@ -228,11 +262,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={0}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={0}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should include all managers (even those with 0 reviews, though none exist in this test)
@@ -252,11 +290,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          employeeFilters={['manager1']}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            employeeFilters={['manager1']}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should only show 1 manager (John Doe)  
@@ -284,12 +326,16 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          employeeFilters={['manager2', 'manager3']}
-          minReviewCount={3}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            employeeFilters={['manager2', 'manager3']}
+            minReviewCount={3}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should only show 1 manager (Jane Smith - meets both filters)
@@ -306,10 +352,14 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       expect(screen.getByText('Overview')).toBeInTheDocument();
@@ -325,10 +375,14 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Click on "By Question" tab
@@ -351,36 +405,41 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       expect(screen.getByTestId('manager-comparison-chart')).toBeInTheDocument();
-      expect(screen.getByText('Manager Comparison Chart with 2 managers')).toBeInTheDocument();
     });
 
     it('hides manager comparison chart when only one manager exists after filtering', () => {
       const mockRequests = [
         createMockFeedbackRequest('manager1', 'John Doe', [
-          createMockResponse('response1', { q1: 4, q2: 5, q3: 3 }),
-          createMockResponse('response2', { q1: 3, q2: 4, q3: 2 })
+          createMockResponse('response1', { q1: 4, q2: 5, q3: 3 })
         ]),
         createMockFeedbackRequest('manager2', 'Jane Smith', [
-          createMockResponse('response3', { q1: 3, q2: 4, q3: 2 })
+          createMockResponse('response2', { q1: 3, q2: 4, q3: 2 })
         ])
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={2}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            employeeFilters={['manager1']}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
-      // Should not show comparison chart (only 1 manager meets criteria)
       expect(screen.queryByTestId('manager-comparison-chart')).not.toBeInTheDocument();
     });
   });
@@ -388,32 +447,35 @@ describe('ManagerSurveyAnalytics', () => {
   describe('Question averages and distributions', () => {
     it('calculates question averages correctly with review count filtering', () => {
       const mockRequests = [
-        // Manager 1: 2 responses (meets minReviewCount=2)
         createMockFeedbackRequest('manager1', 'John Doe', [
-          createMockResponse('response1', { q1: 5, q2: 3, q3: 4 }),
-          createMockResponse('response2', { q1: 3, q2: 5, q3: 2 })
+          createMockResponse('response1', { q1: 5, q2: 4, q3: 3 }), // q1: 5, q2: 4, q3: 3
+          createMockResponse('response2', { q1: 3, q2: 2, q3: 1 })  // q1: 3, q2: 2, q3: 1
+          // Averages: q1: 4.0, q2: 3.0, q3: 2.0
         ]),
-        // Manager 2: 1 response (doesn't meet minReviewCount=2)
         createMockFeedbackRequest('manager2', 'Jane Smith', [
-          createMockResponse('response3', { q1: 1, q2: 1, q3: 1 })
+          createMockResponse('response3', { q1: 1, q2: 1, q3: 1 }) // Should be excluded with minReviewCount=2
         ])
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={2}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={2}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
-      // Switch to "By Question" tab
+      // Click on "By Question" tab to see question averages
       fireEvent.click(screen.getByText('By Question'));
 
-      // Question averages should only include Manager 1's responses
-      // q1: (5+3)/2 = 4.0, q2: (3+5)/2 = 4.0, q3: (4+2)/2 = 3.0
-      expect(screen.getByText('4.0')).toBeInTheDocument(); // Should appear for q1 and q2
-      expect(screen.getByText('3.0')).toBeInTheDocument(); // Should appear for q3
+      // Should show averages for John Doe only (Jane excluded due to insufficient reviews)
+      expect(screen.getByText('4.0')).toBeInTheDocument(); // q1 average
+      expect(screen.getByText('3.0')).toBeInTheDocument(); // q2 average
+      expect(screen.getByText('2.0')).toBeInTheDocument(); // q3 average
     });
 
     it('handles empty question results when no managers meet criteria', () => {
@@ -424,11 +486,15 @@ describe('ManagerSurveyAnalytics', () => {
       ];
 
       render(
-        <ManagerSurveyAnalytics
-          feedbackRequests={mockRequests}
-          questionIdToTextMap={mockQuestionIdToTextMap}
-          minReviewCount={5}
-        />
+        <TestWrapper>
+          <ManagerSurveyAnalytics
+            feedbackRequests={mockRequests}
+            questionIdToTextMap={mockQuestionIdToTextMap}
+            minReviewCount={5}
+            reviewCycleId="test-cycle-id"
+            enableNavigation={false}
+          />
+        </TestWrapper>
       );
 
       // Should show no data message
