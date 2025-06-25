@@ -1,10 +1,11 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
-const port = process.env.PORT || 5174; // Use a different port than Vite
+const port = process.env.API_PORT || 5174; // Use a different port than Vite
 
 app.use(cors());
 app.use(express.json());
