@@ -14,20 +14,8 @@ vi.mock('@/lib/supabase', () => ({
   }
 }));
 
-// Fix OpenAI mock - it's a named import, not default
-vi.mock('openai', () => ({
-  OpenAI: vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: vi.fn()
-      }
-    }
-  }))
-}));
-
-vi.mock('../feedback', () => ({
-  analyzeRelationshipFeedback: vi.fn()
-}));
+// Mock fetch for API calls
+global.fetch = vi.fn();
 
 vi.mock('@/constants/feedback', () => ({
   RELATIONSHIP_WEIGHTS: {
@@ -92,38 +80,36 @@ describe('Analysis Processor Utils', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Mock environment variable in a way that doesn't cause TypeScript errors
-    vi.stubGlobal('import.meta', {
-      env: { OPENAI_API_KEY: 'test-api-key' }
-    });
     
     // Reset Supabase mocks to good state
     const { supabase } = await import('@/lib/supabase');
     supabase.from = vi.fn().mockReturnValue({
       upsert: vi.fn().mockResolvedValue({ error: null })
     });
+
+    // Mock successful API responses
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        competency_scores: [
+          {
+            name: 'Leadership & Influence',
+            score: 4,
+            confidence: 'high',
+            description: 'Strong leadership',
+            evidenceCount: 2,
+            effectiveEvidenceCount: 2,
+            evidenceQuotes: ['Quote 1', 'Quote 2']
+          }
+        ],
+        key_insights: ['Insight 1']
+      })
+    });
   });
 
   describe('processAnalysis', () => {
     describe('Successful Analysis Flow', () => {
-      beforeEach(async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
-          key_insights: ['Insight 1'],
-          competency_scores: [
-            {
-              name: 'Leadership & Influence',
-              score: 4,
-              confidence: 'high',
-              description: 'Strong leadership',
-              evidenceCount: 2,
-              effectiveEvidenceCount: 2,
-              evidenceQuotes: ['Quote 1', 'Quote 2']
-            }
-          ]
-        });
-      });
+      // No additional setup needed - using global fetch mock
 
       it('should call stage callbacks in correct order', async () => {
         await processAnalysis(
@@ -145,9 +131,6 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should analyze all relationship types', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-
         await processAnalysis(
           'test-request-id',
           mockGroupedFeedback,
@@ -155,21 +138,36 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        expect(mockFn).toHaveBeenCalledWith(
-          'senior',
-          mockGroupedFeedback.senior,
-          expect.any(Object)
-        );
-        expect(mockFn).toHaveBeenCalledWith(
-          'peer',
-          mockGroupedFeedback.peer,
-          expect.any(Object)
-        );
-        expect(mockFn).toHaveBeenCalledWith(
-          'junior',
-          mockGroupedFeedback.junior,
-          expect.any(Object)
-        );
+        // Should make API calls for each relationship type
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'senior',
+            strengths: 'Strong leadership',
+            areas_for_improvement: 'Better delegation'
+          })
+        });
+
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'peer',
+            strengths: 'Technical expertise',
+            areas_for_improvement: 'Communication'
+          })
+        });
+
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'junior',
+            strengths: 'Mentoring',
+            areas_for_improvement: 'Strategic thinking'
+          })
+        });
       });
 
       it('should save analysis results to database', async () => {

@@ -59,13 +59,10 @@ describe('generateAIReport', () => {
       }
     ];
 
-    const result = await generateAIReport('John Doe', 'Manager', mockFeedbackResponses, '360_review');
-    
-    // Correct title for 360 reviews
-    expect(result).toContain('# 360-Degree Feedback Report for John Doe (Manager)');
-    
-    // Returns the mocked content
-    expect(result).toContain('Mocked AI response content');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport('John Doe', 'Manager', mockFeedbackResponses, '360_review')
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('formats manager effectiveness survey data correctly', async () => {
@@ -104,13 +101,10 @@ describe('generateAIReport', () => {
       }
     ];
 
-    const result = await generateAIReport('Jane Doe', 'Manager', mockFeedbackResponses, 'manager_effectiveness');
-    
-    // Correct title for manager effectiveness
-    expect(result).toContain('# Manager Effectiveness Report for Jane Doe (Manager)');
-    
-    // Returns the mocked content
-    expect(result).toContain('Mocked AI response content');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport('Jane Doe', 'Manager', mockFeedbackResponses, 'manager_effectiveness')
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('defaults to 360 review format when no surveyType provided', async () => {
@@ -128,19 +122,19 @@ describe('generateAIReport', () => {
       }
     ];
 
-    const result = await generateAIReport('John Doe', 'Manager', mockFeedbackResponses);
-    
-    // Defaults to 360 review title
-    expect(result).toContain('# 360-Degree Feedback Report for John Doe (Manager)');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport('John Doe', 'Manager', mockFeedbackResponses)
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('handles empty feedback responses gracefully', async () => {
     const mockEmptyResponses: CoreFeedbackResponse[] = [];
 
-    const result = await generateAIReport('John Doe', 'Manager', mockEmptyResponses, 'manager_effectiveness');
-    
-    // Should still generate a report
-    expect(result).toContain('# Manager Effectiveness Report for John Doe (Manager)');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport('John Doe', 'Manager', mockEmptyResponses, 'manager_effectiveness')
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('handles missing employee information gracefully', async () => {
@@ -158,10 +152,10 @@ describe('generateAIReport', () => {
       }
     ];
 
-    const result = await generateAIReport('', '', mockFeedbackResponses, 'manager_effectiveness');
-    
-    // Uses fallback values
-    expect(result).toContain('# Manager Effectiveness Report for  ()');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport('', '', mockFeedbackResponses, 'manager_effectiveness')
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('uses actual question text when surveyQuestions mapping is provided', async () => {
@@ -190,17 +184,16 @@ describe('generateAIReport', () => {
       'q3': 'What additional feedback would you like to provide?'
     };
 
-    const result = await generateAIReport(
-      'Jane Doe', 
-      'Manager', 
-      mockFeedbackResponses, 
-      'manager_effectiveness',
-      surveyQuestions
-    );
-    
-    // Should contain actual question text
-    expect(result).toContain('# Manager Effectiveness Report for Jane Doe (Manager)');
-    expect(result).toContain('Mocked AI response content');
+    // After security patch, this function throws an error
+    await expect(
+      generateAIReport(
+        'Jane Doe', 
+        'Manager', 
+        mockFeedbackResponses, 
+        'manager_effectiveness',
+        surveyQuestions
+      )
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
   });
 
   it('throws an error indicating the function has been moved server-side for security', async () => {
