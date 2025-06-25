@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 const openai = new OpenAI({
-  apiKey: process.env.VITE_OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY // Server-side only, secure environment variable
 });
 
 const supabase = createClient(
@@ -18,21 +18,47 @@ const supabase = createClient(
   process.env.VITE_SUPABASE_ANON_KEY!
 );
 
-const SYSTEM_PROMPT = `You are an expert in performance reviews and feedback. Analyze the provided feedback and provide structured suggestions for improvement. Focus on:
+const SYSTEM_PROMPT = `You are an expert in 360-degree performance reviews and feedback. You understand workplace dynamics, professional boundaries, and the different perspectives that come from various organizational relationships.
 
-1. Clarity: Is the feedback clear and easy to understand?
-2. Specificity: Does it include specific examples and behaviors?
-3. Actionability: Are there concrete suggestions for improvement?
-4. Tone: Is the feedback constructive and professional?
-5. Completeness: Are all aspects adequately addressed?
+Analyze the feedback and return a JSON object with the following structure:
+{
+  "overallQuality": "excellent" | "good" | "needs_improvement",
+  "summary": "A single paragraph summarizing the overall feedback quality",
+  "suggestions": [
+    {
+      "type": "critical" | "enhancement",
+      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
+      "suggestion": "The specific suggestion text",
+      "context": "The exact quote from the feedback that needs improvement",
+      "highlightStart": "The first few words of the section to highlight",
+      "highlightEnd": "The last few words of the section to highlight"
+    }
+  ]
+}
 
-Categorize suggestions as either 'critical' (must be addressed) or 'enhancement' (would improve but not essential).`;
+When analyzing feedback, consider:
+1. The reviewer's relationship to the employee (senior, peer, or junior) affects:
+   - The expected level of detail in improvement suggestions
+   - The scope of feedback they can reasonably provide
+   - The appropriate tone and perspective
+2. Focus on professional impact and work performance observations
+3. Understand that specific improvement suggestions are optional and depend on:
+   - The reviewer's role relative to the reviewee
+   - The reviewer's area of expertise
+   - The nature of their working relationship
+4. Maintain objectivity and professionalism in all suggestions
+5. Ensure feedback addresses observable behaviors and outcomes
+
+CRITICAL REQUIREMENTS:
+- The 'Areas for Improvement' section MUST contain different content from the 'Strengths' section
+- If the sections are identical or very similar, this should be treated as a critical issue and result in a 'needs_improvement' rating
+- Duplicate content between sections should be explicitly called out in the suggestions`;
 
 app.post('/api/analyze-feedback', async (req, res) => {
   try {
-    const { strengths, areas_for_improvement } = req.body;
+    const { relationship, strengths, areas_for_improvement } = req.body;
 
-    if (!process.env.VITE_OPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured');
     }
 
@@ -42,27 +68,13 @@ app.post('/api/analyze-feedback', async (req, res) => {
         { role: "system", content: SYSTEM_PROMPT },
         { 
           role: "user", 
-          content: `Please analyze this feedback:
+          content: `Please analyze this feedback. The reviewer's relationship to the employee is: ${relationship}.
 
 Strengths:
 ${strengths}
 
 Areas for Improvement:
-${areas_for_improvement}
-
-Provide your response in this exact JSON format:
-{
-  "overallQuality": "excellent" | "good" | "needs_improvement",
-  "summary": "A brief 1-2 sentence overview",
-  "suggestions": [
-    {
-      "type": "critical" | "enhancement",
-      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
-      "suggestion": "The specific suggestion",
-      "context": "The relevant text from the feedback (if applicable)"
-    }
-  ]
-}`
+${areas_for_improvement}`
         }
       ],
       temperature: 0.7,

@@ -1,11 +1,10 @@
-import { OpenAI } from 'openai';
 import { supabase } from '@/lib/supabase';
 import { type RelationshipInsight, type OpenAICompetencyScore } from "@/types/feedback/analysis";
 import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
-import { analyzeRelationshipFeedback } from './feedback';
 import { calculateConfidence as calculateComprehensiveConfidence } from "@/components/dashboard/utils";
 import type { ScoreWithOutlier } from "@/components/dashboard/types";
+import { analyzeRelationshipFeedback } from './feedback';
 
 interface GroupedFeedback {
   [key: string]: CoreFeedbackResponse[];
@@ -29,31 +28,24 @@ export async function processAnalysis(
   try {
     // Stage 0: Prepare
     callbacks.onStageChange(0);
-    const openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true
-    });
 
-    // Stage 1: Process feedback
+    // Stage 1: Process feedback through server-side API
     callbacks.onStageChange(1, 'SENIOR');
-    const seniorAnalysis = await analyzeRelationshipFeedback(
+    const seniorAnalysis = await analyzeRelationshipFeedbackViaAPI(
       'senior',
-      groupedFeedback.senior,
-      openai
+      groupedFeedback.senior
     );
 
     callbacks.onStageChange(1, 'PEER');
-    const peerAnalysis = await analyzeRelationshipFeedback(
+    const peerAnalysis = await analyzeRelationshipFeedbackViaAPI(
       'peer',
-      groupedFeedback.peer,
-      openai
+      groupedFeedback.peer
     );
 
     callbacks.onStageChange(1, 'JUNIOR');
-    const juniorAnalysis = await analyzeRelationshipFeedback(
+    const juniorAnalysis = await analyzeRelationshipFeedbackViaAPI(
       'junior',
-      groupedFeedback.junior,
-      openai
+      groupedFeedback.junior
     );
 
     callbacks.onStageChange(1, 'AGGREGATE');
@@ -96,6 +88,37 @@ export async function processAnalysis(
       : 'Failed to analyze feedback. Please try again later.';
     callbacks.onError(errorMessage);
   }
+}
+
+async function analyzeRelationshipFeedbackViaAPI(
+  relationship: string,
+  feedback: CoreFeedbackResponse[]
+) {
+  if (feedback.length === 0) {
+    return { competency_scores: [], key_insights: [] };
+  }
+
+  const combinedStrengths = feedback.map(f => f.strengths).join('\n\n');
+  const combinedImprovements = feedback.map(f => f.areas_for_improvement).join('\n\n');
+
+  const response = await fetch('/api/analyze-feedback', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      relationship,
+      strengths: combinedStrengths,
+      areas_for_improvement: combinedImprovements
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Analysis failed for ${relationship} feedback`);
+  }
+
+  return response.json();
 }
 
 function calculateAggregateInsights(

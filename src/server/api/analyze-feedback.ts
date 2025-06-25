@@ -2,19 +2,19 @@ import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY // Server-side only, secure environment variable
 });
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
+  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_SUPABASE_ANON_KEY!
 );
 
 export async function POST(request: Request) {
   try {
     const { strengths, areas_for_improvement } = await request.json();
 
-    if (!import.meta.env.VITE_OPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured');
     }
 

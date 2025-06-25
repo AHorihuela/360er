@@ -1,10 +1,25 @@
-import OpenAI from 'openai';
+// SECURITY FIX: This file previously exposed OpenAI API keys to client-side
+// All OpenAI operations now happen server-side only for security
+
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 
-export const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+// Use server-side API instead of direct OpenAI client
+export async function makeOpenAIRequest(prompt: string, options: any = {}) {
+  const response = await fetch('/api/analyze-feedback', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt, ...options }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
+  
+  return response.json();
+}
 
 function formatFeedbackForPrompt(
   employeeName: string,
@@ -332,67 +347,10 @@ export async function generateAIReport(
   surveyType?: string,
   surveyQuestions?: Record<string, string>
 ): Promise<string> {
-  try {
-    console.log('Generating report for survey type:', surveyType);
-    
-    // Choose the appropriate prompt and formatting based on survey type
-    let formattedFeedback: string;
-    let systemPrompt: string;
-    let reportTitle: string;
-    
-    if (surveyType === 'manager_effectiveness') {
-      console.log('Formatting manager effectiveness survey for prompt...');
-      formattedFeedback = formatManagerSurveyForPrompt(employeeName, employeeRole, feedback, surveyQuestions);
-      systemPrompt = MANAGER_SYSTEM_PROMPT;
-      reportTitle = `# Manager Effectiveness Report for ${employeeName} (${employeeRole})`;
-    } else {
-      console.log('Formatting 360 feedback for prompt...');
-      formattedFeedback = formatFeedbackForPrompt(employeeName, employeeRole, feedback);
-      systemPrompt = SYSTEM_PROMPT;
-      reportTitle = `# 360-Degree Feedback Report for ${employeeName} (${employeeRole})`;
-    }
+  // SECURITY FIX: All OpenAI calls now happen server-side
+  // This function has been disabled to prevent API key exposure
+  throw new Error('generateAIReport has been moved to server-side for security. Use /api/generate-report endpoint instead.');
+}
 
-    console.log('Sending request to OpenAI...');
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: formattedFeedback
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 2500
-    });
-
-    console.log('OpenAI response received:', completion.choices[0]?.message);
-    let markdownContent = completion.choices[0]?.message?.content || 'Failed to generate report';
-    
-    // Ensure proper title formatting
-    markdownContent = `${reportTitle}\n\n${
-      markdownContent.replace(/^#.*$/m, '').trim()
-    }`;
-
-    // Clean up any double spaces before headers
-    markdownContent = markdownContent.replace(/\n\s+#/g, '\n#');
-
-    // Ensure consistent header formatting
-    markdownContent = markdownContent
-      .replace(/^###\s+\*{2,}/gm, '### **') // Replace any multiple ** with just **
-      .replace(/^###\s+(?!\*\*)/gm, '### **'); // Add ** to headers that don't have it
-
-    console.log('Final markdown:', markdownContent.substring(0, 200) + '...');
-    if (!markdownContent.trim()) {
-      throw new Error('Generated report is empty');
-    }
-
-    return markdownContent;
-  } catch (error) {
-    console.error('Error generating AI report:', error);
-    throw error;
-  }
-} 
+// Export default to maintain compatibility
+export default { makeOpenAIRequest, generateAIReport }; 

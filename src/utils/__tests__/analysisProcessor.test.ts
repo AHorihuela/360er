@@ -94,7 +94,7 @@ describe('Analysis Processor Utils', () => {
     vi.clearAllMocks();
     // Mock environment variable in a way that doesn't cause TypeScript errors
     vi.stubGlobal('import.meta', {
-      env: { VITE_OPENAI_API_KEY: 'test-api-key' }
+      env: { OPENAI_API_KEY: 'test-api-key' }
     });
     
     // Reset Supabase mocks to good state
@@ -445,7 +445,7 @@ describe('Analysis Processor Utils', () => {
 
         // Restore API key
         vi.stubGlobal('import.meta', {
-          env: { VITE_OPENAI_API_KEY: 'test-api-key' }
+          env: { OPENAI_API_KEY: 'test-api-key' }
         });
       });
     });
