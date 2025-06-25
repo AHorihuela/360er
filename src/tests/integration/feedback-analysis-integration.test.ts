@@ -75,10 +75,11 @@ describe('Feedback Analysis API Integration Tests', () => {
     it('should validate that both frontend and backend servers are required', async () => {
       // This test documents the requirement for running both servers
       
-             // 1. Check that Vite dev server proxy is configured
-       const viteConfigExists = await import('../../../vite.config.ts')
-         .then(() => true)
-         .catch(() => false);
+      // 1. Check that Vite config file exists
+      const fs = await import('fs');
+      const path = await import('path');
+      const viteConfigPath = path.resolve(process.cwd(), 'vite.config.ts');
+      const viteConfigExists = fs.existsSync(viteConfigPath);
       
       expect(viteConfigExists).toBe(true);
       
@@ -203,10 +204,14 @@ describe('Feedback Analysis API Integration Tests', () => {
 
          it('should validate Vite proxy configuration', async () => {
        // This test ensures the proxy is configured correctly
-       const viteConfig = await import('../../../vite.config.ts');
+       const fs = await import('fs');
+       const path = await import('path');
+       const viteConfigPath = path.resolve(process.cwd(), 'vite.config.ts');
+       const configContent = fs.readFileSync(viteConfigPath, 'utf8');
        
-       expect(viteConfig.default).toBeDefined();
-       // Additional validation could be added here to check proxy config
+       // Check that proxy configuration exists in the file
+       expect(configContent).toContain('proxy');
+       expect(configContent).toContain('/api');
      });
   });
 }); 
