@@ -202,4 +202,57 @@ describe('generateAIReport', () => {
     expect(result).toContain('# Manager Effectiveness Report for Jane Doe (Manager)');
     expect(result).toContain('Mocked AI response content');
   });
+
+  it('throws an error indicating the function has been moved server-side for security', async () => {
+    const mockFeedback = [
+      {
+        id: '1',
+        strengths: 'Great team player',
+        areas_for_improvement: 'Could improve time management',
+        reviewer_relationship: 'peer' as const,
+        feedback_request_id: 'req-1',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        submitted_at: '2024-01-01T00:00:00Z',
+        status: 'completed' as const,
+        session_id: 'session-1',
+        relationship: 'peer' as const,
+        severity: 'normal' as const
+      }
+    ];
+
+    await expect(
+      generateAIReport(
+        'John Doe',
+        'Software Engineer',
+        mockFeedback,
+        '360_review'
+      )
+    ).rejects.toThrow('generateAIReport has been moved to server-side for security');
+  });
+
+  it('provides guidance on using the server-side endpoint', async () => {
+    await expect(
+      generateAIReport(
+        'Jane Smith',
+        'Product Manager',
+        [],
+        'manager_effectiveness'
+      )
+    ).rejects.toThrow('Use /api/generate-report endpoint instead');
+  });
+
+  // Test that all function signatures still work (for backward compatibility)
+  it('maintains function signature compatibility', async () => {
+    const testCall = () => generateAIReport(
+      'Test Employee',
+      'Test Role',
+      [],
+      'manager_effectiveness',
+      { 'q1': 'Question 1' }
+    );
+
+    // Should reject but not throw synchronously
+    await expect(testCall()).rejects.toThrow();
+  });
 }); 
