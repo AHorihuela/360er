@@ -61,7 +61,14 @@ export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) 
     }
   });
 
-  // Check for existing submissions
+  // Check for existing submissions - now reactive
+  const [isSubmitted, setIsSubmitted] = useState(() => {
+    if (!uniqueLink) return false;
+    const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
+    return submittedFeedbacks[uniqueLink] || false;
+  });
+
+  // Check for existing submissions (utility function)
   const checkExistingSubmission = useCallback(() => {
     if (!uniqueLink) return false;
     const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
@@ -97,6 +104,7 @@ export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) 
       const submittedFeedbacks = JSON.parse(localStorage.getItem('submittedFeedbacks') || '{}');
       submittedFeedbacks[uniqueLink] = true;
       localStorage.setItem('submittedFeedbacks', JSON.stringify(submittedFeedbacks));
+      setIsSubmitted(true); // Update reactive state
       clearSavedData();
       navigate('/feedback/thank-you');
     }
@@ -166,6 +174,6 @@ export function useFeedbackFormState({ uniqueLink }: UseFeedbackFormStateProps) 
     startSubmission,
     handleSubmissionFailure,
     checkExistingSubmission,
-    isSubmitted: checkExistingSubmission()
+    isSubmitted
   };
 } 

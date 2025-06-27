@@ -87,7 +87,7 @@ describe('Analysis Processor Utils', () => {
       upsert: vi.fn().mockResolvedValue({ error: null })
     });
 
-    // Mock successful API responses
+    // Mock successful API responses by default
     (global.fetch as any).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -106,6 +106,25 @@ describe('Analysis Processor Utils', () => {
       })
     });
   });
+
+  // Helper function to mock API responses
+  const mockApiResponse = (response: any) => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(response)
+    });
+  };
+
+  const mockApiError = (error: string) => {
+    (global.fetch as any).mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ error })
+    });
+  };
+
+  const mockApiReject = (error: Error) => {
+    (global.fetch as any).mockRejectedValue(error);
+  };
 
   describe('processAnalysis', () => {
     describe('Successful Analysis Flow', () => {
@@ -213,9 +232,8 @@ describe('Analysis Processor Utils', () => {
 
     describe('Error Handling', () => {
       it('should handle OpenAI API errors', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockRejectedValue(new Error('OpenAI API error'));
+        // Mock API error response
+        mockApiError('OpenAI API error');
 
         await processAnalysis(
           'test-request-id',
@@ -230,10 +248,9 @@ describe('Analysis Processor Utils', () => {
 
       it('should handle database errors', async () => {
         const { supabase } = await import('@/lib/supabase');
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
         
-        mockFn.mockResolvedValue({
+        // Mock successful API responses
+        mockApiResponse({
           key_insights: [],
           competency_scores: []
         });
@@ -255,9 +272,8 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should handle unknown errors gracefully', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockRejectedValue('Unknown error type');
+        // Mock network/fetch error
+        mockApiReject(new Error('Network error'));
 
         await processAnalysis(
           'test-request-id',
@@ -266,7 +282,7 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        expect(mockError).toHaveBeenCalledWith('Failed to analyze feedback. Please try again later.');
+        expect(mockError).toHaveBeenCalledWith('Network error');
       });
     });
 
@@ -278,9 +294,8 @@ describe('Analysis Processor Utils', () => {
           junior: []
         };
 
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
+        // Mock API response for empty feedback (should return empty arrays)
+        mockApiResponse({
           key_insights: [],
           competency_scores: []
         });
@@ -305,9 +320,8 @@ describe('Analysis Processor Utils', () => {
           junior: mockGroupedFeedback.junior
         };
 
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
+        // Mock API response for partial feedback
+        mockApiResponse({
           key_insights: ['Partial insight'],
           competency_scores: []
         });
@@ -319,27 +333,34 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        expect(mockFn).toHaveBeenCalledWith(
-          'senior',
-          partialGroupedFeedback.senior,
-          expect.any(Object)
-        );
-        expect(mockFn).toHaveBeenCalledWith(
-          'peer',
-          partialGroupedFeedback.peer,
-          expect.any(Object)
-        );
-        expect(mockFn).toHaveBeenCalledWith(
-          'junior',
-          partialGroupedFeedback.junior,
-          expect.any(Object)
-        );
+        // Should make API calls for senior feedback
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'senior',
+            strengths: 'Strong leadership',
+            areas_for_improvement: 'Better delegation'
+          })
+        });
+
+        // Should make API calls for junior feedback  
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'junior',
+            strengths: 'Mentoring',
+            areas_for_improvement: 'Strategic thinking'
+          })
+        });
+
+        // Peer should not be called since it's empty (handled internally)
       });
 
       it('should handle invalid feedback request ID', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
+        // Mock API response
+        mockApiResponse({
           key_insights: [],
           competency_scores: []
         });
@@ -355,9 +376,8 @@ describe('Analysis Processor Utils', () => {
       });
 
       it('should handle invalid feedback hash', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
+        // Mock API response
+        mockApiResponse({
           key_insights: [],
           competency_scores: []
         });
@@ -375,9 +395,8 @@ describe('Analysis Processor Utils', () => {
 
     describe('Analysis Timing', () => {
       it('should include timestamp in saved results', async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
+        // Mock API response
+        mockApiResponse({
           key_insights: ['Timed insight'],
           competency_scores: []
         });
@@ -401,9 +420,7 @@ describe('Analysis Processor Utils', () => {
     });
 
     describe('OpenAI Configuration', () => {
-      it('should initialize OpenAI with correct configuration', async () => {
-        const { OpenAI } = await import('openai');
-
+      it('should make API calls with correct request format', async () => {
         await processAnalysis(
           'test-request-id',
           mockGroupedFeedback,
@@ -411,25 +428,21 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        expect(OpenAI).toHaveBeenCalledWith({
-          apiKey: expect.any(String),
-          dangerouslyAllowBrowser: true
+        // Verify the API calls are made with correct format
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            relationship: 'senior',
+            strengths: 'Strong leadership',
+            areas_for_improvement: 'Better delegation'
+          })
         });
       });
 
-      it('should handle missing OpenAI API key', async () => {
-        // The API key validation happens at OpenAI instantiation, not our code
-        // Since we're mocking OpenAI, this test verifies OpenAI would be called with undefined
-        vi.stubGlobal('import.meta', {
-          env: {}
-        });
-
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockResolvedValue({
-          key_insights: [],
-          competency_scores: []
-        });
+      it('should handle server-side API key validation', async () => {
+        // Mock server error when API key is missing
+        mockApiError('OpenAI API key not configured');
 
         await processAnalysis(
           'test-request-id',
@@ -438,34 +451,35 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        // Success should be called since we're mocking everything
-        expect(mockSuccess).toHaveBeenCalled();
-
-        // Restore API key
-        vi.stubGlobal('import.meta', {
-          env: { OPENAI_API_KEY: 'test-api-key' }
-        });
+        expect(mockError).toHaveBeenCalledWith('OpenAI API key not configured');
       });
     });
 
     describe('Aggregate Insights Calculation', () => {
-      beforeEach(async () => {
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        mockFn.mockImplementation((relationship: string) => {
+      beforeEach(() => {
+        // Mock API responses for different relationships with different scores
+        let callCount = 0;
+        (global.fetch as any).mockImplementation((url: string, options: any) => {
+          const body = JSON.parse(options.body);
+          const relationship = body.relationship;
+          callCount++;
+          
           return Promise.resolve({
-            key_insights: [`${relationship} insight`],
-            competency_scores: [
-              {
-                name: 'Leadership',
-                score: relationship === 'senior' ? 4 : relationship === 'peer' ? 3 : 2,
-                confidence: 'high',
-                description: `${relationship} leadership`,
-                evidenceCount: 1,
-                effectiveEvidenceCount: 1,
-                evidenceQuotes: [`${relationship} quote`]
-              }
-            ]
+            ok: true,
+            json: () => Promise.resolve({
+              key_insights: [`${relationship} insight`],
+              competency_scores: [
+                {
+                  name: 'Leadership',
+                  score: relationship === 'senior' ? 4 : relationship === 'peer' ? 3 : 2,
+                  confidence: 'high',
+                  description: `${relationship} leadership`,
+                  evidenceCount: 1,
+                  effectiveEvidenceCount: 1,
+                  evidenceQuotes: [`${relationship} quote`]
+                }
+              ]
+            })
           });
         });
       });
@@ -496,10 +510,8 @@ describe('Analysis Processor Utils', () => {
           mockCallbacks
         );
 
-        const { analyzeRelationshipFeedback } = await import('../feedback');
-        const mockFn = vi.mocked(analyzeRelationshipFeedback);
-        // Verify that competency scores are aggregated
-        expect(mockFn).toHaveBeenCalledTimes(3);
+        // Verify that API calls are made for each relationship type
+        expect(global.fetch).toHaveBeenCalledTimes(3);
         expect(mockSuccess).toHaveBeenCalled();
       });
     });

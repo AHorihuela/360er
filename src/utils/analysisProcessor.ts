@@ -4,7 +4,6 @@ import { type CoreFeedbackResponse } from '@/types/feedback/base';
 import { RELATIONSHIP_WEIGHTS } from "@/constants/feedback";
 import { calculateConfidence as calculateComprehensiveConfidence } from "@/components/dashboard/utils";
 import type { ScoreWithOutlier } from "@/components/dashboard/types";
-import { analyzeRelationshipFeedback } from './feedback';
 
 interface GroupedFeedback {
   [key: string]: CoreFeedbackResponse[];
