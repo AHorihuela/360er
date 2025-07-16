@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
-const port = process.env.API_PORT || 5174; // Use a different port than Vite
+const port = process.env.API_PORT || 3001; // Use port 3001 to avoid conflicts with Vite dev server
 
 app.use(cors());
 app.use(express.json());
