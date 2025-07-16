@@ -25,51 +25,44 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   setAuthState: (state: AuthState) => set({ authState: state }),
   setUser: (user: User | null) => set({ user }),
   setIsMasterAccount: (isMaster: boolean) => {
-    console.log('[DEBUG] Setting isMasterAccount:', isMaster);
     set({ isMasterAccount: isMaster });
   },
   setViewingAllAccounts: (viewing: boolean) => {
-    console.log('[DEBUG] Setting viewingAllAccounts:', viewing);
     set({ viewingAllAccounts: viewing });
     localStorage.setItem('masterViewingAllAccounts', viewing.toString());
+    console.log('[AUTH] Master viewing mode changed:', viewing);
   },
   checkMasterAccountStatus: async (userId: string) => {
+    if (!userId) {
+      console.warn('[AUTH] Invalid userId for master account check:', userId);
+      set({ isMasterAccount: false });
+      return false;
+    }
+
     try {
-      // Skip check if userId is not valid
-      if (!userId || userId.length < 10) {
-        console.log('[DEBUG] Invalid userId for master account check:', userId);
-        set({ isMasterAccount: false });
-        return false;
-      }
-      
-      console.log('[DEBUG] Checking master account status for user:', userId);
-      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to handle "not found" gracefully
-      
-      // No data means not a master account - not an error
-      if (!data) {
-        console.log('[DEBUG] No user role found - not a master account');
-        set({ isMasterAccount: false });
-        return false;
-      }
-      
+        .maybeSingle();
+
       if (error) {
-        console.error('Error checking master account status:', error);
+        console.error('Error checking user role:', error);
         set({ isMasterAccount: false });
         return false;
       }
-      
-      const isMaster = data?.role === 'master';
-      console.log('[DEBUG] Master account check result:', { userId, role: data?.role, isMaster });
+
+      if (!data) {
+        set({ isMasterAccount: false });
+        return false;
+      }
+
+      const isMaster = data.role === 'master';
+      console.log('[AUTH] Master account status:', { userId: userId.substring(0, 8) + '...', isMaster });
       set({ isMasterAccount: isMaster });
       
       // If user is not a master account, ensure viewingAllAccounts is false
       if (!isMaster && get().viewingAllAccounts) {
-        console.log('[DEBUG] User is not master account, disabling viewingAllAccounts');
         set({ viewingAllAccounts: false });
         localStorage.removeItem('masterViewingAllAccounts');
       }

@@ -14,15 +14,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Only check master account status when we have a user and auth is confirmed
   useEffect(() => {
     if (authState === 'Authenticated' && user?.id) {
-      console.log('[DEBUG] ProtectedRoute: Checking master account status for user:', user.id);
-      checkMasterAccountStatus(user.id).then((isMaster) => {
-        console.log('[DEBUG] ProtectedRoute: Master account status checked:', isMaster);
-        setIsMasterStatusChecked(true);
-      }).catch((error) => {
-        console.error('Error checking master account status in ProtectedRoute:', error);
-        setIsMasterStatusChecked(true); // Still allow access even if check fails
-      });
+      checkMasterAccountStatus(user.id)
+        .catch((error) => {
+          console.error('Error checking master account status in ProtectedRoute:', error);
+        })
+        .finally(() => {
+          setIsMasterStatusChecked(true);
+        });
     } else {
+      // For users without ID, null users, or unauthenticated users, don't mark as checked
       setIsMasterStatusChecked(false);
     }
   }, [authState, user?.id, checkMasterAccountStatus]);

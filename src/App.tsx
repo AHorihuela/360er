@@ -475,6 +475,9 @@ function App() {
       setAuthState(session ? 'Authenticated' : 'Unauthenticated');
       setUser(session?.user ?? null);
       setIsInitialized(true);
+    }).catch((err) => {
+      console.error('Session check failed:', err);
+      setIsInitialized(true); // Initialize anyway to prevent infinite loading
     });
 
     // Listen for auth changes
