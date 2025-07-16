@@ -157,22 +157,14 @@ export function useAIReportManagement({
       let currentSession = null;
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       
-      console.log('Debug: Initial session check:', { session: !!session, authError });
-
       if (authError || !session) {
+        console.warn('[AI_REPORT] Session not found, attempting refresh...');
         // Try to refresh the session
-        console.log('Session not found, attempting to refresh...');
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        
-        console.log('Debug: Session refresh attempt:', { 
-          refreshedSession: !!refreshedSession, 
-          refreshError 
-        });
         
         if (refreshError || !refreshedSession) {
           // Try one more time with a sign-in check
           const { data: { user }, error: userError } = await supabase.auth.getUser();
-          console.log('Debug: User check:', { user: !!user, userError });
           
           if (userError || !user) {
             throw new Error('User not authenticated. Please log out and log back in.');
@@ -181,53 +173,52 @@ export function useAIReportManagement({
           throw new Error('Session expired. Please refresh the page and try again.');
         }
         
-        console.log('Session refreshed successfully');
+        console.log('[AI_REPORT] Session refreshed successfully');
         currentSession = refreshedSession;
       } else {
         currentSession = session;
       }
 
-      console.log('Debug: Using session for user:', currentSession.user.id);
+      
 
-      // Verify user has access to the feedback request
-      const { data: verifyData, error: verifyError } = await supabase
+      // Verify access permissions
+      const { data: feedbackRequestData, error: fetchError } = await supabase
         .from('feedback_requests')
         .select(`
-          id,
-          review_cycle_id,
-          review_cycles!inner(user_id)
+          *,
+          review_cycles (user_id)
         `)
         .eq('id', feedbackRequest.id)
         .single();
 
-      console.log('Debug: Access verification:', { 
-        verifyData: !!verifyData, 
-        verifyError,
-        reviewCycleOwner: verifyData ? (verifyData.review_cycles as any).user_id : null,
-        currentUser: currentSession.user.id
-      });
-
-      if (verifyError || !verifyData) {
-        throw new Error('Access denied: Cannot access this feedback request.');
+      if (fetchError) {
+        throw new Error(`Failed to verify access: ${fetchError.message}`);
       }
 
-      // Check if user owns the feedback request OR is a master account
-      const isOwner = (verifyData.review_cycles as any).user_id === currentSession.user.id;
-      
-      if (!isOwner) {
-        console.log('Debug: User does not own feedback request, checking master account status...');
+      const cycleOwnerUserId = feedbackRequestData?.review_cycles?.user_id;
+      const currentUserId = currentSession.user.id;
+
+      if (cycleOwnerUserId !== currentUserId) {
+        console.warn('[AI_REPORT] Access denied - user does not own cycle, checking master status...', {
+          currentUserId: currentUserId.substring(0, 8) + '...',
+          cycleOwnerUserId: cycleOwnerUserId?.substring(0, 8) + '...'
+        });
         
+        // Check if current user has master account privileges
         try {
-          const isMasterAccount = await checkMasterAccountStatus(currentSession.user.id);
-          
-          if (isMasterAccount) {
-            console.log('Debug: Access granted - user is master account');
-            // Continue with report generation
-          } else {
-            throw new Error('Access denied: You do not own this feedback request.');
+          const { data: userRole, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', currentUserId)
+            .maybeSingle();
+
+          if (roleError || !userRole || userRole.role !== 'master') {
+            throw new Error('You do not have permission to generate reports for this feedback request.');
           }
+
+          console.log('[AI_REPORT] Access granted - user has master account privileges');
         } catch (error) {
-          console.error('Debug: Error checking master account status:', error);
+          console.error('[AI_REPORT] Error checking master account status:', error);
           throw new Error('Access denied: You do not own this feedback request.');
         }
       }

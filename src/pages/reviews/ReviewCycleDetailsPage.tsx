@@ -87,7 +87,6 @@ export function ReviewCycleDetailsPage() {
 
       // If in master mode, we need to fetch employees belonging to the cycle owner
       const userId = isMasterMode && cycleOwnerUserId ? cycleOwnerUserId : user.id;
-      console.log('[DEBUG] Fetching employees for user:', { userId, isMasterMode, cycleOwnerUserId });
 
       const { data: allEmployees, error: employeesError } = await supabase
         .from('employees')

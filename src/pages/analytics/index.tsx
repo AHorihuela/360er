@@ -72,7 +72,6 @@ export default function AnalyticsPage() {
       const savedState = localStorage.getItem('masterViewingAllAccounts');
       const currentState = savedState === 'true';
       if (currentState !== viewingAllAccounts) {
-        console.log('[DEBUG] Analytics: Syncing viewing all accounts state:', currentState);
         setViewingAllAccounts(currentState);
       }
     }, 500);
@@ -110,10 +109,7 @@ export default function AnalyticsPage() {
         const shouldFilterByUser = !isMasterAccount || !viewingAllAccounts;
         
         if (shouldFilterByUser) {
-          console.log('[DEBUG] Filtering analytics by user_id:', user.id);
           query = query.eq('user_id', user.id);
-        } else {
-          console.log('[DEBUG] Showing all analytics data (master account mode)');
         }
         
         const { data: reviewCycles, error: cyclesError } = await query;

@@ -117,7 +117,6 @@ export function ReviewCyclesPage() {
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
-          console.log('[DEBUG] Initial user load:', currentUser.id);
           setIsUserLoaded(true);
         } else {
           navigate('/login');
@@ -151,12 +150,7 @@ export function ReviewCyclesPage() {
   useEffect(() => {
     if (!isAuthReady || !user?.id) return;
     
-    console.log('[DEBUG] Auth ready, fetching cycles:', { 
-      viewingAllAccounts, 
-      isMasterAccount, 
-      isUserLoaded,
-      userId: user?.id 
-    });
+
     
     // Debounce multiple rapid calls
     const timer = setTimeout(() => {
@@ -169,24 +163,13 @@ export function ReviewCyclesPage() {
   async function fetchReviewCycles(currentUserId: string) {
     try {
       setIsLoading(true);
-      console.log('[DEBUG] Fetching review cycles:', { 
-        isMasterAccount, 
-        viewingAllAccounts, 
-        currentUserId,
-        authStateLoaded: isUserLoaded
-      });
       
       // Safety check: if viewingAllAccounts is true but isMasterAccount is false, 
       // there's likely a race condition. Default to filtering by user.
       const safeIsMasterAccount = isMasterAccount && viewingAllAccounts;
       const shouldShowAllAccounts = safeIsMasterAccount && viewingAllAccounts;
       
-      console.log('[DEBUG] Safe master account check:', {
-        original_isMasterAccount: isMasterAccount,
-        original_viewingAllAccounts: viewingAllAccounts,
-        safeIsMasterAccount,
-        shouldShowAllAccounts
-      });
+
       
       let query = supabase
         .from('review_cycles')
@@ -229,13 +212,9 @@ export function ReviewCyclesPage() {
 
       // Only show all accounts if BOTH master account AND viewing all accounts is enabled
       const shouldFilterByUser = !shouldShowAllAccounts;
-      console.log('[DEBUG] Should filter by user?', shouldFilterByUser);
       
       if (shouldFilterByUser) {
-        console.log('[DEBUG] Filtering by user_id:', currentUserId);
         query = query.eq('user_id', currentUserId);
-      } else {
-        console.log('[DEBUG] Showing all review cycles (master account mode)');
       }
 
       // Order by created_at descending
@@ -253,7 +232,7 @@ export function ReviewCyclesPage() {
         return;
       }
       
-      console.log('[DEBUG] Retrieved cycles count:', reviewCyclesData.length);
+
 
       const processedCycles: ReviewCycle[] = reviewCyclesData
         .map(cycle => {
@@ -358,7 +337,7 @@ export function ReviewCyclesPage() {
 
         if (otherUserIds.length > 0) {
           try {
-            console.log('[DEBUG] Fetching user emails for:', otherUserIds);
+
             const { data: usersData, error: usersError } = await supabase
               .rpc('get_user_emails', { user_ids: otherUserIds });
               
@@ -369,7 +348,7 @@ export function ReviewCyclesPage() {
                 return acc;
               }, {});
 
-              console.log('[DEBUG] Mapped user emails:', userEmailMap);
+
               
               // Add creator email to each cycle
               processedCycles.forEach(cycle => {
@@ -575,14 +554,7 @@ export function ReviewCyclesPage() {
               const safeIsMasterAccount = isMasterAccount && viewingAllAccounts;
               const shouldShowGroupedView = safeIsMasterAccount && otherCycles.length > 0;
               
-              console.log('[DEBUG] Rendering decision:', {
-                isMasterAccount,
-                viewingAllAccounts,
-                safeIsMasterAccount,
-                shouldShowGroupedView,
-                ownCyclesCount: ownCycles.length,
-                otherCyclesCount: otherCycles.length
-              });
+
               
               if (shouldShowGroupedView) {
                 return (

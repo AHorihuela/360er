@@ -252,10 +252,7 @@ export function EmployeesPage() {
       const shouldFilterByUser = !isMasterAccount || !viewingAllAccounts;
       
       if (shouldFilterByUser) {
-        console.log('[DEBUG] Filtering employees by user_id:', user.id);
         query = query.eq('user_id', user.id);
-      } else {
-        console.log('[DEBUG] Showing all employees (master account mode)');
       }
 
       const { data, error } = await query;
