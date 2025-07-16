@@ -206,13 +206,9 @@ export function useAIReportManagement({
         
         // Check if current user has master account privileges
         try {
-          const { data: userRole, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', currentUserId)
-            .maybeSingle();
-
-          if (roleError || !userRole || userRole.role !== 'master') {
+          const hasMasterAccess = await checkMasterAccountStatus(currentUserId);
+          
+          if (!hasMasterAccess) {
             throw new Error('You do not have permission to generate reports for this feedback request.');
           }
 

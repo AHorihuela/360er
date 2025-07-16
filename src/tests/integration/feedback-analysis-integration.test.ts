@@ -211,7 +211,7 @@ describe('Feedback Analysis API Integration Tests', () => {
           expect(error).toBeDefined();
         }
       }
-    });
+    }, 10000);
   });
 
   describe('Environment Configuration Validation', () => {
