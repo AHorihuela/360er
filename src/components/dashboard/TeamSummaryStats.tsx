@@ -30,9 +30,16 @@ export function TeamSummaryStats({
   averageConfidence,
   sortedScores
 }: TeamSummaryStatsProps) {
-  const coveragePercentage = (employeesWithAnalytics / totalEmployees) * 100;
-  const reviewPercentage = (includedReviewCount / totalReviewCount) * 100;
-  const confidencePercentage = averageConfidence * 100;
+  // Defensive programming: ensure values are numbers to prevent NaN
+  const safeEmployeesWithAnalytics = employeesWithAnalytics ?? 0;
+  const safeTotalEmployees = totalEmployees ?? 0;
+  const safeIncludedReviewCount = includedReviewCount ?? 0;
+  const safeTotalReviewCount = totalReviewCount ?? 0;
+  const safeAverageConfidence = averageConfidence ?? 0;
+  
+  const coveragePercentage = safeTotalEmployees === 0 ? 0 : (safeEmployeesWithAnalytics / safeTotalEmployees) * 100;
+  const reviewPercentage = safeTotalReviewCount === 0 ? 0 : (safeIncludedReviewCount / safeTotalReviewCount) * 100;
+  const confidencePercentage = safeAverageConfidence * 100;
   const weightedAverageScore = calculateWeightedAverageScore(sortedScores);
   const scoreProgressValue = ((weightedAverageScore - 1) / 4) * 100;
   const confidenceClasses = getConfidenceClass(confidencePercentage);
@@ -41,7 +48,7 @@ export function TeamSummaryStats({
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <StatCard
         title="Team Coverage"
-        value={`${employeesWithAnalytics}/${totalEmployees}`}
+        value={`${safeEmployeesWithAnalytics}/${safeTotalEmployees}`}
         subtitle="employees analyzed"
         progress={{ value: coveragePercentage }}
         tooltip={{

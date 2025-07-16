@@ -135,7 +135,6 @@ export function useDashboardData() {
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
-          console.log('[DEBUG] Initial user load:', currentUser.id);
           setIsUserLoaded(true);
         } else {
           navigate('/login');
@@ -153,28 +152,20 @@ export function useDashboardData() {
     initialLoad();
   }, [navigate, toast]);
   
-  // Consolidated effect that waits for both auth and user data to be ready
+  // Wait for auth to be ready and all master account checks to complete
   useEffect(() => {
-    // Mark auth as ready when we have user state and master account status is determined
-    if (isUserLoaded && user?.id) {
-      // Small delay to ensure master account status has been checked
-      const timer = setTimeout(() => {
-        setIsAuthReady(true);
-      }, 100);
-      return () => clearTimeout(timer);
+    if (!isUserLoaded || !user?.id) {
+      return;
     }
-  }, [isUserLoaded, user?.id, isMasterAccount]);
+    
+    // Mark as auth ready once user is loaded and master account status is available
+    setIsAuthReady(true);
+  }, [isUserLoaded, user?.id]);
+
   
   // Single effect for data fetching with debounce
   useEffect(() => {
     if (!isAuthReady || !user?.id) return;
-    
-    console.log('[DEBUG] Auth ready, fetching data:', { 
-      viewingAllAccounts, 
-      isMasterAccount, 
-      isUserLoaded,
-      userId: user?.id 
-    });
     
     // Debounce multiple rapid calls
     const timer = setTimeout(() => {
@@ -190,8 +181,6 @@ export function useDashboardData() {
     try {
       setIsLoading(true);
       
-      console.log('[DEBUG] Starting fetch with selectedCycleId:', selectedCycleId, 'viewingAllAccounts:', viewingAllAccounts, 'isMasterAccount:', isMasterAccount);
-      
       let employeeQuery = supabase
         .from('employees')
         .select('*');
@@ -205,14 +194,13 @@ export function useDashboardData() {
       const { data: employeesData, error: employeesError } = await employeeQuery;
  
       if (employeesError) {
-        console.error('Error fetching employees:', employeesError);
+        console.error('[DASHBOARD] Error fetching employees:', employeesError);
         toast({
           title: 'Error fetching employees',
           description: employeesError.message,
           variant: 'destructive',
         });
       } else if (employeesData) {
-        console.log('[DEBUG] Employees data loaded, count:', employeesData.length);
         setEmployeesData(employeesData as DashboardEmployee[]);
       }
   
@@ -220,7 +208,7 @@ export function useDashboardData() {
       
       if (!shouldFilterByUser) {
         // Master account mode - fetch cycles without user join first
-        console.log('[DEBUG] Fetching ALL cycles in master mode');
+        console.log('[DASHBOARD] Fetching in master mode - showing all accounts');
         cyclesQuery = supabase
           .from('review_cycles')
           .select(`
@@ -247,7 +235,6 @@ export function useDashboardData() {
           .order('created_at', { ascending: false });
       } else {
         // Regular user mode - no user email needed
-        console.log('[DEBUG] Filtering cycles by user:', user.id);
         cyclesQuery = supabase
           .from('review_cycles')
           .select(`
@@ -278,101 +265,84 @@ export function useDashboardData() {
       const { data: reviewCycles, error: cyclesError } = await cyclesQuery;
 
       if (cyclesError) {
-        console.error('Error fetching review cycles:', cyclesError);
+        console.error('[DASHBOARD] Error fetching review cycles:', cyclesError);
         toast({
           title: 'Error fetching review cycles',
           description: cyclesError.message,
           variant: 'destructive',
         });
-      }
-      
-      let cyclesWithUsers: ReviewCycleWithUser[] = [];
-      
-      if (reviewCycles && reviewCycles.length > 0) {
-        console.log('[DEBUG] Review cycles loaded, count:', reviewCycles.length, 'cycles');
-        
-        if (!shouldFilterByUser) {
-          // For master account mode, manually fetch user emails
-          const userIds = [...new Set(reviewCycles.map(cycle => cycle.user_id).filter(Boolean))];
-          
-          if (userIds.length > 0) {
-            const { data: usersData, error: usersError } = await supabase
-              .rpc('get_user_emails', { user_ids: userIds });
-              
+      } else if (reviewCycles) {
+        // Transform and process the cycles data
+        let cyclesWithUsers = reviewCycles.map(cycle => ({
+          ...cycle,
+          userEmail: null // Will be populated below for master mode
+        }));
+
+        // If in master account mode, fetch user emails for cycles not owned by current user
+        if (!shouldFilterByUser && reviewCycles.length > 0) {
+          const otherUserIds = [...new Set(
+            reviewCycles
+              .filter(cycle => cycle.user_id !== user.id)
+              .map(cycle => cycle.user_id)
+          )];
+
+          if (otherUserIds.length > 0) {
+            const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+            
             if (usersError) {
-              console.warn('Error fetching user emails:', usersError);
-              // Continue without user emails
-              cyclesWithUsers = reviewCycles;
-            } else {
-              // Map user emails to cycles
+              console.error('[DASHBOARD] Error fetching user emails for master mode:', usersError);
+            } else if (users?.users) {
+              const userEmailMap = users.users.reduce((acc, authUser) => {
+                if (authUser.id && authUser.email) {
+                  acc[authUser.id] = authUser.email;
+                }
+                return acc;
+              }, {} as Record<string, string>);
+
+              // Update cycles with user emails
               cyclesWithUsers = reviewCycles.map(cycle => ({
                 ...cycle,
-                users: usersData?.find((user: { id: string; email: string }) => user.id === cycle.user_id) 
-                  ? { email: usersData.find((user: { id: string; email: string }) => user.id === cycle.user_id)!.email }
-                  : undefined
+                userEmail: cycle.user_id !== user.id ? userEmailMap[cycle.user_id] || null : null
               }));
             }
-          } else {
-            cyclesWithUsers = reviewCycles;
           }
-        } else {
-          cyclesWithUsers = reviewCycles;
         }
-        
-        console.log('[DEBUG] Cycles loaded:', cyclesWithUsers.map(c => ({ id: c.id, title: c.title, user_id: c.user_id })));
-        
+
         setAllReviewCycles(cyclesWithUsers);
         
-        let cycleToShow = null;
+        // Auto-select cycle logic - Process through mapping to ensure complete data
+        let cycleToSelect: typeof cyclesWithUsers[0] | null = null;
         
-        // If we have a selectedCycleId, try to find it in the available cycles
         if (selectedCycleId) {
-          cycleToShow = cyclesWithUsers.find(c => c.id === selectedCycleId);
-          
-          // If the selected cycle is not found (e.g., when switching from master mode back to user mode)
-          // automatically select the user's most recent cycle
-          if (!cycleToShow) {
-            console.log('[DEBUG] Selected cycle not found in available cycles, auto-selecting most recent');
-            cycleToShow = cyclesWithUsers[0]; // Most recent cycle (ordered by created_at desc)
-            if (cycleToShow) {
-              console.log('[DEBUG] Auto-selecting cycle after mode switch:', cycleToShow.id, cycleToShow.title);
-              setSelectedCycleId(cycleToShow.id);
-              localStorage.setItem('selectedCycleId', cycleToShow.id);
-            }
+          cycleToSelect = cyclesWithUsers.find(c => c.id === selectedCycleId) || null;
+          if (!cycleToSelect) {
+            // Selected cycle not found in available cycles, auto-select most recent
+            console.warn('[DASHBOARD] Selected cycle not found, auto-selecting most recent');
+            cycleToSelect = cyclesWithUsers.length > 0 ? cyclesWithUsers[0] : null;
           }
-        } else {
-          // No selectedCycleId, select the most recent cycle
-          cycleToShow = cyclesWithUsers[0];
-          if (cycleToShow) {
-            console.log('[DEBUG] Auto-selecting most recent cycle:', cycleToShow.id);
-            setSelectedCycleId(cycleToShow.id);
-            localStorage.setItem('selectedCycleId', cycleToShow.id);
-          }
+        } else if (cyclesWithUsers.length > 0) {
+          // Auto-select most recent cycle
+          cycleToSelect = cyclesWithUsers[0];
         }
 
-        if (cycleToShow) {
-          console.log('[DEBUG] Selected cycle:', cycleToShow.id, cycleToShow.title);
-        } else if (selectedCycleId) {
-          console.log('[DEBUG] Selected cycle not found in loaded cycles. Selected ID:', selectedCycleId);
-        }
-
-        if (cycleToShow && cycleToShow.feedback_requests) {
+        if (cycleToSelect && cycleToSelect.feedback_requests) {
+          // Process the selected cycle through mapping to ensure complete data
           const {
             mappedRequests,
             totalRequests,
             completedRequests,
             employeesWithStatus
           } = mapFeedbackRequestsToDashboard({
-            id: cycleToShow.id,
-            title: cycleToShow.title,
-            review_by_date: cycleToShow.review_by_date,
-            feedback_requests: cycleToShow.feedback_requests
+            id: cycleToSelect.id,
+            title: cycleToSelect.title,
+            review_by_date: cycleToSelect.review_by_date,
+            feedback_requests: cycleToSelect.feedback_requests
           }, employeesData);
 
           setActiveReviewCycle({
-            id: cycleToShow.id,
-            title: cycleToShow.title,
-            review_by_date: cycleToShow.review_by_date,
+            id: cycleToSelect.id,
+            title: cycleToSelect.title,
+            review_by_date: cycleToSelect.review_by_date,
             feedback_requests: mappedRequests,
             total_requests: totalRequests,
             completed_requests: completedRequests
@@ -381,17 +351,20 @@ export function useDashboardData() {
           if (employeesWithStatus) {
             setEmployees(employeesWithStatus);
           }
-          
-          if (cycleToShow.type) {
-            fetchSurveyQuestions(cycleToShow.type);
+
+          // Fetch survey questions if cycle has a type
+          if (cycleToSelect.type) {
+            fetchSurveyQuestions(cycleToSelect.type);
           }
+        } else {
+          setActiveReviewCycle(null);
         }
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('[DASHBOARD] Critical error in fetchData:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch dashboard data',
+        title: 'Error loading dashboard data',
+        description: 'Please try refreshing the page',
         variant: 'destructive',
       });
     } finally {
@@ -400,13 +373,11 @@ export function useDashboardData() {
   };
 
   const handleCycleChange = (cycleId: string) => {
-    console.log('[DEBUG] Cycle selection changed to:', cycleId);
     localStorage.setItem('selectedCycleId', cycleId);
     setSelectedCycleId(cycleId);
     const selectedCycle = allReviewCycles.find(c => c.id === cycleId);
     
     if (selectedCycle && selectedCycle.feedback_requests) {
-      console.log('[DEBUG] Processing selected cycle:', selectedCycle.title);
       const {
         mappedRequests,
         totalRequests,
@@ -431,17 +402,20 @@ export function useDashboardData() {
       if (employeesWithStatus) {
         setEmployees(employeesWithStatus);
       }
-      
+
+      // Fetch survey questions if cycle has a type
       if (selectedCycle.type) {
         fetchSurveyQuestions(selectedCycle.type);
       }
     } else {
-      console.warn('[DEBUG] Selected cycle not found in current cycles list. ID:', cycleId);
+      console.warn('[DASHBOARD] Cycle not found in current data, may need refresh:', { 
+        cycleId, 
+        availableCycles: allReviewCycles.length,
+        isMasterMode: isMasterAccount && viewingAllAccounts 
+      });
       if (isMasterAccount && viewingAllAccounts) {
-        console.log('[DEBUG] In master mode, refreshing data to find missing cycle');
         fetchData();
       } else {
-        console.log('[DEBUG] Cycle not found and not in master mode - clearing active cycle');
         setActiveReviewCycle(null);
       }
     }
@@ -533,16 +507,11 @@ export function useDashboardData() {
 
   useEffect(() => {
     if (selectedCycleId && !activeReviewCycle && allReviewCycles.length > 0) {
-      console.log('[DEBUG] Trying to restore active cycle from selectedCycleId');
       const cycle = allReviewCycles.find(c => c.id === selectedCycleId);
       if (cycle) {
         handleCycleChange(selectedCycleId);
       } else {
-        console.log('[DEBUG] Selected cycle not found in current cycles list');
-        if (isMasterAccount && viewingAllAccounts) {
-          console.log('[DEBUG] In master mode, will keep selection until data refresh completes');
-        } else {
-          console.log('[DEBUG] Clearing cycle selection as it no longer exists');
+        if (!isMasterAccount || !viewingAllAccounts) {
           localStorage.removeItem('selectedCycleId');
           setSelectedCycleId(null);
         }
@@ -555,11 +524,8 @@ export function useDashboardData() {
       const cycleExists = allReviewCycles.some(c => c.id === selectedCycleId);
       if (!cycleExists) {
         if (!isMasterAccount || !viewingAllAccounts) {
-          console.log('[DEBUG] Selected cycle not found in available cycles - clearing selection');
           localStorage.removeItem('selectedCycleId');
           setSelectedCycleId(null);
-        } else {
-          console.log('[DEBUG] Cycle not found but in master mode - keeping selection');
         }
       }
     }

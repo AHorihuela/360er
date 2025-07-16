@@ -9,6 +9,10 @@ interface ActiveReviewCycleCardProps {
 
 export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCardProps) {
   const navigate = useNavigate();
+  
+  // Defensive programming: ensure counts are numbers to prevent NaN
+  const totalRequests = activeReviewCycle.total_requests ?? 0;
+  const completedRequests = activeReviewCycle.completed_requests ?? 0;
 
   return (
     <Card 
@@ -28,16 +32,16 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
           <div className="flex justify-between text-sm">
             <span>Overall Completion</span>
             <span className="font-medium">
-              {activeReviewCycle.total_requests === 0 ? '0' : Math.min(Math.round((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100), 100)}%
+              {totalRequests === 0 ? '0' : Math.min(Math.round((completedRequests / totalRequests) * 100), 100)}%
             </span>
           </div>
           <Progress 
-            value={activeReviewCycle.total_requests === 0 ? 0 : Math.min((activeReviewCycle.completed_requests / activeReviewCycle.total_requests) * 100, 100)} 
+            value={totalRequests === 0 ? 0 : Math.min((completedRequests / totalRequests) * 100, 100)} 
             className="h-3"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{activeReviewCycle.completed_requests} reviews completed</span>
-            <span>{activeReviewCycle.total_requests - activeReviewCycle.completed_requests} pending</span>
+            <span>{completedRequests} reviews completed</span>
+            <span>{totalRequests - completedRequests} pending</span>
           </div>
         </div>
       </CardContent>

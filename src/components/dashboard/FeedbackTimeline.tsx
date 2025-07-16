@@ -17,6 +17,10 @@ interface DayData {
 }
 
 export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pendingReviews }: Props) {
+  // Defensive programming: ensure counts are numbers to prevent NaN
+  const safeTotal = totalReviews ?? 0;
+  const safePending = pendingReviews ?? 0;
+  
   // Process the data to get responses per day
   const data: DayData[] = [];
   const responses = feedbackRequests
@@ -45,7 +49,7 @@ export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pend
     });
   });
 
-  const completionPercentage = Math.round(((totalReviews - pendingReviews) / totalReviews) * 100);
+  const completionPercentage = safeTotal === 0 ? 0 : Math.round(((safeTotal - safePending) / safeTotal) * 100);
 
   return (
     <Card className="col-span-4">
@@ -66,7 +70,7 @@ export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pend
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {totalReviews - pendingReviews} of {totalReviews}
+                {safeTotal - safePending} of {safeTotal}
               </span>
             </div>
             <div className="flex items-center space-x-2">
