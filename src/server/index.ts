@@ -14,9 +14,22 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY // Server-side only, secure environment variable
 });
 
+// Server-side Supabase client - isolated from client-side auth
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_ANON_KEY!
+  process.env.VITE_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false, // Don't persist session on server
+      autoRefreshToken: false, // No auto-refresh on server
+      detectSessionInUrl: false // No URL detection on server
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'server-side-client' // Help identify in logs
+      }
+    }
+  }
 );
 
 const SYSTEM_PROMPT = `You are an expert in 360-degree performance reviews and feedback. You understand workplace dynamics, professional boundaries, and the different perspectives that come from various organizational relationships.

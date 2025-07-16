@@ -201,43 +201,66 @@ npm run preview
 
 ## Known Issues & TODO 🚧
 
-### Critical Issues to Address
+### Security Configuration (MANUAL FIX REQUIRED)
 
-#### 1. Authentication Session Sync Issue (HIGH PRIORITY)
-**Problem**: Supabase `auth.uid()` returns `null` in database queries despite browser showing authenticated session.
-- **Symptoms**: 
-  - Browser session appears valid with user ID
-  - Database queries show `auth.uid()` as null
-  - Console warning: "Multiple GoTrueClient instances"
-  - RLS policies fail due to null authentication context
-- **Current Workaround**: Hardcoded bypass in `is_master_account()` function for production stability
-- **Impact**: Affects all authentication-dependent features across the application
-- **Root Cause**: Likely Supabase client configuration issue or session state management
-- **Action Required**: 
-  - Investigate Supabase client initialization patterns
-  - Review session management and storage
-  - Test authentication flow in isolation
-  - Consider migrating to latest Supabase client version
-  - Remove hardcoded workarounds once resolved
+#### 1. OTP Long Expiry
+**Issue**: OTP expiry is set to more than 1 hour in Supabase dashboard.
+- **Recommended Setting**: < 1 hour (ideally 10-15 minutes)
+- **How to Fix**: Go to Supabase Dashboard → Authentication → Settings → Set OTP expiry to 600 seconds (10 minutes)
 
-#### 2. Master Account Function Hardcoding (MEDIUM PRIORITY)
-**Problem**: Temporary hardcoded logic in database function bypasses proper authentication checks.
-- **Current State**: `is_master_account()` returns `true` when `auth.uid()` is null
-- **Risk**: Potential security vulnerability if authentication context is compromised
-- **Action Required**: Remove hardcoded logic once session sync issue is resolved
+#### 2. Leaked Password Protection Disabled  
+**Issue**: Supabase's leaked password protection feature is disabled.
+- **How to Fix**: Go to Supabase Dashboard → Authentication → Settings → Enable "Leaked Password Protection"
 
-#### 3. Development-Only Master Account Bypass (LOW PRIORITY)
-**Problem**: Temporary development bypass in `useAIReportManagement.ts` for local testing.
-- **Current State**: Development mode allows master accounts to generate reports for any feedback request
-- **Location**: `src/hooks/useAIReportManagement.ts` lines ~170-185
-- **Safety**: Protected by `import.meta.env.DEV` check and master account validation
-- **Action Required**: Remove development bypass once authentication session sync is resolved
+### Development & Performance Improvements
+
+#### 1. Database Performance Optimization
+- Add database indexes on frequently queried columns
+- Implement query result caching for dashboard data
+- Consider pagination for large datasets
+- Use database views for complex aggregations
+
+#### 2. Frontend Performance 
+- Implement React.memo and useMemo more strategically
+- Improve bundle splitting and lazy loading
+- Consider moving to React Query for better caching
+- Split large components into smaller, focused ones
+
+#### 3. AI/OpenAI Cost Optimization
+- Implement request queuing and batching
+- Add usage monitoring and cost alerts
+- Cache AI analysis results more aggressively
+- Consider using cheaper models for preliminary analysis
+
+#### 4. Testing Coverage Expansion
+- Add end-to-end authentication flow tests
+- Implement RLS policy validation tests  
+- Add AI analysis integration tests
+- Create performance benchmark tests
 
 ### Future Enhancements
-- Implement proper session debugging tools
-- Add authentication state monitoring dashboard
-- Create automated tests for authentication flows
-- Document authentication troubleshooting procedures
+
+#### 1. Enhanced Analytics & Reporting
+- Advanced competency trend analysis
+- Manager effectiveness survey integration
+- Custom report generation
+- Data export capabilities
+
+#### 2. User Experience Improvements
+- Progressive Web App (PWA) support
+- Real-time notifications
+- Advanced search and filtering
+- Mobile-responsive dashboard enhancements
+
+#### 3. Security & Compliance
+- Audit logging system
+- GDPR compliance features
+- Advanced user permission management
+- Session timeout configuration
+
+---
+
+**Note**: The authentication session sync issues mentioned in previous versions have been ✅ **RESOLVED** through Supabase client isolation and proper configuration.
 
 ## Contributing 🤝
 

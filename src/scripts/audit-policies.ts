@@ -4,13 +4,28 @@ import dotenv from 'dotenv'
 // Load environment variables
 dotenv.config()
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL!
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
 
+if (!supabaseUrl) {
+  throw new Error('Missing VITE_SUPABASE_URL environment variable')
+}
+
+if (!supabaseKey) {
+  throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable')
+}
+
+// Script-specific Supabase client - isolated from other clients
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false
+    persistSession: false, // Don't persist session in scripts
+    autoRefreshToken: false, // No auto-refresh in scripts
+    detectSessionInUrl: false // No URL detection in scripts
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'audit-script-client' // Help identify in logs
+    }
   }
 })
 

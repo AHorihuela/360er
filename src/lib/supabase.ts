@@ -39,6 +39,39 @@ const customStorage = {
   }
 };
 
+// Create isolated storage for anonymous client to prevent auth conflicts
+const anonymousStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined') {
+        // Use different namespace for anonymous client
+        return window.localStorage.getItem(`anon_${key}`);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`anon_${key}`, value);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(`anon_${key}`);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  }
+};
+
 // Regular client for authenticated operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -46,21 +79,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storage: customStorage
+    storage: customStorage,
+    storageKey: 'sb-auth-token' // Explicit storage key for main client
   }
 });
 
-// Anonymous client for feedback submissions
+// Anonymous client for feedback submissions with completely isolated auth
 export const anonymousClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false, // Don't persist the anonymous session
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-    storage: customStorage
+    persistSession: false, // Don't persist any session
+    autoRefreshToken: false, // Don't auto-refresh
+    detectSessionInUrl: false, // Don't detect auth from URL
+    storage: anonymousStorage, // Use separate storage namespace
+    storageKey: 'sb-anon-token' // Different storage key
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'anonymous-client' // Help identify in logs
+    }
   }
 });
 
-// Listen for auth state changes without logging sensitive data
+// Listen for auth state changes ONLY on the main client
 supabase.auth.onAuthStateChange((event, _session) => {
   try {
     // Only log in development and not in content script context
@@ -69,7 +109,7 @@ supabase.auth.onAuthStateChange((event, _session) => {
       'runtime' in (window as any).chrome;
       
     if (process.env.NODE_ENV === 'development' && !isContentScript) {
-      console.log('Auth state changed:', event);
+      console.log('Main client auth state changed:', event);
     }
   } catch {
     // Silently ignore logging in content script context
