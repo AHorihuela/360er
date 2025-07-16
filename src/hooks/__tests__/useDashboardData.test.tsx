@@ -479,8 +479,8 @@ describe('useDashboardData', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: "Error",
-          description: "Failed to fetch dashboard data",
+          title: "Error loading dashboard data",
+          description: "Please try refreshing the page",
           variant: "destructive",
         });
       });

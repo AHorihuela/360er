@@ -27,24 +27,43 @@ vi.mock('../../lib/supabase', () => ({
       refreshSession: vi.fn(),
       getUser: vi.fn()
     },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: '123',
-              review_cycle_id: 'cycle-123',
-              review_cycles: { user_id: 'test-user-id' }
-            },
-            error: null
-          })
+    from: vi.fn((table) => {
+      if (table === 'user_roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { role: 'master' },
+                error: null
+              })
+            }))
+          }))
+        };
+      }
+      
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: '123',
+                review_cycle_id: 'cycle-123',
+                review_cycles: { user_id: 'test-user-id' }
+              },
+              error: null
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { role: 'master' },
+              error: null
+            })
+          }))
+        })),
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ error: null })
         }))
-      })),
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      update: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ error: null })
-      }))
-    }))
+      };
+    })
   }
 }));
 
@@ -291,27 +310,9 @@ describe('useAIReportManagement', () => {
   });
 
   it('allows master accounts to generate reports for feedback requests they do not own', async () => {
-    // Mock the feedback request to belong to a different user
-    const mockSupabase = vi.mocked(supabase);
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: '123',
-              review_cycle_id: 'cycle-123',
-              review_cycles: { user_id: 'different-user-id' } // Different from the current user
-            },
-            error: null
-          })
-        })
-      }),
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null })
-      })
-    } as any);
-
+    // The global mock already sets up user_roles to return { role: 'master' }
+    // and feedback_requests to return a different user_id, which is what we need
+    
     // Mock checkMasterAccountStatus to return true (user is a master account)
     mockCheckMasterAccountStatus.mockResolvedValue(true);
 

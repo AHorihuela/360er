@@ -33,6 +33,7 @@ Object.defineProperty(window, 'localStorage', {
 const consoleSpy = {
   log: vi.spyOn(console, 'log').mockImplementation(() => {}),
   error: vi.spyOn(console, 'error').mockImplementation(() => {}),
+  warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
 };
 
 describe('useAuth Hook', () => {
@@ -47,6 +48,7 @@ describe('useAuth Hook', () => {
     // Reset console spies
     consoleSpy.log.mockClear();
     consoleSpy.error.mockClear();
+    consoleSpy.warn.mockClear();
     
     // Fresh import of the hook
     vi.resetModules();
@@ -126,7 +128,7 @@ describe('useAuth Hook', () => {
       });
 
       expect(result.current.isMasterAccount).toBe(true);
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] Setting isMasterAccount:', true);
+      // Note: setIsMasterAccount no longer logs directly - this is handled by checkMasterAccountStatus
     });
 
     it('should update viewing all accounts with localStorage persistence', () => {
@@ -138,7 +140,7 @@ describe('useAuth Hook', () => {
 
       expect(result.current.viewingAllAccounts).toBe(true);
       expect(localStorageMock.setItem).toHaveBeenCalledWith('masterViewingAllAccounts', 'true');
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] Setting viewingAllAccounts:', true);
+      expect(consoleSpy.log).toHaveBeenCalledWith('[AUTH] Master viewing mode changed:', true);
     });
   });
 
@@ -159,7 +161,7 @@ describe('useAuth Hook', () => {
         expect(result.current.isMasterAccount).toBe(false);
       }
 
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] Invalid userId for master account check:', expect.any(String));
+      expect(consoleSpy.warn).toHaveBeenCalledWith('[AUTH] Invalid userId for master account check:', expect.any(String));
     });
 
     it('should handle user with master role', async () => {
@@ -176,10 +178,8 @@ describe('useAuth Hook', () => {
 
       expect(isMaster).toBe(true);
       expect(result.current.isMasterAccount).toBe(true);
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] Checking master account status for user:', mockUserId);
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] Master account check result:', {
-        userId: mockUserId,
-        role: 'master',
+      expect(consoleSpy.log).toHaveBeenCalledWith('[AUTH] Master account status:', {
+        userId: mockUserId.substring(0, 8) + '...',
         isMaster: true
       });
     });
@@ -214,7 +214,7 @@ describe('useAuth Hook', () => {
 
       expect(isMaster).toBe(false);
       expect(result.current.isMasterAccount).toBe(false);
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] No user role found - not a master account');
+      // Note: No debug log for "no data" case - this is expected behavior
     });
 
     it('should handle database errors', async () => {
@@ -232,7 +232,7 @@ describe('useAuth Hook', () => {
 
       expect(isMaster).toBe(false);
       expect(result.current.isMasterAccount).toBe(false);
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error checking master account status:', mockError);
+      expect(consoleSpy.error).toHaveBeenCalledWith('Error checking user role:', mockError);
     });
 
     it('should handle unexpected exceptions', async () => {
@@ -276,7 +276,7 @@ describe('useAuth Hook', () => {
       expect(result.current.isMasterAccount).toBe(false);
       expect(result.current.viewingAllAccounts).toBe(false);
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('masterViewingAllAccounts');
-      expect(consoleSpy.log).toHaveBeenCalledWith('[DEBUG] User is not master account, disabling viewingAllAccounts');
+      // Note: This is now handled by useEffect in the hook rather than the store
     });
 
     it('should maintain viewingAllAccounts when user is master', async () => {
