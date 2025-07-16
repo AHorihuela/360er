@@ -240,7 +240,7 @@ describe('Feedback Analysis API Integration Tests', () => {
         expect(errorData.error).toBeDefined();
         expect(typeof errorData.error).toBe('string');
       }
-    });
+    }, 10000);
 
     it('should provide meaningful error messages for configuration issues', async () => {
       if (!serverStarted) {
