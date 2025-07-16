@@ -10,7 +10,10 @@ import { useToast } from '@/components/ui/use-toast';
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
-      getUser: vi.fn()
+      getUser: vi.fn(),
+      admin: {
+        listUsers: vi.fn()
+      }
     },
     from: vi.fn(),
     rpc: vi.fn()
@@ -422,9 +425,11 @@ describe('useDashboardData', () => {
         return createCyclesQuery();
       });
 
-      // Mock the RPC call for user emails
-      mockSupabase.rpc.mockResolvedValue({
-        data: [{ id: 'other-user-id', email: 'other@example.com' }],
+      // Mock the auth.admin.listUsers call for user emails
+      mockSupabase.auth.admin.listUsers.mockResolvedValue({
+        data: {
+          users: [{ id: 'other-user-id', email: 'other@example.com' }]
+        },
         error: null
       });
 
@@ -435,7 +440,7 @@ describe('useDashboardData', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.allReviewCycles[0].users?.email).toBe('other@example.com');
+        expect(result.current.allReviewCycles[0].userEmail).toBe('other@example.com');
       });
     });
   });
@@ -479,7 +484,7 @@ describe('useDashboardData', () => {
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
-          title: "Error loading dashboard data",
+          title: "Error loading review cycles",
           description: "Please try refreshing the page",
           variant: "destructive",
         });

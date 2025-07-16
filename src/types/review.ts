@@ -28,6 +28,14 @@ export interface ReviewCycle {
   };
 }
 
+// Extended ReviewCycle type that includes user information for master account mode
+export interface ReviewCycleWithUser extends ReviewCycle {
+  users?: {
+    email: string;
+  };
+  userEmail?: string | null;
+}
+
 export interface PageView extends TimestampValidation {
   id: string;
   feedback_request_id: string;

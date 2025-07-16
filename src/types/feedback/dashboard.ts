@@ -1,6 +1,7 @@
 import { type Employee } from './submission';
 import { type RelationshipType, type FeedbackStatus } from './base';
 import { type FeedbackResponse } from '@/types/feedback';
+import { type FeedbackRequest } from '@/types/review';
 
 export interface DashboardEmployee {
   id: string;
@@ -70,4 +71,29 @@ export interface DashboardReviewCycle {
 export interface ReviewCycleWithFeedback extends DashboardReviewCycle {
   total_requests: number;
   completed_requests: number;
+}
+
+// Input type for review cycle data processing
+export interface ReviewCycleInput {
+  id: string;
+  title: string;
+  review_by_date: string;
+  feedback_requests?: Array<FeedbackRequest & {
+    feedback_responses?: FeedbackResponse[];
+    analytics?: {
+      id: string;
+      insights: Array<{
+        competencies: Array<DashboardCompetency>;
+        relationship: string;
+      }>;
+    };
+  }>;
+}
+
+// Result type for feedback mapping operations
+export interface MapFeedbackResult {
+  mappedRequests: DashboardFeedbackRequest[];
+  totalRequests: number;
+  completedRequests: number;
+  employeesWithStatus: DashboardEmployee[] | undefined;
 } 
