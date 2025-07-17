@@ -31,6 +31,7 @@ interface Props {
   elapsedSeconds: number;
   surveyType?: ReviewCycleType;
   isSaving?: boolean;
+  hideHeader?: boolean; // Hide the section header when used within another section
 }
 
 const generationSteps = [
@@ -52,7 +53,8 @@ export function AIReport({
   generationStep,
   elapsedSeconds,
   surveyType,
-  isSaving = false
+  isSaving = false,
+  hideHeader = false
 }: Props) {
   const { toast } = useToast();
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
@@ -178,14 +180,16 @@ export function AIReport({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold">AI-Generated Report</h2>
-        {aiReport?.created_at && (
-          <p className="text-sm text-muted-foreground">
-            Generated {formatLastAnalyzed(aiReport.created_at)}
-          </p>
-        )}
-      </div>
+      {!hideHeader && (
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">AI-Generated Report</h2>
+          {aiReport?.created_at && (
+            <p className="text-sm text-muted-foreground">
+              Generated {formatLastAnalyzed(aiReport.created_at)}
+            </p>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader 
