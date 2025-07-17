@@ -97,8 +97,8 @@ export function useManagerFeedback({ userId, reviewCycleId }: UseManagerFeedback
         .insert({
           feedback_request_id: activeFeedbackRequest.id,
           relationship: 'manager',
-          strengths: input.content.includes('strength') || input.content.includes('good') ? input.content : '',
-          areas_for_improvement: input.content.includes('strength') || input.content.includes('good') ? '' : input.content,
+          strengths: '', // Always empty for manager feedback - no auto-categorization
+          areas_for_improvement: input.content, // Store all manager feedback here
           source: input.source || 'web',
           category: input.category,
           status: 'submitted',

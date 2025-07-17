@@ -84,10 +84,8 @@ export function FeedbackEntryCard({
     setIsUpdating(true);
     try {
       const success = await updateFeedback(feedback.id, {
-        strengths: editedContent.includes('strength') || editedContent.includes('good') 
-          ? editedContent : feedback.strengths,
-        areas_for_improvement: editedContent.includes('strength') || editedContent.includes('good') 
-          ? feedback.areas_for_improvement : editedContent
+        strengths: '', // Always empty for manager feedback - no auto-categorization
+        areas_for_improvement: editedContent // Store all manager feedback here
       });
 
       if (success) {

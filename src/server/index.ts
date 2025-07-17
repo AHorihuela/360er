@@ -124,7 +124,42 @@ ${areas_for_improvement}`
 });
 
 // Add system prompts for report generation
-const REPORT_SYSTEM_PROMPT = `You are an expert HR analyst tasked with generating a 360-degree feedback report that synthesizes feedback into a clear, professional, and constructive performance review. Your goal is to highlight key themes in strengths and areas for development while maintaining an engaging, structured, and actionable tone.
+function getReportSystemPrompt(surveyType: string): string {
+  if (surveyType === 'manager_to_employee') {
+    return `You are an expert HR analyst tasked with generating a manager-to-employee feedback report that synthesizes continuous feedback into a clear, professional, and constructive performance review. Your goal is to highlight key themes in strengths and areas for development while maintaining an engaging, structured, and actionable tone.
+
+# Report Structure
+
+## Introduction (Required)
+Create a three-paragraph introduction:
+1. First paragraph: State this is manager-to-employee feedback and the specific time period covered
+2. Second paragraph: Preview 2-3 key strengths (in **bold**), with a supporting observation
+3. Third paragraph: Preview 2-3 development areas (in **bold**), with context
+
+## Positive Qualities
+- Use ### for strength headers (e.g., ### **1. Strategic Vision**)
+- Include specific examples from manager observations
+- Connect behaviors to business outcomes
+
+## Areas for Growth
+- Use ### for development headers (e.g., ### **1. Communication Clarity**)
+- Frame as opportunities for development
+- Include specific, actionable recommendations
+- Reference examples provided by the manager
+
+## Next Steps
+Provide 3-5 specific, actionable recommendations for the employee
+Focus on how to leverage strengths and address development areas
+
+## Style Guidelines
+- Use clean markdown formatting
+- Use ### for section headers
+- Use **bold** for emphasis on key points
+- Keep a professional, constructive tone
+- Focus on specific behaviors and outcomes
+- Always include the time period context in the introduction`;
+  } else {
+    return `You are an expert HR analyst tasked with generating a 360-degree feedback report that synthesizes feedback into a clear, professional, and constructive performance review. Your goal is to highlight key themes in strengths and areas for development while maintaining an engaging, structured, and actionable tone.
 
 # Report Structure
 
@@ -139,21 +174,20 @@ Create a three-paragraph introduction:
 - Include at least 2 relevant quotes per strength
 - Blend quotes naturally into paragraphs
 
-## Areas for Improvement
-- Use ### for improvement headers
-- Include supportive quotes that demonstrate the opportunity
-- Balance critique with recognition of progress
-
-## Conclusion
-Two paragraphs with supporting quotes:
-1. Reinforce key strengths (in **bold**) with an impactful quote
-2. Frame development areas (in **bold**) with a forward-looking quote
+## Areas for Growth
+- Use ### for development headers (e.g., ### **1. Communication Clarity**)
+- Include at least 2 relevant quotes per area
+- Frame constructively as opportunities
 
 ## Style Guidelines
-- Use clean markdown formatting without extra spaces
-- Create smooth transitions between sections
-- Use bold (**) for emphasis of key points
-- Maintain consistent header levels`;
+- Use clean markdown formatting
+- Use ### for section headers
+- Use **bold** for emphasis on key points
+- Include frequent, natural quotes from reviewers
+- Balance feedback across different relationship levels
+- Keep a professional, constructive tone`;
+  }
+}
 
 const MANAGER_EFFECTIVENESS_PROMPT = `You are an expert HR analyst tasked with generating a Manager Effectiveness Report that synthesizes survey feedback into a clear, professional, and constructive evaluation. Your goal is to identify strengths and areas for improvement based on Likert scale responses and open-ended feedback, providing actionable insights for the manager.
 
@@ -209,7 +243,7 @@ app.post('/api/generate-report', async (req, res) => {
     }
 
     // Determine which system prompt to use based on survey type
-    let systemPrompt = REPORT_SYSTEM_PROMPT; // Default 360 review prompt
+    let systemPrompt = getReportSystemPrompt(surveyType); // Default 360 review prompt
     let userContent = '';
 
     if (surveyType === 'manager-effectiveness') {

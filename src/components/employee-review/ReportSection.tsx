@@ -239,14 +239,14 @@ export function ReportSection({
               size="lg"
             >
               <Sparkles className="mr-2 h-4 w-4" />
-              Generate Report
+              {existingReport ? 'Generate New Report' : 'Generate Report'}
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Existing Report or Non-M2E Report */}
-      {(existingReport || !isM2E) && (
+      {/* Show Existing Report for M2E if it exists */}
+      {isM2E && existingReport && (
         <AIReport 
           feedbackRequest={feedbackRequest as any}
           onExportPDF={onExportPDF}
@@ -258,7 +258,22 @@ export function ReportSection({
           elapsedSeconds={elapsedSeconds}
           surveyType={reviewCycle?.type}
           isSaving={isSaving}
-          hideHeader={isM2E} // Hide redundant header for M2E
+        />
+      )}
+
+      {/* Non-M2E Report Display */}
+      {!isM2E && (
+        <AIReport 
+          feedbackRequest={feedbackRequest as any}
+          onExportPDF={onExportPDF}
+          onReportChange={onReportChange}
+          onGenerateReport={onGenerateReport}
+          isGeneratingReport={isGeneratingReport}
+          generationStep={generationStep}
+          startTime={startTime}
+          elapsedSeconds={elapsedSeconds}
+          surveyType={reviewCycle?.type}
+          isSaving={isSaving}
         />
       )}
     </section>
