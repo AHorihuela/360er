@@ -7,12 +7,20 @@ import { ReviewCycleType } from '../types/survey';
 import { CoreFeedbackResponse } from '../types/feedback/base';
 import { useAuth } from './useAuth';
 
+interface TimeRange {
+  startDate: Date;
+  endDate: Date;
+  preset?: 'last_week' | 'last_month' | 'last_quarter' | 'custom';
+  label: string;
+}
+
 interface UseAIReportManagementProps {
   feedbackRequest: FeedbackRequest | null;
   surveyType?: ReviewCycleType;
   onSuccessfulGeneration?: () => Promise<void>;
   surveyQuestions?: Record<string, string>;
   surveyQuestionOrder?: Record<string, number>;
+  timeRange?: TimeRange; // Add time range support
 }
 
 export function useAIReportManagement({ 
@@ -20,7 +28,8 @@ export function useAIReportManagement({
   surveyType,
   onSuccessfulGeneration,
   surveyQuestions,
-  surveyQuestionOrder
+  surveyQuestionOrder,
+  timeRange
 }: UseAIReportManagementProps) {
   const { toast } = useToast();
   const { checkMasterAccountStatus } = useAuth();
@@ -251,7 +260,8 @@ export function useAIReportManagement({
           employeeRole: feedbackRequest.employee?.role || 'Unknown Role',
           feedback: feedbackRequest.feedback,
           surveyType: surveyType,
-          surveyQuestions: surveyQuestions
+          surveyQuestions: surveyQuestions,
+          timeRange: timeRange
         })
       });
 

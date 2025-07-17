@@ -183,13 +183,14 @@ Provide 3-5 specific, actionable recommendations with bullet points.
 // Add the generate-report endpoint
 app.post('/api/generate-report', async (req, res) => {
   try {
-    const { employeeName, employeeRole, feedback, surveyType, surveyQuestions } = req.body;
+    const { employeeName, employeeRole, feedback, surveyType, surveyQuestions, timeRange } = req.body;
 
     console.log('=== GENERATE REPORT DEBUG ===');
     console.log('Employee Name:', employeeName);
     console.log('Employee Role:', employeeRole);
     console.log('Survey Type:', surveyType);
     console.log('Feedback Length:', feedback?.length);
+    console.log('Time Range:', timeRange);
     console.log('Feedback Structure:', JSON.stringify(feedback?.[0], null, 2));
     console.log('Survey Questions:', surveyQuestions);
     console.log('==============================');
@@ -236,7 +237,11 @@ Total responses: ${feedback.length}`;
 # Report Structure
 
 ## Introduction
-Create a brief introduction explaining this is direct feedback from the manager about the employee's performance.
+Create a brief introduction that includes:
+- This is direct feedback from the manager about the employee's performance
+- The specific time period covered by the feedback (e.g., "based on feedback from January 1 - March 31, 2024")
+- Number of feedback entries included
+- Brief overview of what the report covers
 
 ## Strengths
 Use ### headers for each strength area
@@ -258,9 +263,38 @@ Focus on how to leverage strengths and address development areas
 - Use ### for section headers
 - Use **bold** for emphasis
 - Keep a professional, constructive tone
-- Focus on specific behaviors and outcomes`;
+- Focus on specific behaviors and outcomes
+- Always include the time period context in the introduction`;
 
-      const managerFeedback = (feedback as FeedbackItem[]).map((f: FeedbackItem) => {
+      // Filter feedback by time range if provided
+      let filteredFeedback = feedback as FeedbackItem[];
+      let timeRangeText = 'all available feedback';
+      
+      if (timeRange && timeRange.startDate && timeRange.endDate) {
+        const startDate = new Date(timeRange.startDate);
+        const endDate = new Date(timeRange.endDate);
+        
+        filteredFeedback = (feedback as FeedbackItem[]).filter((f: FeedbackItem) => {
+          if (!f.created_at) return true; // Include feedback without dates
+          const feedbackDate = new Date(f.created_at);
+          return feedbackDate >= startDate && feedbackDate <= endDate;
+        });
+        
+        // Format the time range for the prompt
+        const formatDate = (date: Date) => date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        timeRangeText = `feedback from ${formatDate(startDate)} to ${formatDate(endDate)}`;
+        
+        if (timeRange.label) {
+          timeRangeText += ` (${timeRange.label})`;
+        }
+      }
+
+      const managerFeedback = filteredFeedback.map((f: FeedbackItem) => {
         // M2E feedback might have content in either strengths OR areas_for_improvement
         // Combine both fields, filtering out empty ones
         const combinedContent = [f.strengths, f.areas_for_improvement]
@@ -275,10 +309,12 @@ Focus on how to leverage strengths and address development areas
 
       userContent = `Generate a manager-to-employee feedback report for ${employeeName} (${employeeRole}).
 
-Manager Feedback Entries:
-${managerFeedback.map((f, i) => `${i + 1}. ${f.feedback} (${f.timestamp})`).join('\n\n')}
+Time Period: This report covers ${timeRangeText}.
+Total feedback entries in period: ${filteredFeedback.length}
+${feedback.length !== filteredFeedback.length ? `(Filtered from ${feedback.length} total entries)` : ''}
 
-Total feedback entries: ${feedback.length}`;
+Manager Feedback Entries:
+${managerFeedback.map((f, i) => `${i + 1}. ${f.feedback} (${f.timestamp})`).join('\n\n')}`;
     } else {
       // Standard 360 review
       const feedbackByRelationship = (feedback as FeedbackItem[]).reduce((acc: Record<string, Array<{strengths: string, areas_for_improvement: string}>>, response: FeedbackItem) => {

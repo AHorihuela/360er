@@ -68,6 +68,9 @@ export function EmployeeReviewDetailsPage() {
     onFeedbackUpdate: setFeedbackRequest
   });
 
+  // State for time range (will be passed from ReportSection)
+  const [currentTimeRange, setCurrentTimeRange] = useState<any>(null);
+
   // AI report management hook
   const {
     isGeneratingReport,
@@ -77,14 +80,22 @@ export function EmployeeReviewDetailsPage() {
     elapsedSeconds,
     isSaving,
     handleReportChange,
-    handleGenerateReport
+    handleGenerateReport: generateReport
   } = useAIReportManagement({
     feedbackRequest,
     surveyType: reviewCycle?.type,
     onSuccessfulGeneration: fetchData,
     surveyQuestions,
-    surveyQuestionOrder
+    surveyQuestionOrder,
+    timeRange: currentTimeRange
   });
+
+  // Wrapper function to handle time range
+  const handleGenerateReport = (timeRange?: any) => {
+    setCurrentTimeRange(timeRange);
+    // The hook will use the updated timeRange on next render
+    setTimeout(() => generateReport(), 0);
+  };
 
   // Sorted feedback memo
   const sortedFeedback = useMemo(() => 

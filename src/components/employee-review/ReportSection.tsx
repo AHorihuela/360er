@@ -17,7 +17,7 @@ interface ReportSectionProps {
   feedbackRequest: FeedbackRequest;
   onExportPDF: () => Promise<void>;
   onReportChange: (report: any) => void;
-  onGenerateReport: () => void;
+  onGenerateReport: (timeRange?: TimeRange) => void;
   isGeneratingReport: boolean;
   generationStep: GenerationStep;
   startTime: number | null;
@@ -129,7 +129,7 @@ export function ReportSection({
       </div>
 
       {/* M2E Time Range Selection and Generation */}
-      {isM2E && !existingReport && (
+      {isM2E && (
         <Card className="border-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -233,7 +233,7 @@ export function ReportSection({
 
             {/* Generate Button */}
             <Button
-              onClick={onGenerateReport}
+              onClick={() => onGenerateReport(selectedTimeRange)}
               disabled={!hasMinimumFeedback || isGeneratingReport}
               className="w-full"
               size="lg"
