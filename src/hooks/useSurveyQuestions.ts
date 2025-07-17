@@ -12,6 +12,14 @@ export function useSurveyQuestions() {
   const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
 
   const fetchSurveyQuestions = async (cycleType: ReviewCycleType): Promise<Record<string, string>> => {
+    // Manager-to-employee cycles don't use survey questions - they use direct feedback input
+    if (cycleType === 'manager_to_employee') {
+      console.log('Skipping survey questions for manager-to-employee cycle - uses direct feedback input');
+      setSurveyQuestions({});
+      setIsQuestionsLoading(false);
+      return {};
+    }
+
     try {
       setSurveyQuestions({});
       setIsQuestionsLoading(true);
@@ -29,7 +37,6 @@ export function useSurveyQuestions() {
           title: "Warning",
           description: `Could not load survey questions for ${
           cycleType === 'manager_effectiveness' ? 'Manager Survey' : 
-          cycleType === 'manager_to_employee' ? 'Manager to Employee Feedback' : 
           '360° Feedback'
         }`,
           variant: "destructive",
