@@ -2,7 +2,7 @@
 import { TimestampValidation } from './review';
 
 // Types of review cycles
-export type ReviewCycleType = '360_review' | 'manager_effectiveness';
+export type ReviewCycleType = '360_review' | 'manager_effectiveness' | 'manager_to_employee';
 
 // Question types for surveys
 export type QuestionType = 'likert' | 'open_ended' | 'multiple_choice';

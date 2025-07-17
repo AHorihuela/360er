@@ -77,6 +77,9 @@ export interface FeedbackResponse {
   areas_for_improvement: string | null;
   // Add the responses field for structured survey responses
   responses?: StructuredResponses;
+  // New fields from manager feedback migration
+  source?: 'web' | 'slack' | 'voice';
+  category?: string;
 }
 
 export interface FeedbackRequest {
@@ -85,7 +88,7 @@ export interface FeedbackRequest {
   review_cycle_id: string;
   status: string;
   target_responses: number;
-  unique_link: string;
+  unique_link: string | null; // Now nullable for manager feedback
   created_at?: string;
   employee?: Employee | Employee[];
   feedback_responses?: FeedbackResponse[];
@@ -124,4 +127,53 @@ export interface AIReport extends TimestampValidation {
   is_final: boolean;
   error?: string;
   status?: 'pending' | 'processing' | 'completed' | 'error';
+  // New fields from manager feedback migration
+  report_period_start?: string;
+  report_period_end?: string;
+  time_range_preset?: 'last_week' | 'last_month' | 'last_quarter' | 'custom';
+  report_purpose?: string;
+  feedback_count?: number;
+}
+
+// Manager Feedback Specific Types
+export interface ManagerFeedbackEntry {
+  id: string;
+  feedback_request_id: string;
+  relationship: 'manager';
+  strengths: string;
+  areas_for_improvement: string;
+  source: 'web' | 'slack' | 'voice';
+  category?: string;
+  submitted_at: string;
+  created_at: string;
+}
+
+export interface TimeRangeSelection {
+  preset?: 'last_week' | 'last_month' | 'last_quarter' | 'custom';
+  startDate: Date;
+  endDate: Date;
+  label: string;
+}
+
+export interface FeedbackDensityInfo {
+  feedbackCount: number;
+  qualitySuggestion: 'expand_range' | 'sufficient' | 'too_large';
+  suggestedRange?: TimeRangeSelection;
+  message: string;
+}
+
+export interface ManagerFeedbackReport extends AIReport {
+  employee_id: string;
+  time_range_preset: 'last_week' | 'last_month' | 'last_quarter' | 'custom';
+  report_period_start: string;
+  report_period_end: string;
+  feedback_count: number;
+  report_purpose?: string;
+}
+
+export interface CreateManagerFeedbackInput {
+  employee_id: string;
+  content: string;
+  source?: 'web' | 'voice';
+  category?: string;
 } 
