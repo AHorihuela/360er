@@ -51,7 +51,12 @@ export function useReviewCycle(cycleId: string | undefined) {
             feedback_responses (
               id,
               submitted_at,
-              relationship
+              relationship,
+              strengths,
+              areas_for_improvement,
+              created_at,
+              source,
+              category
             ),
             analytics:feedback_analytics!feedback_request_id (
               id,

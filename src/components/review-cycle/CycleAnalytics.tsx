@@ -56,9 +56,25 @@ export function CycleAnalytics({ reviewCycle }: Props) {
               ? request.employee[0]?.name 
               : request.employee?.name;
             
+            // For manager feedback, get the most comprehensive content available
+            let content = '';
+            
+            // Try multiple content sources in order of preference
+            if (response.areas_for_improvement?.trim()) {
+              content = response.areas_for_improvement.trim();
+            } else if (response.strengths?.trim()) {
+              content = response.strengths.trim();
+            } else if (response.responses && typeof response.responses === 'object') {
+              // Check if responses contain feedback content
+              const responsesObj = response.responses as any;
+              content = Object.values(responsesObj).find((val: any) => 
+                typeof val === 'string' && val.trim().length > 0
+              ) as string || '';
+            }
+            
             recentFeedback.push({
               employeeName: employeeName || 'Unknown Employee',
-              content: response.strengths || response.areas_for_improvement || 'No content',
+              content: content || 'No content available',
               submittedAt: response.submitted_at,
               relationship: response.relationship
             });
@@ -90,24 +106,21 @@ export function CycleAnalytics({ reviewCycle }: Props) {
           <h3 className="text-lg font-semibold">
             {isManagerToEmployee ? 'Feedback Activity' : 'Review Cycle Progress'}
           </h3>
-          <div className="flex items-center gap-2">
-            <Badge variant={stage.variant}>{stage.label}</Badge>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {isManagerToEmployee 
-                      ? 'Shows total feedback entries from manager'
-                      : 'Shows progress of received responses against target responses'
-                    }
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          {!isManagerToEmployee && (
+            <div className="flex items-center gap-2">
+              <Badge variant={stage.variant}>{stage.label}</Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Shows progress of received responses against target responses</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {!isManagerToEmployee && (
