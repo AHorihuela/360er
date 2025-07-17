@@ -7,6 +7,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Note: This app intentionally creates two Supabase client instances:
+// 1. Main client for authenticated user operations (dashboard, user management)
+// 2. Anonymous client for public feedback submission (completely isolated auth)
+// The "Multiple GoTrueClient instances" warning in console is expected and safe.
+
 // Create a custom storage object that checks for window availability
 const customStorage = {
   getItem: (key: string): string | null => {
@@ -81,10 +86,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce',
     storage: customStorage,
     storageKey: 'sb-auth-token' // Explicit storage key for main client
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'authenticated-client'
+    }
   }
 });
 
 // Anonymous client for feedback submissions with completely isolated auth
+// Note: Multiple GoTrueClient instances warning is expected and safe here - 
+// we intentionally use separate clients for authenticated vs anonymous operations
 export const anonymousClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // Don't persist any session
