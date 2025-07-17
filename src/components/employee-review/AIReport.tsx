@@ -164,9 +164,11 @@ export function AIReport({
 
   // Get the report type label based on survey type
   const getReportTypeLabel = () => {
-    return surveyType === 'manager_effectiveness' 
-      ? 'Manager Effectiveness Report' 
-      : '360-Degree Feedback Report';
+      return surveyType === 'manager_effectiveness'
+    ? 'Manager Effectiveness Report'
+    : surveyType === 'manager_to_employee'
+    ? 'Manager to Employee Feedback Report'
+    : '360-Degree Feedback Report';
   };
 
   // Handle toggle with localStorage update

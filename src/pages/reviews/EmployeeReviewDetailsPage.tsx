@@ -64,15 +64,25 @@ function formatStatusText(status?: string): string {
 
 // Helper function to render the survey type badge
 function getSurveyTypeBadge(type?: ReviewCycleType) {
-  return type === 'manager_effectiveness' ? (
-    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-      Manager Survey
-    </Badge>
-  ) : (
-    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-      360° Feedback
-    </Badge>
-  );
+  if (type === 'manager_effectiveness') {
+    return (
+      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+        Manager Survey
+      </Badge>
+    );
+  } else if (type === 'manager_to_employee') {
+    return (
+      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+        Manager to Employee Feedback
+      </Badge>
+    );
+  } else {
+    return (
+      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+        360° Feedback
+      </Badge>
+    );
+  }
 }
 
 export function EmployeeReviewDetailsPage() {
@@ -138,7 +148,11 @@ export function EmployeeReviewDetailsPage() {
         console.warn(`No questions found for survey type: ${cycleType}`);
         toast({
           title: "Warning",
-          description: `Could not load survey questions for ${cycleType === 'manager_effectiveness' ? 'Manager Survey' : '360° Feedback'}`,
+          description: `Could not load survey questions for ${
+          cycleType === 'manager_effectiveness' ? 'Manager Survey' : 
+          cycleType === 'manager_to_employee' ? 'Manager to Employee Feedback' : 
+          '360° Feedback'
+        }`,
           variant: "destructive",
         });
         setIsQuestionsLoading(false);

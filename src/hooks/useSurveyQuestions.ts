@@ -27,7 +27,11 @@ export function useSurveyQuestions() {
         console.warn(`No questions found for survey type: ${cycleType}`);
         toast({
           title: "Warning",
-          description: `Could not load survey questions for ${cycleType === 'manager_effectiveness' ? 'Manager Survey' : '360° Feedback'}`,
+          description: `Could not load survey questions for ${
+          cycleType === 'manager_effectiveness' ? 'Manager Survey' : 
+          cycleType === 'manager_to_employee' ? 'Manager to Employee Feedback' : 
+          '360° Feedback'
+        }`,
           variant: "destructive",
         });
         return {};

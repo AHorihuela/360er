@@ -63,6 +63,8 @@ export function EditableTitle({
     switch (type) {
       case 'manager_effectiveness':
         return 'Manager Survey'
+      case 'manager_to_employee':
+        return 'Manager to Employee Feedback'
       case '360_review':
       default:
         return '360° Feedback'
