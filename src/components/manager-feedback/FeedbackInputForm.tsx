@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Send, Mic, User } from 'lucide-react';
+import { Loader2, Send, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useManagerFeedback } from '@/hooks/useManagerFeedback';
 import { SearchableEmployeeSelector } from './SearchableEmployeeSelector';
+import { VoiceToTextInput } from './VoiceToTextInput';
 import { Employee } from '@/types/review';
 
 interface FeedbackInputFormProps {
@@ -97,7 +98,7 @@ export function FeedbackInputForm({
       if (result) {
         // Clear form on success
         setFeedbackContent('');
-        setSelectedEmployeeId('');
+        setSelectedEmployeeId(hideEmployeeSelector && employees.length === 1 ? employees[0].id : '');
         setIsVoiceMode(false);
         
         onSubmissionSuccess?.();
@@ -107,13 +108,8 @@ export function FeedbackInputForm({
     }
   };
 
-  const handleVoiceToggle = () => {
-    setIsVoiceMode(!isVoiceMode);
-    // Voice recording logic will be added when we create the VoiceToTextInput component
-    toast({
-      title: "Voice Input",
-      description: "Voice input feature coming soon!",
-    });
+  const handleVoiceToggle = (voiceMode: boolean) => {
+    setIsVoiceMode(voiceMode);
   };
 
   return (
@@ -161,20 +157,18 @@ export function FeedbackInputForm({
               <Label htmlFor="feedback-content">
                 Your Feedback
               </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleVoiceToggle}
-                className="flex items-center gap-1"
-                disabled={!selectedEmployeeId}
-                tabIndex={-1}
-              >
-                <Mic className={`h-4 w-4 ${isVoiceMode ? 'text-red-500' : ''}`} />
-                Voice
-              </Button>
             </div>
             
+            {/* Voice Input Component */}
+            <VoiceToTextInput
+              value={feedbackContent}
+              onChange={setFeedbackContent}
+              onVoiceToggle={handleVoiceToggle}
+              disabled={!selectedEmployeeId}
+              className="mb-3"
+            />
+            
+            {/* Text Input */}
             <Textarea
               id="feedback-content"
               value={feedbackContent}
@@ -198,6 +192,8 @@ export function FeedbackInputForm({
               <span>
                 {feedbackContent.length < 10 
                   ? `${10 - feedbackContent.length} more characters needed`
+                  : isVoiceMode 
+                  ? "Voice input active • You can also type to edit"
                   : "Ready to submit • ⌘+Enter to submit quickly"
                 }
               </span>

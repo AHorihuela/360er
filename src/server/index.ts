@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
 import reportRoutes from './routes/reportRoutes';
+import { transcribeAudio, audioUpload } from './api/whisper-transcribe';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,11 +29,14 @@ function getOpenAIClient(): OpenAI {
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the dist directory
-app.use(express.static(path.join(__dirname, '../../dist')));
-
-// API Routes
+// API Routes FIRST (before static files)
 app.use('/api', reportRoutes);
+
+// Whisper transcription endpoint
+app.post('/api/transcribe', audioUpload, transcribeAudio);
+
+// Serve static files from the dist directory (after API routes)
+app.use(express.static(path.join(__dirname, '../../dist')));
 
 // Analyze feedback endpoint (kept in main file for now - could be moved to routes later)
 app.post('/api/analyze-feedback', async (req, res) => {
@@ -104,5 +108,6 @@ app.get('*', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  console.log(`Static files served from: ${path.join(__dirname, '../../dist')}`);
-}); 
+});
+
+export default app; 
