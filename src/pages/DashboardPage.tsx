@@ -9,7 +9,7 @@ import { AnalyticsSection } from '@/components/dashboard/AnalyticsSection';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Mail } from 'lucide-react';
-import { ManagerFeedbackActivity } from '@/components/dashboard/ManagerFeedbackActivity';
+
 
 export function DashboardPage(): JSX.Element {
   const {
@@ -113,16 +113,7 @@ export function DashboardPage(): JSX.Element {
           />
         )}
 
-        {/* Manager Feedback Team Overview - Show for manager-to-employee cycles */}
-        {activeReviewCycle && 
-         activeReviewCycle.type === 'manager_to_employee' && 
-         activeReviewCycle.feedback_requests?.length > 0 && (
-          <ManagerFeedbackActivity 
-            feedbackRequests={activeReviewCycle.feedback_requests}
-            employees={employeesData}
-            cycleId={activeReviewCycle.id}
-          />
-        )}
+
 
         {/* Other Employees */}
         <OtherEmployees
