@@ -398,6 +398,88 @@ src/pages/manager-feedback/
 - [ ] Weekly nudges are delivered appropriately
 - [ ] End-to-end testing covers both web and Slack workflows
 
+## Future Considerations
+
+### Peer-to-Peer Feedback Expansion
+
+**Vision**: Allow anyone in the organization to provide feedback about colleagues through Slack or web interface, creating a fourth pillar of comprehensive feedback coverage.
+
+**Use Cases:**
+- Slack mentions: "@john did amazing work on the client presentation today"
+- Cross-team feedback: "Working with Sarah on the integration was seamless"
+- Peer recognition: Real-time appreciation and constructive feedback
+- 360-degree continuous feedback: Extends beyond just manager-employee relationships
+
+**Database Readiness**: The current manager feedback design already supports this expansion:
+
+```sql
+-- Current structure supports peer feedback with minimal changes
+review_cycles (type='peer_to_peer')           -- New type
+feedback_requests (any_user → any_employee)   -- Relaxed permissions  
+feedback_responses (
+    relationship='peer' | 'cross-team' | 'colleague',  -- New relationships
+    source='slack',                            -- Already supported
+    category='recognition' | 'collaboration'   -- New categories
+)
+```
+
+**Implementation Considerations:**
+- **Permissions**: Extend RLS policies to allow peer feedback (currently manager-only)
+- **UI Separation**: Keep peer feedback separate from manager feedback in reports
+- **Slack Integration**: Same bot architecture, different triggering patterns
+- **Moderation**: Consider approval workflows for peer feedback
+- **Privacy**: Option for anonymous peer feedback vs attributed feedback
+
+**Benefits of Current Architecture for Future Expansion:**
+- ✅ Same database infrastructure (no new tables needed)
+- ✅ Same API endpoints (extend with new type filtering)
+- ✅ Same report generation (separate peer vs manager sections)
+- ✅ Same UI components (extend existing forms)
+- ✅ Source tracking already built-in for Slack integration
+
+**Timeline**: Not planned for Phase 1, but architecture is designed to support seamless addition as Phase 3 after Slack integration is proven with manager feedback.
+
+### Slack Integration Challenges
+
+**Employee Name Matching**: A critical challenge for Slack integration will be accurately mapping Slack mentions to database employees.
+
+**The Problem:**
+```slack
+@john-smith did amazing work on the presentation
+```
+**Mapping Challenges:**
+- Multiple employees with same name ("John Smith" vs "John K. Smith")
+- Different name formats (Slack: "john-smith", Database: "John Smith")
+- Nickname usage (Slack: "@johnny", Database: "John Smith")
+- Spelling variations or typos in Slack mentions
+
+**Potential Solutions for Phase 2:**
+1. **Slack User ID Mapping**: Link Slack user IDs to employee records during setup
+2. **Email-Based Matching**: Match Slack email addresses to employee email fields
+3. **Fuzzy Name Matching**: AI-powered name similarity scoring with confirmation prompts
+4. **Manual Resolution UI**: When ambiguous, prompt manager to confirm employee selection
+5. **Auto-Complete Integration**: Slack bot suggests valid employee names as user types
+
+**Implementation Approach:**
+```sql
+-- Future: Employee-Slack mapping table
+CREATE TABLE employee_slack_mapping (
+    employee_id UUID REFERENCES employees(id),
+    slack_user_id TEXT NOT NULL,
+    slack_username TEXT,
+    slack_display_name TEXT,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**User Experience Design:**
+- **Setup Phase**: Manager connects Slack workspace and maps team members
+- **Feedback Collection**: Bot suggests corrections for ambiguous mentions
+- **Fallback**: Manual employee selection when auto-matching fails
+
+**Timeline**: Address during Phase 2 Slack integration development.
+
 ---
 
-*This PRD serves as the foundational document for implementing the third pillar of our holistic review ecosystem, completing the feedback loop between managers, employees, and peers.* 
+*This PRD serves as the foundational document for implementing the third pillar of our holistic review ecosystem, with built-in extensibility for a future fourth pillar of peer-to-peer feedback.* 
