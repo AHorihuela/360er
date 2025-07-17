@@ -153,10 +153,7 @@ export function CycleAnalytics({ reviewCycle }: Props) {
                     </span>
                   </div>
                   <p className="text-muted-foreground line-clamp-2">
-                    {feedback.content.length > 100 
-                      ? `${feedback.content.substring(0, 100)}...` 
-                      : feedback.content
-                    }
+                    {feedback.content}
                   </p>
                 </div>
               ))}
