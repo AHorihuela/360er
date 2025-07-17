@@ -65,6 +65,7 @@ export interface DashboardReviewCycle {
   id: string;
   title: string;
   review_by_date: string;
+  type: 'manager_to_employee' | 'manager_effectiveness' | '360_review';
   feedback_requests: DashboardFeedbackRequest[];
 }
 

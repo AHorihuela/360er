@@ -39,6 +39,7 @@ export function useCycleSelection() {
         id: selectedCycle.id,
         title: selectedCycle.title,
         review_by_date: selectedCycle.review_by_date,
+        type: selectedCycle.type,
         feedback_requests: mappedRequests,
         total_requests: totalRequests,
         completed_requests: completedRequests
@@ -90,6 +91,7 @@ export function useCycleSelection() {
         id: cycleToSelect.id,
         title: cycleToSelect.title,
         review_by_date: cycleToSelect.review_by_date,
+        type: cycleToSelect.type,
         feedback_requests: mappedRequests,
         total_requests: totalRequests,
         completed_requests: completedRequests

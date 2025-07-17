@@ -382,9 +382,9 @@ export function ReviewCycleDetailsPage() {
               .insert([{
                 review_cycle_id: cycleId,
                 employee_id: employeeData.id,
-                unique_link: crypto.randomUUID(),
+                unique_link: reviewCycle.type === 'manager_to_employee' ? null : crypto.randomUUID(),
                 status: 'pending',
-                target_responses: 10
+                target_responses: reviewCycle.type === 'manager_to_employee' ? 0 : 10
               }])
               .select(`
                 id,

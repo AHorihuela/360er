@@ -185,7 +185,7 @@ export function useDashboardData() {
     }
 
     try {
-      const uniqueLink = generateShortId();
+      const uniqueLink = cycleSelectionHook.activeReviewCycle.type === 'manager_to_employee' ? null : generateShortId();
 
       const { error: insertError } = await supabase
         .from('feedback_requests')
@@ -193,7 +193,7 @@ export function useDashboardData() {
           employee_id: employeeId,
           review_cycle_id: cycleSelectionHook.activeReviewCycle.id,
           status: 'pending',
-          target_responses: 10,
+          target_responses: cycleSelectionHook.activeReviewCycle.type === 'manager_to_employee' ? 0 : 10,
           unique_link: uniqueLink
         });
 

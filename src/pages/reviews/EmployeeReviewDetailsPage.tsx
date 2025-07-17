@@ -20,12 +20,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon, Users } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Copy, AlertCircle, ArrowUpIcon, EqualIcon, ArrowDownIcon, StarIcon, TrendingUpIcon, Users, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FeedbackAnalytics } from '@/components/employee-review/FeedbackAnalytics';
 import { AIReport } from '@/components/employee-review/AIReport';
 import { cn } from '@/lib/utils';
 import { ReviewCycle, FeedbackRequest } from '@/types/reviews/employee-review';
+import { Employee } from '@/types/review';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { getFeedbackDate } from '@/utils/report';
 import { exportToPDF } from '@/utils/pdf';
@@ -33,6 +34,7 @@ import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
 import { ReviewCycleType, SurveyQuestion } from '@/types/survey';
 import { ManagerSurveyAnalytics } from '@/components/employee-review/ManagerSurveyAnalytics';
+import { FeedbackInputForm } from '@/components/manager-feedback/FeedbackInputForm';
 
 function getStatusVariant(status?: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
@@ -321,7 +323,8 @@ export function EmployeeReviewDetailsPage() {
             employee:employees (
               id,
               name,
-              role
+              role,
+              user_id
             ),
             feedback_responses (
               id,
@@ -494,16 +497,29 @@ export function EmployeeReviewDetailsPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            key="copy-link"
-            variant="outline"
-            size="sm"
-            onClick={handleCopyLink}
-            className="h-8 text-xs flex items-center gap-1.5"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Copy Link
-          </Button>
+          {reviewCycle?.type === 'manager_to_employee' ? (
+            <Button
+              key="add-feedback"
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById('manager-feedback-input')?.scrollIntoView({ behavior: 'smooth' })}
+              className="h-8 text-xs flex items-center gap-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Add Feedback
+            </Button>
+          ) : (
+            <Button
+              key="copy-link"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="h-8 text-xs flex items-center gap-1.5"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy Link
+            </Button>
+          )}
           <Button
             key="ai-report"
             variant="ghost"
@@ -569,6 +585,30 @@ export function EmployeeReviewDetailsPage() {
           isSaving={isSaving}
         />
       </section>
+
+      {/* Manager Feedback Input - Only show for manager-to-employee cycles */}
+      {reviewCycle?.type === 'manager_to_employee' && (
+        <section id="manager-feedback-input" className="space-y-4 pt-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Add Feedback</h2>
+            <p className="text-sm text-muted-foreground">
+              Provide feedback for {feedbackRequest?.employee?.name}
+            </p>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <FeedbackInputForm
+                reviewCycleId={cycleId}
+                employees={feedbackRequest?.employee ? [feedbackRequest.employee as Employee] : []}
+                onSubmissionSuccess={() => {
+                  fetchData(); // Refresh the page data after submission
+                }}
+                cycleTitle={reviewCycle?.title}
+              />
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Detailed Reviews Section */}
       <section id="detailed-feedback" className="space-y-4 pt-6">
