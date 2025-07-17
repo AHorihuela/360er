@@ -13,6 +13,15 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
   // Defensive programming: ensure counts are numbers to prevent NaN
   const totalRequests = activeReviewCycle.total_requests ?? 0;
   const completedRequests = activeReviewCycle.completed_requests ?? 0;
+  
+  // Check if this is a manager-to-employee cycle
+  const isManagerToEmployee = activeReviewCycle.type === 'manager_to_employee';
+  
+  // For M2E cycles, count total feedback entries instead of completion
+  const totalFeedbackEntries = isManagerToEmployee 
+    ? activeReviewCycle.feedback_requests.reduce((total, request) => 
+        total + (request.feedback_responses?.length || 0), 0)
+    : 0;
 
   return (
     <Card 
@@ -22,28 +31,45 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
       <CardHeader>
         <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <span>{activeReviewCycle.title}</span>
-          <span className="text-sm font-normal text-muted-foreground">
-            Due {new Date(activeReviewCycle.review_by_date).toLocaleDateString()}
-          </span>
+          {!isManagerToEmployee && (
+            <span className="text-sm font-normal text-muted-foreground">
+              Due {new Date(activeReviewCycle.review_by_date).toLocaleDateString()}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-between text-sm">
-            <span>Overall Completion</span>
-            <span className="font-medium">
-              {totalRequests === 0 ? '0' : Math.min(Math.round((completedRequests / totalRequests) * 100), 100)}%
-            </span>
+        {isManagerToEmployee ? (
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span>Feedback Activity</span>
+              <span className="font-medium">
+                {totalFeedbackEntries} entries
+              </span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{activeReviewCycle.feedback_requests.length} team members</span>
+              <span>Continuous feedback</span>
+            </div>
           </div>
-          <Progress 
-            value={totalRequests === 0 ? 0 : Math.min((completedRequests / totalRequests) * 100, 100)} 
-            className="h-3"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{completedRequests} reviews completed</span>
-            <span>{totalRequests - completedRequests} pending</span>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span>Overall Completion</span>
+              <span className="font-medium">
+                {totalRequests === 0 ? '0' : Math.min(Math.round((completedRequests / totalRequests) * 100), 100)}%
+              </span>
+            </div>
+            <Progress 
+              value={totalRequests === 0 ? 0 : Math.min((completedRequests / totalRequests) * 100, 100)} 
+              className="h-3"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{completedRequests} reviews completed</span>
+              <span>{totalRequests - completedRequests} pending</span>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

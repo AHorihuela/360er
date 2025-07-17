@@ -8,6 +8,7 @@ interface Props {
   dueDate: string;
   totalReviews: number;
   pendingReviews: number;
+  cycleType?: string;
 }
 
 interface DayData {
@@ -16,10 +17,13 @@ interface DayData {
   total: number;
 }
 
-export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pendingReviews }: Props) {
+export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pendingReviews, cycleType }: Props) {
   // Defensive programming: ensure counts are numbers to prevent NaN
   const safeTotal = totalReviews ?? 0;
   const safePending = pendingReviews ?? 0;
+  
+  // Check if this is a manager-to-employee cycle
+  const isManagerToEmployee = cycleType === 'manager_to_employee';
   
   // Process the data to get responses per day
   const data: DayData[] = [];
@@ -56,32 +60,41 @@ export function FeedbackTimeline({ feedbackRequests, dueDate, totalReviews, pend
       <CardHeader>
         <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div className="space-y-0.5">
-            <CardTitle className="text-xl font-bold">Response Timeline</CardTitle>
-            <div className="flex items-center text-muted-foreground">
-              <CalendarDays className="mr-2 h-4 w-4" />
-              <span className="text-sm">Due {new Date(dueDate).toLocaleDateString('en-US', { 
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric'
-              })}</span>
-            </div>
+            <CardTitle className="text-xl font-bold">
+              {isManagerToEmployee ? 'Feedback Activity' : 'Response Timeline'}
+            </CardTitle>
+            {!isManagerToEmployee && (
+              <div className="flex items-center text-muted-foreground">
+                <CalendarDays className="mr-2 h-4 w-4" />
+                <span className="text-sm">Due {new Date(dueDate).toLocaleDateString('en-US', { 
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {safeTotal - safePending} of {safeTotal}
+                {isManagerToEmployee 
+                  ? `${responses.length} feedback entries`
+                  : `${safeTotal - safePending} of ${safeTotal}`
+                }
               </span>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-16 h-2 rounded-full bg-secondary">
-                <div 
-                  className="h-full rounded-full bg-primary transition-all" 
-                  style={{ width: `${Math.min(completionPercentage, 100)}%` }}
-                />
+            {!isManagerToEmployee && (
+              <div className="flex items-center space-x-2">
+                <div className="w-16 h-2 rounded-full bg-secondary">
+                  <div 
+                    className="h-full rounded-full bg-primary transition-all" 
+                    style={{ width: `${Math.min(completionPercentage, 100)}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium">{completionPercentage}%</span>
               </div>
-              <span className="text-sm font-medium">{completionPercentage}%</span>
-            </div>
+            )}
           </div>
         </div>
       </CardHeader>

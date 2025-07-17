@@ -97,8 +97,9 @@ export function useCycleSelection() {
         completed_requests: completedRequests
       });
 
-      // Fetch survey questions if cycle has a type
-      if (cycleToSelect.type && onSurveyQuestionsFetch) {
+      // Fetch survey questions only for cycles that use structured questions
+      // Manager-to-employee cycles use direct feedback input, not survey questions
+      if (cycleToSelect.type && onSurveyQuestionsFetch && cycleToSelect.type !== 'manager_to_employee') {
         onSurveyQuestionsFetch(cycleToSelect.type);
       }
     } else {

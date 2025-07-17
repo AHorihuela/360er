@@ -50,6 +50,7 @@ export function AnalyticsSection({
         dueDate={activeReviewCycle.review_by_date}
         totalReviews={activeReviewCycle.total_requests}
         pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
+        cycleType={cycleType}
       />
 
       {/* Team Competency Analysis Card - for 360 review cycles */}
@@ -140,6 +141,28 @@ export function AnalyticsSection({
             })}
             questionIdToTextMap={surveyQuestions}
             reviewCycleType='manager_effectiveness'
+            reviewCycleId={activeReviewCycle.id}
+          />
+        </div>
+      ) : cycleType === 'manager_to_employee' ? (
+        <div>
+          <RecentReviews 
+            feedbackRequests={activeReviewCycle.feedback_requests.map(request => {
+              // Find the employee data for this request
+              const employee = employees.find(e => e.id === request.employee_id);
+              
+              // Return a new request object with employee data attached
+              return {
+                ...request,
+                employee: employee ? {
+                  id: employee.id,
+                  name: employee.name,
+                  role: employee.role
+                } : undefined
+              };
+            })}
+            questionIdToTextMap={{}} // M2E doesn't use survey questions
+            reviewCycleType='manager_to_employee'
             reviewCycleId={activeReviewCycle.id}
           />
         </div>

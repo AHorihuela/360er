@@ -1,6 +1,7 @@
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { OnboardingSection } from '@/components/dashboard/OnboardingSection';
 import { ReviewCycleSelector } from '@/components/dashboard/ReviewCycleSelector';
+import { QuickFeedbackSection } from '@/components/dashboard/QuickFeedbackSection';
 import { ActiveReviewCycleCard } from '@/components/dashboard/ActiveReviewCycleCard';
 import { CurrentCycleEmployees } from '@/components/dashboard/CurrentCycleEmployees';
 import { OtherEmployees } from '@/components/dashboard/OtherEmployees';
@@ -24,8 +25,14 @@ export function DashboardPage(): JSX.Element {
     currentCycleUserEmail,
     currentCycleUserId,
     handleCycleChange,
-    handleAddEmployeeToCycle
+    handleAddEmployeeToCycle,
+    fetchData
   } = useDashboardData();
+
+  const handleFeedbackSubmitted = () => {
+    // Refresh dashboard data after feedback submission
+    fetchData?.();
+  };
 
   if (isLoading) {
     return (
@@ -69,6 +76,15 @@ export function DashboardPage(): JSX.Element {
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {/* Quick Feedback Entry - Manager-to-Employee only */}
+        {activeReviewCycle && (
+          <QuickFeedbackSection
+            activeReviewCycle={activeReviewCycle}
+            employees={employees}
+            onFeedbackSubmitted={handleFeedbackSubmitted}
+          />
         )}
         
         {/* Active Review Cycle Progress */}

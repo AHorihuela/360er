@@ -72,6 +72,37 @@ export function ReviewCycleSelector({
     return allReviewCycles;
   };
 
+  // Get the currently selected cycle and its type
+  const selectedCycle = selectedCycleId 
+    ? allReviewCycles.find(cycle => cycle.id === selectedCycleId)
+    : null;
+
+  // Helper function to get survey type badge info
+  const getSurveyTypeBadge = (type: string) => {
+    switch (type) {
+      case 'manager_to_employee':
+        return {
+          label: 'Manager → Employee',
+          className: 'bg-blue-100 text-blue-800 border-blue-200'
+        };
+      case 'manager_effectiveness':
+        return {
+          label: 'Manager Effectiveness',
+          className: 'bg-amber-100 text-amber-800 border-amber-200'
+        };
+      case '360_review':
+        return {
+          label: '360° Feedback',
+          className: 'bg-green-100 text-green-800 border-green-200'
+        };
+      default:
+        return {
+          label: 'Review',
+          className: 'bg-gray-100 text-gray-800 border-gray-200'
+        };
+    }
+  };
+
   return (
     <div className="flex flex-col space-y-4 md:space-y-6">
       {/* Header Section */}
@@ -136,35 +167,54 @@ export function ReviewCycleSelector({
       </div>
 
       {/* Review Cycle Selection Section - now gets full width */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-muted/30 rounded-lg border">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>Current Review Cycle:</span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-muted/30 rounded-lg border">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>Active Review:</span>
+          </div>
+          
+          <Select 
+            value={selectedCycleId || ''} 
+            onValueChange={onCycleChange}
+            key={`cycle-select-${allReviewCycles.length}-${viewingAllAccounts}-${isMasterAccount}`}
+          >
+            <SelectTrigger className="w-full sm:w-auto sm:min-w-[300px] sm:max-w-[400px]">
+              <SelectValue placeholder="Select review cycle" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px] overflow-y-auto max-w-[600px]">
+              {getDisplayedCycles().map((cycle: ReviewCycle) => (
+                <SelectItem key={cycle.id} value={cycle.id} className="max-w-[580px]">
+                  <div className="flex items-center justify-between w-full">
+                    <TruncatedText text={cycle.title} maxLength={60} />
+                    {isMasterAccount && viewingAllAccounts && cycle.user_id !== currentUserId && (
+                      <Badge variant="outline" className="ml-2 text-xs bg-amber-100 text-amber-800">
+                        Other user
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        
-        <Select 
-          value={selectedCycleId || ''} 
-          onValueChange={onCycleChange}
-          key={`cycle-select-${allReviewCycles.length}-${viewingAllAccounts}-${isMasterAccount}`}
-        >
-          <SelectTrigger className="w-full sm:w-auto sm:min-w-[300px] sm:max-w-[500px]">
-            <SelectValue placeholder="Select review cycle" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px] overflow-y-auto max-w-[600px]">
-            {getDisplayedCycles().map((cycle: ReviewCycle) => (
-              <SelectItem key={cycle.id} value={cycle.id} className="max-w-[580px]">
-                <div className="flex items-center justify-between w-full">
-                  <TruncatedText text={cycle.title} maxLength={60} />
-                  {isMasterAccount && viewingAllAccounts && cycle.user_id !== currentUserId && (
-                    <Badge variant="outline" className="ml-2 text-xs bg-amber-100 text-amber-800">
-                      Other user
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Survey Type Badge */}
+        {selectedCycle && (
+          <div className="flex-shrink-0">
+            {(() => {
+              const badgeInfo = getSurveyTypeBadge(selectedCycle.type);
+              return (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs font-medium ${badgeInfo.className}`}
+                >
+                  {badgeInfo.label}
+                </Badge>
+              );
+            })()}
+          </div>
+        )}
       </div>
     </div>
   );
