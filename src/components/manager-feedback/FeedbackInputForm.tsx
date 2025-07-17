@@ -117,7 +117,7 @@ export function FeedbackInputForm({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full">
       {!hideHeader && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -160,11 +160,6 @@ export function FeedbackInputForm({
             <div className="flex items-center justify-between">
               <Label htmlFor="feedback-content">
                 Your Feedback
-                {selectedEmployee && (
-                  <span className="text-sm text-muted-foreground ml-2">
-                    for {selectedEmployee.name}
-                  </span>
-                )}
               </Label>
               <Button
                 type="button"
