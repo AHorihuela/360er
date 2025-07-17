@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Send, Mic, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useManagerFeedback } from '@/hooks/useManagerFeedback';
-import { EmployeeSelector } from './EmployeeSelector';
+import { SearchableEmployeeSelector } from './SearchableEmployeeSelector';
 import { Employee } from '@/types/review';
 
 interface FeedbackInputFormProps {
@@ -137,7 +137,7 @@ export function FeedbackInputForm({
           {!hideEmployeeSelector && (
             <div className="space-y-2">
               <Label htmlFor="employee-select">Select Team Member</Label>
-              <EmployeeSelector
+              <SearchableEmployeeSelector
                 employees={employees}
                 selectedEmployeeId={selectedEmployeeId}
                 onEmployeeChange={setSelectedEmployeeId}
