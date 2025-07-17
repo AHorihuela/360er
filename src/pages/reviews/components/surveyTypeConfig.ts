@@ -40,7 +40,7 @@ export const surveyTypeInfo: Record<ReviewCycleType, SurveyTypeConfig> = {
     description: 'Ongoing feedback cycle for continuous observations',
     icon: MessageSquare,
     badge: 'Continuous',
-    color: 'bg-orange-50 border-orange-200 hover:bg-orange-100',
+    color: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
     questions: [
       'Capture real-time observations about performance',
       'Record specific examples and situations as they occur',

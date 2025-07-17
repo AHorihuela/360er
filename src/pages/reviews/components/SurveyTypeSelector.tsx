@@ -78,7 +78,7 @@ export function SurveyTypeSelector({ selectedType, onTypeChange }: SurveyTypeSel
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                      className="h-8 w-8 text-muted-foreground hover:text-gray-700 hover:bg-gray-100 transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Info className="h-4 w-4" />

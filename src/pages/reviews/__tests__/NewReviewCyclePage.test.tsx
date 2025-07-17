@@ -4,17 +4,16 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { NewReviewCyclePage } from '../NewReviewCyclePage';
 
 // Mock the dependencies
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: { id: '123' }, error: null }))
-        }))
-      }))
-    }))
-  }
-}));
+vi.mock('@/lib/supabase', () => {
+  const mockSingle = vi.fn(() => Promise.resolve({ data: { id: '123' }, error: null }));
+  const mockSelect = vi.fn(() => ({ single: mockSingle }));
+  const mockInsert = vi.fn(() => ({ select: mockSelect }));
+  const mockFrom = vi.fn(() => ({ insert: mockInsert }));
+
+  return {
+    supabase: { from: mockFrom }
+  };
+});
 
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: vi.fn(() => ({
@@ -214,8 +213,8 @@ describe('NewReviewCyclePage', () => {
     const dateInput = screen.getByLabelText('Review By Date');
     fireEvent.change(dateInput, { target: { value: '2024-12-31' } });
 
-    // Submit form
-    const submitButton = screen.getByRole('button', { name: /Create Review Cycle/ });
+    // Submit form via button click (real user interaction)
+    const submitButton = screen.getByRole('button', { name: /Create Review Cycle/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -233,7 +232,7 @@ describe('NewReviewCyclePage', () => {
     const { useToast } = await import('@/components/ui/use-toast');
     const mockToastReturn = vi.mocked(useToast)();
 
-    // Mock error response
+    // Mock error response with proper method chaining
     vi.mocked(supabase.from).mockReturnValue({
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
@@ -248,7 +247,8 @@ describe('NewReviewCyclePage', () => {
       </TestWrapper>
     );
 
-    const submitButton = screen.getByRole('button', { name: /Create Review Cycle/ });
+    // Submit form via button click (real user interaction)
+    const submitButton = screen.getByRole('button', { name: /Create Review Cycle/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -293,7 +293,9 @@ describe('NewReviewCyclePage', () => {
       </TestWrapper>
     );
 
-    const helpIcon = screen.getByRole('button', { name: /Survey type info/ });
+    const helpIcon = screen.getByRole('button', { name: /Survey type info/i });
+    
+    // Trigger tooltip with mouseEnter (real user interaction)
     fireEvent.mouseEnter(helpIcon);
 
     await waitFor(() => {

@@ -42,7 +42,7 @@ export function useReviewCycleForm() {
     try {
       setIsSubmitting(true);
 
-      const { error: cycleError } = await supabase
+      const { data, error: cycleError } = await supabase
         .from('review_cycles')
         .insert({
           title: formData.title,
