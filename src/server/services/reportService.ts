@@ -1,11 +1,6 @@
 import OpenAI from 'openai';
 import { getReportSystemPrompt, MANAGER_EFFECTIVENESS_PROMPT, M2E_INLINE_PROMPT } from '../prompts/reportPrompts';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 // Define interfaces for type safety
 interface FeedbackItem {
   strengths: string;
@@ -31,12 +26,21 @@ interface ReportGenerationRequest {
 }
 
 export class ReportService {
-  async generateReport(request: ReportGenerationRequest): Promise<string> {
-    const { employeeName, employeeRole, feedback, surveyType, surveyQuestions, timeRange } = request;
-
+  private getOpenAIClient(): OpenAI {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured');
     }
+    
+    return new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  async generateReport(request: ReportGenerationRequest): Promise<string> {
+    const { employeeName, employeeRole, feedback, surveyType, surveyQuestions, timeRange } = request;
+
+    // Initialize OpenAI client only when needed
+    const openai = this.getOpenAIClient();
 
     // Determine which system prompt to use based on survey type
     let systemPrompt = getReportSystemPrompt(surveyType);

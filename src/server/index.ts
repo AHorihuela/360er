@@ -1,16 +1,28 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
 import reportRoutes from './routes/reportRoutes';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper function to get OpenAI client when needed
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured');
+  }
+  
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // Middleware
 app.use(cors());
@@ -39,6 +51,8 @@ Relationship: ${relationship}
 Strengths: ${strengths}
 Areas for Improvement: ${areas_for_improvement}
     `.trim();
+
+    const openai = getOpenAIClient();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
