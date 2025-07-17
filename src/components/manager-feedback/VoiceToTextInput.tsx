@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mic, MicOff, Square, Loader2, AlertCircle, Check, Smartphone } from 'lucide-react';
+import { Mic, MicOff, Square, Loader2, AlertCircle, Check, Smartphone, Clock } from 'lucide-react';
 import { useWhisperVoiceToText } from '@/hooks/useWhisperVoiceToText';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,66 @@ interface VoiceToTextInputProps {
   disabled?: boolean;
   className?: string;
   language?: string;
+}
+
+// Audio level visualization component
+function AudioLevelVisualizer({ audioLevel }: { audioLevel: number }) {
+  const bars = 8;
+  const normalizedLevel = Math.min(audioLevel * 100, 100);
+  
+  return (
+    <div className="flex items-center justify-center gap-1 h-8">
+      {Array.from({ length: bars }).map((_, i) => {
+        const barHeight = Math.max(4, (normalizedLevel / 100) * 32);
+        const isActive = (i + 1) * (100 / bars) <= normalizedLevel;
+        
+        return (
+          <div
+            key={i}
+            className={cn(
+              "w-2 rounded-full transition-all duration-100",
+              isActive ? "bg-red-500" : "bg-gray-300"
+            )}
+            style={{ 
+              height: `${barHeight}px`,
+              opacity: isActive ? 1 : 0.3
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// Recording duration timer component  
+function RecordingTimer({ startTime }: { startTime: number | null }) {
+  const [duration, setDuration] = useState(0);
+  
+  useEffect(() => {
+    if (!startTime) {
+      setDuration(0);
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      setDuration(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [startTime]);
+  
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  return (
+    <div className="flex items-center gap-2 text-red-700 font-mono text-sm">
+      <Clock className="h-4 w-4" />
+      <span>{formatTime(duration)}</span>
+    </div>
+  );
 }
 
 export function VoiceToTextInput({
@@ -25,6 +85,12 @@ export function VoiceToTextInput({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [baseText, setBaseText] = useState(''); // Text when voice recording started
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
+  
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Detect mobile device
   useEffect(() => {
@@ -61,9 +127,50 @@ export function VoiceToTextInput({
       // Clean up
       setBaseText('');
       setHasInteracted(false);
+      setRecordingStartTime(null);
+      
+      // Stop audio level monitoring
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
     },
     language
   });
+
+  // Audio level monitoring
+  const startAudioLevelMonitoring = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      audioContextRef.current = new AudioContext();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      
+      analyserRef.current.fftSize = 256;
+      source.connect(analyserRef.current);
+      
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      
+      const updateAudioLevel = () => {
+        if (!analyserRef.current) return;
+        
+        analyserRef.current.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+        const normalizedLevel = average / 255;
+        
+        setAudioLevel(normalizedLevel);
+        animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+      };
+      
+      updateAudioLevel();
+    } catch (error) {
+      console.error('Error setting up audio level monitoring:', error);
+    }
+  };
 
   // Notify parent about voice mode changes
   useEffect(() => {
@@ -77,12 +184,36 @@ export function VoiceToTextInput({
       // Start recording - capture current text as base
       setBaseText(value);
       clearTranscript();
+      setRecordingStartTime(Date.now());
       await startRecording();
+      await startAudioLevelMonitoring();
     } else {
       // Stop recording
+      setRecordingStartTime(null);
       stopRecording();
+      
+      // Stop audio level monitoring
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
 
   // Show loading state while initializing
   if (isInitializing) {
@@ -150,9 +281,9 @@ export function VoiceToTextInput({
           )}
           
           {isMobile ? (
-            isRecording ? "Stop" : isTranscribing ? "Processing..." : "Voice"
+            isRecording ? "Finish Recording" : isTranscribing ? "Processing..." : "Dictate"
           ) : (
-            isRecording ? "Stop Recording" : isTranscribing ? "Transcribing..." : "Voice Input"
+            isRecording ? "Finish Recording" : isTranscribing ? "Transcribing..." : "Dictate Feedback"
           )}
           
           {isMobile && !isProcessing && <Smartphone className="h-3 w-3 opacity-60" />}
@@ -175,25 +306,43 @@ export function VoiceToTextInput({
         )}
       </div>
 
-      {/* Recording Interface - Only show when recording */}
+      {/* Recording Interface - Enhanced with audio level and timer */}
       {isRecording && (
         <div className={cn(
-          "space-y-3 p-4 border-2 border-red-200 rounded-lg bg-red-50/50",
+          "space-y-4 p-4 border-2 border-red-200 rounded-lg bg-red-50/50",
           isMobile && "p-3"
         )}>
+          {/* Recording Header with Timer */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-red-700 font-medium">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              Recording in Progress
+            </div>
+            <RecordingTimer startTime={recordingStartTime} />
+          </div>
+
+          {/* Audio Level Visualizer */}
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-center text-muted-foreground">
+              Audio Level
+            </div>
+            <AudioLevelVisualizer audioLevel={audioLevel} />
+            <div className="text-center">
+              <Badge variant="outline" className="text-xs">
+                {audioLevel > 0.03 ? "🎤 Good signal" : "🔇 Speak louder"}
+              </Badge>
+            </div>
+          </div>
+
           {/* Recording Instructions */}
           <div className={cn(
             "text-center",
             isMobile && "text-xs"
           )}>
-            <div className="flex items-center justify-center gap-2 text-red-700 font-medium mb-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              {isMobile ? "Recording..." : "Recording in progress..."}
-            </div>
             <p className="text-sm text-muted-foreground">
               {isMobile ? 
-                "Speak clearly. Tap 'Stop' when done." :
-                "🎤 Speak clearly into your microphone. Click 'Stop Recording' when finished."
+                "Speak clearly. Tap 'Finish Recording' to save." :
+                "🎤 Speak clearly into your microphone. Click 'Finish Recording' when done to save your feedback."
               }
             </p>
           </div>
@@ -266,16 +415,16 @@ export function VoiceToTextInput({
         </div>
       )}
 
-      {/* Info about Whisper upgrade */}
-      {!isProcessing && !error && (
-        <div className="p-3 border border-green-200 bg-green-50 rounded-lg">
+      {/* User-friendly voice input info */}
+      {!isProcessing && !error && !hasInteracted && (
+        <div className="p-3 border border-blue-200 bg-blue-50 rounded-lg">
           <div className="flex items-start gap-2">
-            <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+            <Mic className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="space-y-1">
-              <p className="text-xs font-medium text-green-800">High-Quality Voice Input</p>
-              <p className="text-xs text-green-700">
-                Now using OpenAI Whisper for superior transcription accuracy, better punctuation, 
-                and automatic device selection. No more iPhone microphone issues!
+              <p className="text-xs font-medium text-blue-800">Voice Feedback Ready</p>
+              <p className="text-xs text-blue-700">
+                Click "Dictate Feedback" to speak your thoughts instead of typing. 
+                Your speech will be automatically converted to text with high accuracy.
               </p>
             </div>
           </div>
