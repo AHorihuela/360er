@@ -87,19 +87,19 @@ export function DashboardPage(): JSX.Element {
           />
         )}
         
-        {/* Active Review Cycle Progress */}
-        {activeReviewCycle && (
-          <>
-            <ActiveReviewCycleCard activeReviewCycle={activeReviewCycle} />
+        {/* Active Review Cycle Progress - Hide for M2E cycles */}
+        {activeReviewCycle && activeReviewCycle.type !== 'manager_to_employee' && (
+          <ActiveReviewCycleCard activeReviewCycle={activeReviewCycle} />
+        )}
 
-            {/* Analytics Grid */}
-            <AnalyticsSection
-              activeReviewCycle={activeReviewCycle}
-              allReviewCycles={allReviewCycles}
-              employees={employees}
-              surveyQuestions={surveyQuestions}
-            />
-          </>
+        {/* Analytics Grid */}
+        {activeReviewCycle && (
+          <AnalyticsSection
+            activeReviewCycle={activeReviewCycle}
+            allReviewCycles={allReviewCycles}
+            employees={employees}
+            surveyQuestions={surveyQuestions}
+          />
         )}
 
         {/* Current Cycle Employees */}

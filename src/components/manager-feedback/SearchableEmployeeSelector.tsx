@@ -92,7 +92,7 @@ export function SearchableEmployeeSelector({
                   key={employee.id}
                   value={`${employee.name} ${employee.role}`}
                   onSelect={() => handleSelect(employee.id)}
-                  className="flex items-center gap-3 px-2 py-3 cursor-pointer data-[selected='true']:bg-accent data-[selected='true']:text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+                  className="flex items-center gap-3 px-2 py-3 cursor-pointer data-[selected='true']:bg-slate-50 hover:bg-slate-50 rounded-sm transition-colors"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">

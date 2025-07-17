@@ -1,30 +1,144 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { DashboardFeedbackRequest, DashboardFeedbackResponse } from '@/types/feedback/dashboard';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 import { ManagerSurveyReviewCard } from './ManagerSurveyReviewCard';
-import { ReviewCycleType } from '@/types/survey';
+import { DashboardFeedbackResponse } from '@/types/feedback/dashboard';
 import { FeedbackStatus, RelationshipType, CoreFeedbackResponse } from '@/types/feedback/base';
-
-// Helper function to get initials from name
-function getInitials(name: string | undefined): string {
-  if (!name) return '?';
-  
-  const parts = name.split(' ');
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
-}
+import { MessageSquare, Calendar, Clock } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
 
 interface RecentReviewsProps {
-  feedbackRequests: DashboardFeedbackRequest[];
+  feedbackRequests: Array<{
+    id: string;
+    employee?: {
+      id: string;
+      name: string;
+      role: string;
+    };
+    feedback_responses?: Array<{
+      id: string;
+      submitted_at: string;
+      relationship: string;
+      [key: string]: any;
+    }>;
+  }>;
   questionIdToTextMap: Record<string, string>;
-  reviewCycleType?: ReviewCycleType;
-  reviewCycleId?: string;
+  reviewCycleType?: '360_review' | 'manager_effectiveness' | 'manager_to_employee';
+  reviewCycleId: string;
+}
+
+// Manager-to-Employee Timeline Component
+function ManagerFeedbackTimeline({ 
+  feedbackRequests 
+}: { 
+  feedbackRequests: RecentReviewsProps['feedbackRequests'] 
+}) {
+  const [visibleEntries, setVisibleEntries] = useState(8);
+
+  // Collect all feedback entries and sort by date
+  const allEntries = feedbackRequests.flatMap(request => 
+    (request.feedback_responses || []).map(response => ({
+      id: response.id,
+      employee: request.employee,
+      submittedAt: response.submitted_at,
+      content: response.areas_for_improvement || response.strengths || response.content || '',
+      source: response.source || 'web',
+      relationship: response.relationship
+    }))
+  ).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+  const visibleFeedback = allEntries.slice(0, visibleEntries);
+
+  if (allEntries.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <h3 className="text-lg font-medium mb-2">No feedback entries yet</h3>
+        <p className="text-sm">Start providing feedback to your team members to see entries here</p>
+      </div>
+    );
+  }
+
+  const getInitials = (name?: string) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-blue-600" />
+          Recent Feedback
+        </h2>
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          {allEntries.length} {allEntries.length === 1 ? 'entry' : 'entries'}
+        </Badge>
+      </div>
+      
+      <div className="space-y-3">
+        {visibleFeedback.map((entry, index) => (
+          <Card key={entry.id} className="border-l-4 border-l-blue-500">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-8 w-8 mt-1">
+                  <AvatarFallback className="text-xs bg-blue-100 text-blue-700 font-medium">
+                    {getInitials(entry.employee?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{entry.employee?.name || 'Unknown Employee'}</span>
+                    {entry.employee?.role && (
+                      <Badge variant="secondary" className="text-xs">
+                        {entry.employee.role}
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                      <Clock className="h-3 w-3" />
+                      {formatDistanceToNow(new Date(entry.submittedAt), { addSuffix: true })}
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {entry.content || 'No content available'}
+                  </p>
+                  
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(entry.submittedAt), 'MMM d, yyyy')}
+                    </div>
+                    {entry.source && entry.source !== 'web' && (
+                      <Badge variant="outline" className="text-xs">
+                        {entry.source}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {allEntries.length > visibleEntries && (
+        <div className="flex justify-center pt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setVisibleEntries(prev => prev + 8)}
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Load More Feedback
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function RecentReviews({ 
@@ -34,19 +148,23 @@ export function RecentReviews({
   reviewCycleId
 }: RecentReviewsProps) {
   const [visibleReviews, setVisibleReviews] = useState(6);
+
+  // For manager-to-employee feedback, use the timeline component
+  if (reviewCycleType === 'manager_to_employee') {
+    return <ManagerFeedbackTimeline feedbackRequests={feedbackRequests} />;
+  }
+
+  // Original logic for 360 reviews and manager effectiveness surveys
+  console.log(`Processing Recent Reviews for cycle type: ${reviewCycleType}`);
+  console.log(`Received ${feedbackRequests.length} feedback requests`);
   
-  console.log(`RecentReviews called with ${feedbackRequests.length} feedback requests, cycle type: ${reviewCycleType}`);
-  console.log("Question map has", Object.keys(questionIdToTextMap).length, "questions");
-  
-  // Get all responses with data
   const allResponses = feedbackRequests.flatMap(request => {
-    // Skip if no responses or employee data
-    if (!request.feedback_responses || !request.employee) {
-      console.log(`Skipping request ${request.id}: has_responses=${!!request.feedback_responses}, has_employee=${!!request.employee}`);
+    console.log(`Processing request ${request.id} with ${request.feedback_responses?.length || 0} responses`);
+    
+    if (!request.feedback_responses || request.feedback_responses.length === 0) {
+      console.log(`No responses found for request ${request.id}`);
       return [];
     }
-    
-    console.log(`Processing request ${request.id} with ${request.feedback_responses.length} responses`);
     
     return request.feedback_responses
       .filter(response => {
@@ -121,176 +239,5 @@ export function RecentReviews({
         </div>
       )}
     </section>
-  );
-}
-
-interface ManagerReviewCardProps {
-  review: {
-    id: string;
-    employee?: any; 
-    averageScore: number;
-    highestScore: [string, number] | null;
-    lowestScore: [string, number] | null;
-    submitted_at: string;
-    responses?: Record<string, number | string>;
-  };
-  questionIdToTextMap: Record<string, string>;
-}
-
-function ManagerReviewCard({ review, questionIdToTextMap }: ManagerReviewCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  
-  // Helper function to get question text by ID
-  const getQuestionText = (questionId: string): string => {
-    return questionIdToTextMap[questionId] || `Question ${questionId.slice(0, 6)}...`;
-  };
-  
-  // Format date
-  const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString();
-  };
-  
-  return (
-    <Card className="overflow-hidden hover:shadow-md transition-all">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 bg-primary/10">
-              <AvatarFallback>{getInitials(review.employee?.name)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h4 className="font-medium">{review.employee?.name || 'Unknown'}</h4>
-              <div className="text-sm text-muted-foreground">
-                <span>{review.employee?.role || 'No role'}</span>
-              </div>
-            </div>
-          </div>
-          <div className="text-right text-sm text-muted-foreground">
-            <div>{formatDate(review.submitted_at)}</div>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              Manager Survey
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {/* Average score visualization */}
-        <div className="flex items-center gap-4 mb-3">
-          <div className={cn(
-            "w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2",
-            review.averageScore >= 4.5 ? "border-emerald-500 bg-emerald-50 text-emerald-700" :
-            review.averageScore >= 4 ? "border-green-500 bg-green-50 text-green-700" :
-            review.averageScore >= 3 ? "border-blue-500 bg-blue-50 text-blue-700" :
-            review.averageScore >= 2 ? "border-orange-500 bg-orange-50 text-orange-700" :
-            "border-red-500 bg-red-50 text-red-700"
-          )}>
-            {review.averageScore.toFixed(1)}
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium mb-1">Overall Rating</div>
-            <Progress 
-              value={(review.averageScore / 5) * 100} 
-              className={cn(
-                "h-2.5 mb-1",
-                review.averageScore >= 4.5 ? "bg-emerald-500" :
-                review.averageScore >= 4 ? "bg-green-500" :
-                review.averageScore >= 3 ? "bg-blue-500" :
-                review.averageScore >= 2 ? "bg-orange-500" :
-                "bg-red-500"
-              )} 
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1</span>
-              <span>5</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Highest/lowest score highlights */}
-        {review.highestScore && review.lowestScore && (
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="p-2 rounded-md bg-green-50 border border-green-100">
-              <div className="text-xs text-green-700 font-medium mb-1">Highest Score</div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm line-clamp-1">{getQuestionText(review.highestScore[0])}</div>
-                <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                  {review.highestScore[1]}/5
-                </Badge>
-              </div>
-            </div>
-            <div className="p-2 rounded-md bg-orange-50 border border-orange-100">
-              <div className="text-xs text-orange-700 font-medium mb-1">Lowest Score</div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm line-clamp-1">{getQuestionText(review.lowestScore[0])}</div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-                  {review.lowestScore[1]}/5
-                </Badge>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Toggle to show/hide details */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setExpanded(!expanded)}
-          className="w-full text-xs justify-between"
-        >
-          {expanded ? "Hide details" : "Show all responses"}
-          <ChevronDown className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")} />
-        </Button>
-      </CardContent>
-      
-      {/* Expandable detailed responses */}
-      {expanded && review.responses && (
-        <div className="px-6 pb-4 border-t">
-          <div className="pt-3 space-y-3">
-            {Object.entries(review.responses)
-              .filter(([, value]) => typeof value === 'number')
-              .map(([questionId, value]) => (
-                <div key={questionId} className="space-y-1">
-                  <div className="text-sm">{getQuestionText(questionId)}</div>
-                  <div className="flex items-center gap-2">
-                    <Progress 
-                      value={(Number(value) / 5) * 100} 
-                      className={cn(
-                        "h-1.5 w-24",
-                        Number(value) >= 4.5 ? "bg-emerald-500" :
-                        Number(value) >= 4 ? "bg-green-500" :
-                        Number(value) >= 3 ? "bg-blue-500" :
-                        Number(value) >= 2 ? "bg-orange-500" :
-                        "bg-red-500"
-                      )} 
-                    />
-                    <span className={cn(
-                      "text-sm font-medium",
-                      Number(value) >= 4.5 ? "text-emerald-700" :
-                      Number(value) >= 4 ? "text-green-700" :
-                      Number(value) >= 3 ? "text-blue-700" :
-                      Number(value) >= 2 ? "text-orange-700" :
-                      "text-red-700"
-                    )}>
-                      {Number(value)}/5
-                    </span>
-                  </div>
-                </div>
-              ))}
-            
-            {/* Open-ended responses if any */}
-            {Object.entries(review.responses)
-              .filter(([, value]) => typeof value === 'string' && String(value).trim().length > 0)
-              .map(([questionId, value]) => (
-                <div key={questionId} className="pt-2 mt-2 border-t">
-                  <div className="text-sm font-medium mb-1">{getQuestionText(questionId)}</div>
-                  <p className="text-sm whitespace-pre-line">{String(value)}</p>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      )}
-    </Card>
   );
 } 

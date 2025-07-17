@@ -9,6 +9,7 @@ import {
   Activity
 } from 'lucide-react';
 import { FeedbackTimeline } from './FeedbackTimeline';
+import { ManagerFeedbackActivity } from './ManagerFeedbackActivity';
 import { RecentReviews } from './RecentReviews';
 import { Legacy360Reviews } from './Legacy360Reviews';
 import { ReviewCycleWithFeedback, DashboardEmployee } from '@/types/feedback/dashboard';
@@ -44,17 +45,24 @@ export function AnalyticsSection({
 
   return (
     <div className="space-y-6">
-      {/* Response Timeline */}
-      <FeedbackTimeline 
-        feedbackRequests={activeReviewCycle.feedback_requests}
-        dueDate={activeReviewCycle.review_by_date}
-        totalReviews={activeReviewCycle.total_requests}
-        pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
-        cycleType={cycleType}
-      />
+      {/* Response Timeline or Manager Feedback Activity */}
+      {cycleType === 'manager_to_employee' ? (
+        <ManagerFeedbackActivity 
+          feedbackRequests={activeReviewCycle.feedback_requests}
+          employees={employees}
+        />
+      ) : (
+        <FeedbackTimeline 
+          feedbackRequests={activeReviewCycle.feedback_requests}
+          dueDate={activeReviewCycle.review_by_date}
+          totalReviews={activeReviewCycle.total_requests}
+          pendingReviews={activeReviewCycle.total_requests - activeReviewCycle.completed_requests}
+          cycleType={cycleType}
+        />
+      )}
 
-      {/* Team Competency Analysis Card - for 360 review cycles */}
-      {cycleType !== 'manager_effectiveness' && (
+      {/* Team Competency Analysis Card - for 360 review cycles only */}
+      {cycleType === '360_review' && (
         <Card 
           onClick={() => navigate('/analytics')}
           className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10 cursor-pointer hover:bg-primary/10 transition-all duration-200 hover:shadow-md group"
