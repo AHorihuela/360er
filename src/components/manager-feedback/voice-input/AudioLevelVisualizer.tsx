@@ -36,7 +36,7 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
       </div>
       <div className="text-center">
         <Badge variant="outline" className="text-xs">
-          {audioLevel > 0.03 ? "🎤 Good signal" : "🔇 Speak louder"}
+          {audioLevel > 0.01 ? "🎤 Good signal" : "🔇 Speak louder"}
         </Badge>
       </div>
     </div>

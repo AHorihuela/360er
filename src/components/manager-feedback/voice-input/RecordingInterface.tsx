@@ -4,6 +4,7 @@ import { RecordingTimer } from './RecordingTimer';
 
 interface RecordingInterfaceProps {
   isRecording: boolean;
+  isRecordingStarting?: boolean;
   audioLevel: number;
   recordingStartTime: number | null;
   baseText: string;
@@ -12,12 +13,13 @@ interface RecordingInterfaceProps {
 
 export function RecordingInterface({
   isRecording,
+  isRecordingStarting = false,
   audioLevel,
   recordingStartTime,
   baseText,
   isMobile
 }: RecordingInterfaceProps) {
-  if (!isRecording) return null;
+  if (!isRecording && !isRecordingStarting) return null;
 
   return (
     <div className={cn(
@@ -28,25 +30,34 @@ export function RecordingInterface({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-red-700 font-medium">
           <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          Recording in Progress
+          {isRecordingStarting ? "Preparing to Record..." : "Recording in Progress"}
         </div>
-        <RecordingTimer startTime={recordingStartTime} />
+        {isRecording && <RecordingTimer startTime={recordingStartTime} />}
       </div>
 
-      {/* Audio Level Visualizer */}
-      <AudioLevelVisualizer audioLevel={audioLevel} />
+      {/* Audio Level Visualizer - Only show when actually recording */}
+      {isRecording && <AudioLevelVisualizer audioLevel={audioLevel} />}
 
-      {/* Recording Instructions */}
+      {/* Recording Status Instructions */}
       <div className={cn(
         "text-center",
         isMobile && "text-xs"
       )}>
-        <p className="text-sm text-muted-foreground">
-          {isMobile ? 
-            "Speak clearly. Tap 'Finish Recording' to save." :
-            "🎤 Speak clearly into your microphone. Click 'Finish Recording' when done to save your feedback."
-          }
-        </p>
+        {isRecordingStarting ? (
+          <p className="text-sm text-muted-foreground">
+            {isMobile ? 
+              "Get ready to speak..." :
+              "🎤 Get ready to speak - recording will begin in a moment..."
+            }
+          </p>
+        ) : (
+          <p className="text-sm text-green-700 font-medium">
+            {isMobile ? 
+              "Speak now!" :
+              "✅ Recording active - speak naturally!"
+            }
+          </p>
+        )}
       </div>
 
       {/* Show base text if exists */}

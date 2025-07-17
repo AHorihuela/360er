@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Mic, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Mic, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface VoiceStatusMessagesProps {
@@ -10,6 +10,74 @@ interface VoiceStatusMessagesProps {
   isMobile: boolean;
 }
 
+// Helper function to get user-friendly error messages
+function getErrorMessage(errorType: string, isMobile: boolean) {
+  switch (errorType) {
+    case 'silent_recording':
+      return {
+        title: 'No Speech Detected',
+        message: isMobile 
+          ? 'Try speaking closer to your microphone and tap record again.'
+          : 'No speech was detected in your recording. Please speak closer to your microphone and try again.',
+        isRetryable: true
+      };
+    
+    case 'no_speech_detected':
+      return {
+        title: 'Audio Too Quiet',
+        message: isMobile
+          ? 'Your voice may have been too quiet. Try speaking louder.'
+          : 'Your speech may have been too quiet to transcribe. Please speak louder and try again.',
+        isRetryable: true
+      };
+    
+    case 'network_error':
+      return {
+        title: 'Connection Issue',
+        message: isMobile
+          ? 'Check your internet connection and try again.'
+          : 'Network error. Please check your internet connection and try again.',
+        isRetryable: true
+      };
+    
+    case 'rate_limit':
+      return {
+        title: 'Too Many Requests',
+        message: isMobile
+          ? 'Please wait a moment before trying again.'
+          : 'Too many requests. Please wait a moment and try again.',
+        isRetryable: true
+      };
+    
+    case 'file_too_large':
+      return {
+        title: 'Recording Too Long',
+        message: isMobile
+          ? 'Keep recordings under 30 seconds.'
+          : 'Recording too long. Please keep recordings under 30 seconds.',
+        isRetryable: false
+      };
+    
+    case 'invalid_audio':
+      return {
+        title: 'Audio Format Error',
+        message: isMobile
+          ? 'There was an issue with the audio format. Try again.'
+          : 'There was an issue with the audio format. Please try recording again.',
+        isRetryable: true
+      };
+    
+    default:
+      return {
+        title: 'Transcription Issue',
+        message: isMobile
+          ? 'Something went wrong. Please try again.'
+          : 'There was an issue processing your speech. Please try again.',
+        isRetryable: true
+      };
+  }
+}
+
 export function VoiceStatusMessages({
   isProcessing,
   isTranscribing,
@@ -18,6 +86,8 @@ export function VoiceStatusMessages({
   hasInteracted,
   isMobile
 }: VoiceStatusMessagesProps) {
+  const errorInfo = error ? getErrorMessage(error, isMobile) : null;
+
   return (
     <>
       {/* Transcribing Interface */}
@@ -49,36 +119,38 @@ export function VoiceStatusMessages({
       )}
 
       {/* Error Display */}
-      {error && (
+      {error && errorInfo && (
         <div className={cn(
-          "p-3 border border-red-200 bg-red-50 rounded-lg",
+          "p-3 border rounded-lg",
+          errorInfo.isRetryable 
+            ? "border-orange-200 bg-orange-50" 
+            : "border-red-200 bg-red-50",
           isMobile && "p-2"
         )}>
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+            {errorInfo.isRetryable ? (
+              <RotateCcw className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+            )}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-red-800">Voice Input Error</p>
-              <p className="text-xs text-red-700">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Helpful guidance for first-time or when idle */}
-      {!isProcessing && !error && !hasInteracted && (
-        <div className="p-3 border border-blue-200 bg-blue-50 rounded-lg">
-          <div className="flex items-start gap-2">
-            <Mic className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-blue-800">Speak Naturally</p>
-              <p className="text-xs text-blue-700">
-                Just speak your thoughts naturally - no need for perfect sentences. 
-                AI will help structure your feedback into professional reports.
+              <p className={cn(
+                "text-xs font-medium",
+                errorInfo.isRetryable ? "text-orange-800" : "text-red-800"
+              )}>
+                {errorInfo.title}
+              </p>
+              <p className={cn(
+                "text-xs",
+                errorInfo.isRetryable ? "text-orange-700" : "text-red-700"
+              )}>
+                {errorInfo.message}
               </p>
             </div>
           </div>
         </div>
       )}
+
     </>
   );
 } 

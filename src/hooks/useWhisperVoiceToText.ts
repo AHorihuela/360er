@@ -9,6 +9,7 @@ interface UseWhisperVoiceToTextOptions {
 
 interface WhisperVoiceToTextState {
   isRecording: boolean;
+  isRecordingStarting: boolean; // New state for the delay period
   isTranscribing: boolean;
   isSupported: boolean;
   transcript: string;
@@ -28,6 +29,7 @@ export function useWhisperVoiceToText({
   
   const [state, setState] = useState<WhisperVoiceToTextState>({
     isRecording: false,
+    isRecordingStarting: false,
     isTranscribing: false,
     isSupported: true, // MediaRecorder is widely supported
     transcript: '',
@@ -38,7 +40,12 @@ export function useWhisperVoiceToText({
   // Start recording audio
   const startRecording = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, error: null, transcript: '', isInitializing: true }));
+      setState(prev => ({ 
+        ...prev, 
+        error: null, // Clear any previous errors
+        transcript: '', 
+        isInitializing: true 
+      }));
 
       // Request microphone access with optimal settings
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -67,6 +74,16 @@ export function useWhisperVoiceToText({
         }
       };
 
+      // Handle recording start - this fires when recording actually begins
+      mediaRecorder.onstart = () => {
+        setState(prev => ({ 
+          ...prev, 
+          isRecording: true, 
+          isRecordingStarting: false,
+          error: null 
+        }));
+      };
+
       mediaRecorder.onstop = async () => {
         setState(prev => ({ ...prev, isRecording: false, isTranscribing: true }));
         
@@ -76,11 +93,22 @@ export function useWhisperVoiceToText({
         if (audioBlob.size > 1000) { // At least 1KB of audio data
           await transcribeAudio(audioBlob);
         } else {
+          // Handle silent/empty recordings more gracefully
           setState(prev => ({ 
             ...prev, 
             isTranscribing: false,
-            error: 'Recording too short. Please speak for at least 1-2 seconds.' 
+            error: 'silent_recording' // Use error type instead of message
           }));
+
+          // Auto-clear silent recording error after 4 seconds
+          setTimeout(() => {
+            setState(prev => {
+              if (prev.error === 'silent_recording') {
+                return { ...prev, error: null };
+              }
+              return prev;
+            });
+          }, 4000);
         }
 
         // Clean up stream
@@ -90,13 +118,15 @@ export function useWhisperVoiceToText({
         }
       };
 
-      mediaRecorder.start();
+      // Set initial "starting" state before calling start()
       setState(prev => ({ 
         ...prev, 
-        isRecording: true, 
+        isRecordingStarting: true, 
         isInitializing: false,
         error: null 
       }));
+
+      mediaRecorder.start();
 
     } catch (error: any) {
       console.error('Error starting recording:', error);
@@ -115,6 +145,7 @@ export function useWhisperVoiceToText({
         ...prev, 
         error: errorMessage, 
         isRecording: false,
+        isRecordingStarting: false,
         isInitializing: false 
       }));
 
@@ -128,10 +159,18 @@ export function useWhisperVoiceToText({
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
-      mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current && (state.isRecording || state.isRecordingStarting)) {
+      if (state.isRecording) {
+        mediaRecorderRef.current.stop();
+      } else if (state.isRecordingStarting) {
+        // If still starting, set a flag to stop as soon as recording begins
+        setState(prev => ({ ...prev, isRecordingStarting: false }));
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      }
     }
-  }, [state.isRecording]);
+  }, [state.isRecording, state.isRecordingStarting]);
 
   // Transcribe audio using Whisper API
   const transcribeAudio = useCallback(async (audioBlob: Blob) => {
@@ -171,33 +210,59 @@ export function useWhisperVoiceToText({
         });
 
       } else {
-        throw new Error('No transcription received from server');
+        // Handle case where API succeeds but returns no transcription (likely silence)
+        setState(prev => ({ 
+          ...prev, 
+          error: 'no_speech_detected',
+          isTranscribing: false 
+        }));
+
+        // Auto-clear no speech error after 4 seconds
+        setTimeout(() => {
+          setState(prev => {
+            if (prev.error === 'no_speech_detected') {
+              return { ...prev, error: null };
+            }
+            return prev;
+          });
+        }, 4000);
+        return;
       }
 
     } catch (error: any) {
       console.error('Transcription error:', error);
       
-      let errorMessage = 'Failed to transcribe audio';
+      let errorType = 'transcription_failed';
       
-      if (error.message.includes('Network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (error.message.includes('rate_limit')) {
-        errorMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (error.message.includes('file too large')) {
-        errorMessage = 'Recording too long. Please keep recordings under 25MB.';
+      if (error.message.includes('Network') || error.name === 'NetworkError') {
+        errorType = 'network_error';
+      } else if (error.message.includes('rate_limit') || error.status === 429) {
+        errorType = 'rate_limit';
+      } else if (error.message.includes('file too large') || error.status === 413) {
+        errorType = 'file_too_large';
+      } else if (error.status === 400) {
+        errorType = 'invalid_audio';
       }
 
       setState(prev => ({ 
         ...prev, 
-        error: errorMessage,
+        error: errorType,
         isTranscribing: false 
       }));
 
-      toast({
-        title: "Transcription Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Auto-clear retryable errors after 5 seconds
+      const retryableErrors = ['silent_recording', 'no_speech_detected', 'network_error', 'invalid_audio'];
+      if (retryableErrors.includes(errorType)) {
+        setTimeout(() => {
+          setState(prev => {
+            // Only clear if the error hasn't changed
+            if (prev.error === errorType) {
+              return { ...prev, error: null };
+            }
+            return prev;
+          });
+        }, 5000);
+      }
     }
   }, [onTranscriptionUpdate, onTranscriptionComplete, toast]);
 
@@ -211,11 +276,12 @@ export function useWhisperVoiceToText({
   }, []);
 
   // Check if currently processing (recording or transcribing)
-  const isProcessing = state.isRecording || state.isTranscribing;
+  const isProcessing = state.isRecording || state.isRecordingStarting || state.isTranscribing;
 
   return {
     // State
     isRecording: state.isRecording,
+    isRecordingStarting: state.isRecordingStarting,
     isTranscribing: state.isTranscribing,
     isSupported: state.isSupported,
     transcript: state.transcript,

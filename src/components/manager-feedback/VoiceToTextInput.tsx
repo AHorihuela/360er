@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Mic, MicOff, Square, Loader2, AlertCircle, Smartphone } from 'lucide-react';
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
+import { Mic, MicOff, Square, Loader2, AlertCircle, Smartphone, Info } from 'lucide-react';
 import { useWhisperVoiceToText } from '@/hooks/useWhisperVoiceToText';
 import { cn } from '@/lib/utils';
 import { 
@@ -49,6 +55,7 @@ export function VoiceToTextInput({
 
   const {
     isRecording,
+    isRecordingStarting,
     isTranscribing,
     isSupported,
     transcript,
@@ -163,73 +170,111 @@ export function VoiceToTextInput({
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      {/* Voice Recording Button */}
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant={isProcessing ? "destructive" : "outline"}
-          size={isMobile ? "default" : "sm"}
-          onClick={handleVoiceToggle}
-          disabled={disabled}
-          className={cn(
-            "flex items-center gap-2 transition-all duration-200",
-            isMobile ? "min-h-[44px] px-4" : "",
-            isProcessing && "shadow-lg"
-          )}
-        >
-          {isRecording ? (
-            <Square className="h-4 w-4" />
-          ) : isTranscribing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Mic className="h-4 w-4" />
-          )}
-          
-          {isMobile ? (
-            isRecording ? "Finish Recording" : isTranscribing ? "Processing..." : "Dictate"
-          ) : (
-            isRecording ? "Finish Recording" : isTranscribing ? "Transcribing..." : "Dictate Feedback"
-          )}
-          
-          {isMobile && !isProcessing && <Smartphone className="h-3 w-3 opacity-60" />}
-        </Button>
+    <TooltipProvider>
+      <div className={cn("space-y-3", className)}>
+        {/* Voice Recording Button */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={isProcessing ? "destructive" : "outline"}
+              size={isMobile ? "default" : "sm"}
+              onClick={handleVoiceToggle}
+              disabled={disabled}
+              className={cn(
+                "flex items-center gap-2 transition-all duration-200",
+                isMobile ? "min-h-[44px] px-4" : "",
+                isProcessing && "shadow-lg"
+              )}
+            >
+              {isRecording ? (
+                <Square className="h-4 w-4" />
+              ) : isRecordingStarting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isTranscribing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+              
+              {isMobile ? (
+                isRecording ? "Finish Recording" : 
+                isRecordingStarting ? "Starting..." :
+                isTranscribing ? "Processing..." : 
+                "Dictate"
+              ) : (
+                isRecording ? "Finish Recording" : 
+                isRecordingStarting ? "Starting Recording..." :
+                isTranscribing ? "Transcribing..." : 
+                "Dictate Feedback"
+              )}
+              
+              {isMobile && !isProcessing && <Smartphone className="h-3 w-3 opacity-60" />}
+            </Button>
 
-        {/* Status Badge */}
-        {isProcessing && (
-          <Badge 
-            variant={isRecording ? "destructive" : "secondary"} 
-            className={cn(
-              isMobile && "px-2 py-1",
-              isRecording && "animate-pulse"
+            {/* Informational Tooltip */}
+            {!isProcessing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1">
+                    <p className="font-medium">Speak Naturally</p>
+                    <p className="text-xs">
+                      Just speak your thoughts naturally - no need for perfect sentences. 
+                      AI will help structure your feedback into professional reports.
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             )}
-          >
-            {isRecording && <div className="w-2 h-2 bg-white rounded-full mr-1" />}
-            {isRecording ? (isMobile ? "Recording" : "Recording...") : 
-             isTranscribing ? (isMobile ? "Processing" : "Processing...") : 
-             "Ready"}
-          </Badge>
-        )}
+          </div>
+
+          {/* Status Badge */}
+          {isProcessing && (
+            <Badge 
+              variant={isRecording ? "destructive" : "secondary"} 
+              className={cn(
+                isMobile && "px-2 py-1",
+                isRecording && "animate-pulse"
+              )}
+            >
+              {isRecording && <div className="w-2 h-2 bg-white rounded-full mr-1" />}
+              {isRecording ? (isMobile ? "Recording" : "Recording...") :
+               isRecordingStarting ? (isMobile ? "Starting" : "Starting...") :
+               isTranscribing ? (isMobile ? "Processing" : "Processing...") : 
+               "Ready"}
+            </Badge>
+          )}
+        </div>
+
+        {/* Recording Interface */}
+        <RecordingInterface
+          isRecording={isRecording}
+          isRecordingStarting={isRecordingStarting}
+          audioLevel={audioLevel}
+          recordingStartTime={recordingStartTime}
+          baseText={baseText}
+          isMobile={isMobile}
+        />
+
+        {/* Status Messages */}
+        <VoiceStatusMessages
+          isProcessing={isProcessing}
+          isTranscribing={isTranscribing}
+          transcript={transcript}
+          error={error}
+          hasInteracted={hasInteracted}
+          isMobile={isMobile}
+        />
       </div>
-
-      {/* Recording Interface */}
-      <RecordingInterface
-        isRecording={isRecording}
-        audioLevel={audioLevel}
-        recordingStartTime={recordingStartTime}
-        baseText={baseText}
-        isMobile={isMobile}
-      />
-
-      {/* Status Messages */}
-      <VoiceStatusMessages
-        isProcessing={isProcessing}
-        isTranscribing={isTranscribing}
-        transcript={transcript}
-        error={error}
-        hasInteracted={hasInteracted}
-        isMobile={isMobile}
-      />
-    </div>
+    </TooltipProvider>
   );
 } 
