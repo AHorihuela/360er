@@ -168,6 +168,7 @@ export function FeedbackInputForm({
                 onClick={handleVoiceToggle}
                 className="flex items-center gap-1"
                 disabled={!selectedEmployeeId}
+                tabIndex={-1}
               >
                 <Mic className={`h-4 w-4 ${isVoiceMode ? 'text-red-500' : ''}`} />
                 Voice
@@ -178,6 +179,15 @@ export function FeedbackInputForm({
               id="feedback-content"
               value={feedbackContent}
               onChange={(e) => setFeedbackContent(e.target.value)}
+              onKeyDown={(e) => {
+                // Command+Enter or Ctrl+Enter to submit
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  if (!isSubmitting && selectedEmployeeId && feedbackContent.trim().length >= 10) {
+                    handleSubmit(e as any);
+                  }
+                }
+              }}
               placeholder="Share your observations about this team member's performance, contributions, or areas for growth. Be specific and constructive..."
               className="min-h-32 resize-none"
               maxLength={2000}
@@ -188,7 +198,7 @@ export function FeedbackInputForm({
               <span>
                 {feedbackContent.length < 10 
                   ? `${10 - feedbackContent.length} more characters needed`
-                  : "Ready to submit"
+                  : "Ready to submit • ⌘+Enter to submit quickly"
                 }
               </span>
               <span>{feedbackContent.length}/2000</span>

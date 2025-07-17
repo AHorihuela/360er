@@ -32,6 +32,14 @@ export function SearchableEmployeeSelector({
     onEmployeeChange(employeeId);
     setOpen(false);
     setSearchValue("");
+    
+    // Focus the feedback textarea after selection
+    setTimeout(() => {
+      const feedbackTextarea = document.getElementById('feedback-content');
+      if (feedbackTextarea) {
+        feedbackTextarea.focus();
+      }
+    }, 100);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
