@@ -267,8 +267,17 @@ export function DetailedFeedbackSection({
                         {feedback.areas_for_improvement && (
                           <div key={`${feedback.id}-improvements`} className="bg-slate-50 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                              <TrendingUpIcon className="h-4 w-4 text-blue-500" />
-                              Areas for Improvement
+                              {reviewCycle?.type === 'manager_to_employee' ? (
+                                <>
+                                  <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                                  Manager Feedback
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUpIcon className="h-4 w-4 text-blue-500" />
+                                  Areas for Improvement
+                                </>
+                              )}
                             </h4>
                             <p className="text-sm text-muted-foreground">
                               {feedback.areas_for_improvement}
