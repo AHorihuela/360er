@@ -132,6 +132,15 @@ export function EmployeeReviewDetailsPage() {
 
   // Fetch survey questions based on the review cycle type
   const fetchSurveyQuestions = useCallback(async (cycleType: ReviewCycleType) => {
+    // Manager-to-employee cycles don't use structured survey questions
+    if (cycleType === 'manager_to_employee') {
+      console.log('Skipping survey questions for manager-to-employee cycle - uses direct feedback input');
+      setSurveyQuestions({});
+      setSurveyQuestionOrder({});
+      setIsQuestionsLoading(false);
+      return;
+    }
+
     try {
       // Clear any existing questions first and set loading state
       setSurveyQuestions({});
@@ -152,7 +161,6 @@ export function EmployeeReviewDetailsPage() {
           title: "Warning",
           description: `Could not load survey questions for ${
           cycleType === 'manager_effectiveness' ? 'Manager Survey' : 
-          cycleType === 'manager_to_employee' ? 'Manager to Employee Feedback' : 
           '360° Feedback'
         }`,
           variant: "destructive",
@@ -498,48 +506,95 @@ export function EmployeeReviewDetailsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {reviewCycle?.type === 'manager_to_employee' ? (
-            <Button
-              key="add-feedback"
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('manager-feedback-input')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs flex items-center gap-1.5"
-            >
-              <Send className="h-3.5 w-3.5" />
-              Add Feedback
-            </Button>
+            <>
+              <Button
+                key="add-feedback"
+                variant="default"
+                size="sm"
+                onClick={() => document.getElementById('manager-feedback-input')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-8 text-xs flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Add Feedback
+              </Button>
+              <Button
+                key="ai-report"
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-8 text-xs"
+              >
+                Generate Report
+              </Button>
+              <Button
+                key="detailed-feedback"
+                variant="ghost"
+                size="sm"
+                onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-8 text-xs"
+              >
+                View Responses
+              </Button>
+            </>
           ) : (
-            <Button
-              key="copy-link"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyLink}
-              className="h-8 text-xs flex items-center gap-1.5"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy Link
-            </Button>
+            <>
+              <Button
+                key="copy-link"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyLink}
+                className="h-8 text-xs flex items-center gap-1.5"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy Link
+              </Button>
+              <Button
+                key="ai-report"
+                variant="ghost"
+                size="sm"
+                onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-8 text-xs"
+              >
+                AI Report
+              </Button>
+              <Button
+                key="detailed-feedback"
+                variant="ghost"
+                size="sm"
+                onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-8 text-xs"
+              >
+                Detailed Feedback
+              </Button>
+            </>
           )}
-          <Button
-            key="ai-report"
-            variant="ghost"
-            size="sm"
-            onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
-            className="h-8 text-xs"
-          >
-            AI Report
-          </Button>
-          <Button
-            key="detailed-feedback"
-            variant="ghost"
-            size="sm"
-            onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
-            className="h-8 text-xs"
-          >
-            Detailed Feedback
-          </Button>
         </div>
       </div>
+
+      {/* Manager Feedback Input - Primary section for manager-to-employee cycles */}
+      {reviewCycle?.type === 'manager_to_employee' && (
+        <section id="manager-feedback-input" className="space-y-4 pb-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Provide Feedback</h2>
+            <p className="text-sm text-muted-foreground">
+              Add continuous feedback for {feedbackRequest?.employee?.name}
+            </p>
+          </div>
+          <Card className="border-purple-200 bg-purple-50/30">
+            <CardContent className="p-6">
+              <FeedbackInputForm
+                reviewCycleId={cycleId}
+                employees={feedbackRequest?.employee ? [feedbackRequest.employee as Employee] : []}
+                onSubmissionSuccess={() => {
+                  fetchData(); // Refresh the page data after submission
+                }}
+                cycleTitle={reviewCycle?.title}
+                hideEmployeeSelector={true}
+              />
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Manager Survey Analytics - Only show for manager effectiveness surveys with responses */}
       {isManagerSurvey && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
@@ -553,7 +608,7 @@ export function EmployeeReviewDetailsPage() {
       )}
 
       {/* Analytics Section - Only show for 360 feedback */}
-      {!isManagerSurvey && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
+      {!isManagerSurvey && reviewCycle?.type !== 'manager_to_employee' && feedbackRequest?.feedback && feedbackRequest.feedback.length > 0 && (
         <section className="space-y-4 pb-6">
           <FeedbackAnalytics
             feedbackResponses={feedbackRequest.feedback}
@@ -562,8 +617,16 @@ export function EmployeeReviewDetailsPage() {
         </section>
       )}
 
-      {/* Report Section */}
+      {/* Report Section - Secondary for M2E cycles */}
       <section id="ai-report" className="space-y-4 py-6">
+        {reviewCycle?.type === 'manager_to_employee' && (
+          <div className="space-y-1 mb-4">
+            <h2 className="text-xl font-semibold">Generate Report</h2>
+            <p className="text-sm text-muted-foreground">
+              Create a comprehensive feedback report from submitted feedback entries
+            </p>
+          </div>
+        )}
         <AIReport 
           feedbackRequest={{
             id: feedbackRequest?.id || '',
@@ -585,30 +648,6 @@ export function EmployeeReviewDetailsPage() {
           isSaving={isSaving}
         />
       </section>
-
-      {/* Manager Feedback Input - Only show for manager-to-employee cycles */}
-      {reviewCycle?.type === 'manager_to_employee' && (
-        <section id="manager-feedback-input" className="space-y-4 pt-6">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Add Feedback</h2>
-            <p className="text-sm text-muted-foreground">
-              Provide feedback for {feedbackRequest?.employee?.name}
-            </p>
-          </div>
-          <Card>
-            <CardContent className="p-6">
-              <FeedbackInputForm
-                reviewCycleId={cycleId}
-                employees={feedbackRequest?.employee ? [feedbackRequest.employee as Employee] : []}
-                onSubmissionSuccess={() => {
-                  fetchData(); // Refresh the page data after submission
-                }}
-                cycleTitle={reviewCycle?.title}
-              />
-            </CardContent>
-          </Card>
-        </section>
-      )}
 
       {/* Detailed Reviews Section */}
       <section id="detailed-feedback" className="space-y-4 pt-6">
@@ -642,16 +681,30 @@ export function EmployeeReviewDetailsPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Completion</p>
-                  <div className="space-y-2">
-                    <Progress 
-                      value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
-                      className="h-2"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {feedbackRequest?._count?.responses} of {feedbackRequest?.target_responses} responses
-                    </p>
-                  </div>
+                  {reviewCycle?.type === 'manager_to_employee' ? (
+                    <>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Feedback Entries</p>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold">{feedbackRequest?._count?.responses || 0}</p>
+                        <p className="text-xs text-muted-foreground">
+                          continuous feedback entries
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Completion</p>
+                      <div className="space-y-2">
+                        <Progress 
+                          value={((feedbackRequest?._count?.responses || 0) / (feedbackRequest?.target_responses || 1)) * 100} 
+                          className="h-2"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {feedbackRequest?._count?.responses} of {feedbackRequest?.target_responses} responses
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div>

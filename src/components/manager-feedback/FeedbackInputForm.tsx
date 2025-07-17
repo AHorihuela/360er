@@ -15,13 +15,15 @@ interface FeedbackInputFormProps {
   employees?: Employee[]; // Employees from the selected cycle
   onSubmissionSuccess?: () => void;
   cycleTitle?: string; // Display cycle context
+  hideEmployeeSelector?: boolean; // Hide employee selector when already on specific employee page
 }
 
 export function FeedbackInputForm({ 
   reviewCycleId, 
   employees = [], 
   onSubmissionSuccess,
-  cycleTitle 
+  cycleTitle,
+  hideEmployeeSelector = false
 }: FeedbackInputFormProps) {
   const { user } = useAuth();
   const { submitManagerFeedback, isSubmitting } = useManagerFeedback({ 
@@ -30,7 +32,9 @@ export function FeedbackInputForm({
   });
   const { toast } = useToast();
   
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(
+    hideEmployeeSelector && employees.length === 1 ? employees[0].id : ''
+  );
   const [feedbackContent, setFeedbackContent] = useState('');
   const [isVoiceMode, setIsVoiceMode] = useState(false);
 
@@ -125,25 +129,27 @@ export function FeedbackInputForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Employee Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="employee-select">Select Team Member</Label>
-            <EmployeeSelector
-              employees={employees}
-              selectedEmployeeId={selectedEmployeeId}
-              onEmployeeChange={setSelectedEmployeeId}
-              placeholder={employees.length === 0 
-                ? "No team members in this cycle..." 
-                : "Choose who you're providing feedback for..."
-              }
-              disabled={employees.length === 0}
-            />
-            {employees.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Add team members to this cycle to start providing feedback.
-              </p>
-            )}
-          </div>
+          {/* Employee Selection - Only show if not hidden */}
+          {!hideEmployeeSelector && (
+            <div className="space-y-2">
+              <Label htmlFor="employee-select">Select Team Member</Label>
+              <EmployeeSelector
+                employees={employees}
+                selectedEmployeeId={selectedEmployeeId}
+                onEmployeeChange={setSelectedEmployeeId}
+                placeholder={employees.length === 0 
+                  ? "No team members in this cycle..." 
+                  : "Choose who you're providing feedback for..."
+                }
+                disabled={employees.length === 0}
+              />
+              {employees.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Add team members to this cycle to start providing feedback.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Feedback Content */}
           <div className="space-y-2">
