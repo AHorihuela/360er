@@ -243,6 +243,7 @@ export function ReviewCycleDetailsPage() {
             key={request.id}
             request={request}
             cycleId={cycleId || ''}
+            cycleType={reviewCycle.type}
             onDelete={isMasterMode ? undefined : (request) => {
               setEmployeeToRemove({
                 id: request.id,

@@ -12,14 +12,23 @@ import { FeedbackRequest, REQUEST_STATUS } from '@/types/review'
 interface FeedbackRequestCardProps {
   request: FeedbackRequest
   cycleId: string
+  cycleType?: 'manager_to_employee' | 'manager_effectiveness' | '360_review'
   onDelete?: (request: FeedbackRequest) => void
   onCopyLink: (link: string) => void
   readOnly?: boolean
 }
 
-function determineRequestStatus(request: FeedbackRequest): string {
-  if (!request.target_responses) return REQUEST_STATUS.PENDING
+function determineRequestStatus(request: FeedbackRequest, cycleType?: string): string {
   const responseCount = request._count?.responses || 0
+  
+  // For manager-to-employee cycles, use different status logic
+  if (cycleType === 'manager_to_employee') {
+    if (responseCount > 0) return REQUEST_STATUS.IN_PROGRESS
+    return REQUEST_STATUS.PENDING
+  }
+  
+  // For other cycle types, use traditional target-based logic
+  if (!request.target_responses) return REQUEST_STATUS.PENDING
   
   // If we have more responses than target, mark as exceeded
   if (responseCount > request.target_responses) return REQUEST_STATUS.EXCEEDED
@@ -34,6 +43,7 @@ function determineRequestStatus(request: FeedbackRequest): string {
 export function FeedbackRequestCard({ 
   request, 
   cycleId, 
+  cycleType,
   onDelete, 
   onCopyLink,
   readOnly = false 
@@ -42,7 +52,7 @@ export function FeedbackRequestCard({
   const responseCount = request._count?.responses || 0
   const targetResponses = request.target_responses || 1
   const completionPercentage = Math.min(Math.round((responseCount / targetResponses) * 100), 100)
-  const status = determineRequestStatus(request)
+  const status = determineRequestStatus(request, cycleType)
   
   // Determine badge color and text based on status
   const getBadgeStyles = (status: string) => {
@@ -94,21 +104,34 @@ export function FeedbackRequestCard({
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium">Completion</span>
-                  <span className="text-sm font-medium">
-                    {responseCount}/{targetResponses}
-                  </span>
-                </div>
-                <Progress 
-                  value={completionPercentage}
-                  className={cn(
-                    "h-2 mb-3",
-                    status === REQUEST_STATUS.COMPLETED || status === REQUEST_STATUS.EXCEEDED
-                      ? "bg-green-500/20 [&>div]:bg-green-500"
-                      : "bg-orange-500/20 [&>div]:bg-orange-500"
-                  )}
-                />
+                {cycleType === 'manager_to_employee' ? (
+                  // For manager-to-employee cycles, show feedback count instead of completion
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium">Feedback Count</span>
+                    <span className="text-sm font-medium">
+                      {responseCount} {responseCount === 1 ? 'entry' : 'entries'}
+                    </span>
+                  </div>
+                ) : (
+                  // For other cycle types, show traditional completion tracking
+                  <>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium">Completion</span>
+                      <span className="text-sm font-medium">
+                        {responseCount}/{targetResponses}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={completionPercentage}
+                      className={cn(
+                        "h-2 mb-3",
+                        status === REQUEST_STATUS.COMPLETED || status === REQUEST_STATUS.EXCEEDED
+                          ? "bg-green-500/20 [&>div]:bg-green-500"
+                          : "bg-orange-500/20 [&>div]:bg-orange-500"
+                      )}
+                    />
+                  </>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -119,24 +142,27 @@ export function FeedbackRequestCard({
                   {getStatusText(status)}
                 </Badge>
                 <div className="flex gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-accent"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onCopyLink(`${window.location.origin}/feedback/${request.unique_link}`)
-                        }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Copy feedback link</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Only show copy link button for cycles that use unique links (not manager-to-employee) */}
+                  {cycleType !== 'manager_to_employee' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-accent"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onCopyLink(`${window.location.origin}/feedback/${request.unique_link}`)
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Copy feedback link</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   
                   {/* Only show delete button if not readOnly and onDelete is provided */}
                   {!readOnly && onDelete && (
