@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -31,10 +32,13 @@ interface RecentReviewsProps {
 
 // Manager-to-Employee Timeline Component
 function ManagerFeedbackTimeline({ 
-  feedbackRequests 
+  feedbackRequests,
+  cycleId 
 }: { 
-  feedbackRequests: RecentReviewsProps['feedbackRequests'] 
+  feedbackRequests: RecentReviewsProps['feedbackRequests'];
+  cycleId: string;
 }) {
+  const navigate = useNavigate();
   const [visibleEntries, setVisibleEntries] = useState(8);
 
   // Collect all feedback entries and sort by date
@@ -80,7 +84,11 @@ function ManagerFeedbackTimeline({
       
       <div className="space-y-3">
         {visibleFeedback.map((entry, index) => (
-          <Card key={entry.id} className="border-l-4 border-l-blue-500">
+          <Card 
+            key={entry.id} 
+            className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => entry.employee?.id && navigate(`/reviews/${cycleId}/employee/${entry.employee.id}`)}
+          >
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <Avatar className="h-8 w-8 mt-1">
@@ -151,7 +159,7 @@ export function RecentReviews({
 
   // For manager-to-employee feedback, use the timeline component
   if (reviewCycleType === 'manager_to_employee') {
-    return <ManagerFeedbackTimeline feedbackRequests={feedbackRequests} />;
+    return <ManagerFeedbackTimeline feedbackRequests={feedbackRequests} cycleId={reviewCycleId} />;
   }
 
   // Original logic for 360 reviews and manager effectiveness surveys

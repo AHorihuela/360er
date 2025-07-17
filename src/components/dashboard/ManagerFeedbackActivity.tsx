@@ -5,13 +5,16 @@ import { DashboardFeedbackRequest, DashboardEmployee } from "@/types/feedback/da
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { Calendar, MessageSquare, TrendingUp, User, Users } from "lucide-react";
 import { format, subDays, isAfter } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   feedbackRequests: DashboardFeedbackRequest[];
   employees: DashboardEmployee[];
+  cycleId: string;
 }
 
 interface EmployeeFeedbackData {
+  employeeId: string;
   name: string;
   initials: string;
   role: string;
@@ -20,7 +23,8 @@ interface EmployeeFeedbackData {
   lastFeedbackDate?: string;
 }
 
-export function ManagerFeedbackActivity({ feedbackRequests, employees }: Props) {
+export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }: Props) {
+  const navigate = useNavigate();
   // Process data to get feedback per employee
   const employeeFeedbackData: EmployeeFeedbackData[] = feedbackRequests.map(request => {
     const employee = employees.find(emp => emp.id === request.employee_id);
@@ -38,6 +42,7 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees }: Props) 
       : null;
 
     return {
+      employeeId: request.employee_id,
       name: employee?.name || 'Unknown',
       initials: employee?.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?',
       role: employee?.role || '',
@@ -167,7 +172,8 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees }: Props) 
               {sortedData.map((employee, index) => (
                 <div 
                   key={employee.name}
-                  className="p-3 rounded-lg border bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                  className="p-3 rounded-lg border bg-slate-50/50 hover:bg-slate-100 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/reviews/${cycleId}/employee/${employee.employeeId}`)}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Avatar className="h-9 w-9">

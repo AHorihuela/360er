@@ -50,6 +50,7 @@ export function AnalyticsSection({
         <ManagerFeedbackActivity 
           feedbackRequests={activeReviewCycle.feedback_requests}
           employees={employees}
+          cycleId={activeReviewCycle.id}
         />
       ) : (
         <FeedbackTimeline 
