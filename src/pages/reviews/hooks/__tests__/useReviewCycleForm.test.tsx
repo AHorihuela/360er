@@ -128,13 +128,13 @@ describe('useReviewCycleForm', () => {
     });
 
     it('should not submit without user', async () => {
-      const { result } = renderHook(() => useReviewCycleForm());
       const { supabase } = await import('@/lib/supabase');
       
       // Mock the auth hook to return no user for this test
       const { useAuth } = await import('@/hooks/useAuth');
-      vi.mocked(useAuth).mockReturnValue({ user: null } as any);
+      vi.mocked(useAuth).mockImplementation(() => ({ user: null } as any));
 
+      const { result } = renderHook(() => useReviewCycleForm());
       const mockEvent = { preventDefault: vi.fn() } as any;
 
       await act(async () => {
@@ -144,7 +144,7 @@ describe('useReviewCycleForm', () => {
       expect(supabase.from).not.toHaveBeenCalled();
       
       // Restore the mock for other tests
-      vi.mocked(useAuth).mockReturnValue({ user: { id: 'test-user-123' } } as any);
+      vi.mocked(useAuth).mockImplementation(() => ({ user: { id: 'test-user-123' } } as any));
     });
   });
 
