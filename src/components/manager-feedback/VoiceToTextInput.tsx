@@ -72,34 +72,23 @@ export function VoiceToTextInput({
         const trimmedText = text.trim();
         let newValue = baseText;
         
-        console.log('=== Voice Text Appending Debug ===');
-        console.log('Original baseText:', JSON.stringify(baseText));
-        console.log('New transcription:', JSON.stringify(trimmedText));
-        console.log('Current field value:', JSON.stringify(value));
-        
         // Add appropriate spacing/formatting between existing text and new transcription
         if (newValue.length > 0) {
           // If baseText doesn't end with punctuation or whitespace, add a space
           if (!newValue.match(/[.!?]\s*$/) && !newValue.endsWith(' ')) {
             newValue += ' ';
-            console.log('Added space after baseText');
           }
           // If baseText ends with punctuation but no space, add a space
           else if (newValue.match(/[.!?]$/) && !newValue.endsWith(' ')) {
             newValue += ' ';
-            console.log('Added space after punctuation');
           }
           // If we have a substantial base text, consider adding a line break for readability
           else if (newValue.length > 100 && !newValue.endsWith('\n')) {
             newValue += '\n\n';
-            console.log('Added line break for long text');
           }
         }
         
         newValue += trimmedText;
-        console.log('Final combined text:', JSON.stringify(newValue));
-        console.log('=== End Debug ===');
-        
         onChange(newValue);
       }
       
@@ -126,8 +115,6 @@ export function VoiceToTextInput({
     
     if (!isRecording && !isTranscribing) {
       // Start recording - capture current text as base
-      console.log('=== Recording Start Debug ===');
-      console.log('Capturing baseText from current value:', JSON.stringify(value));
       setBaseText(value);
       clearTranscript();
       setRecordingStartTime(Date.now());

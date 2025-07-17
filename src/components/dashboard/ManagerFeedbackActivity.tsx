@@ -25,6 +25,7 @@ interface EmployeeFeedbackData {
 
 export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }: Props) {
   const navigate = useNavigate();
+  
   // Process data to get feedback per employee
   const employeeFeedbackData: EmployeeFeedbackData[] = feedbackRequests.map(request => {
     const employee = employees.find(emp => emp.id === request.employee_id);
@@ -52,15 +53,17 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
     };
   });
 
-  // Sort by feedback count (highest first)
+  // Sort by feedback count (highest first), but include all team members
   const sortedData = employeeFeedbackData.sort((a, b) => b.feedbackCount - a.feedbackCount);
 
-  // Prepare chart data
-  const chartData = sortedData.map(emp => ({
-    name: emp.name.split(' ')[0], // First name only for chart
-    total: emp.feedbackCount,
-    recent: emp.recentFeedback
-  }));
+  // Prepare chart data - only include employees with feedback for the chart
+  const chartData = sortedData
+    .filter(emp => emp.feedbackCount > 0)
+    .map(emp => ({
+      name: emp.name.split(' ')[0], // First name only for chart
+      total: emp.feedbackCount,
+      recent: emp.recentFeedback
+    }));
 
   const totalFeedback = employeeFeedbackData.reduce((sum, emp) => sum + emp.feedbackCount, 0);
   const activeEmployees = employeeFeedbackData.filter(emp => emp.feedbackCount > 0).length;
@@ -95,66 +98,71 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
         {/* Chart Section */}
         <div className="space-y-3">
           <h4 className="font-medium text-sm">Feedback Distribution</h4>
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                <XAxis 
-                  dataKey="name" 
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-muted-foreground"
-                />
-                <YAxis 
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-muted-foreground"
-                />
-                <Tooltip
-                  cursor={{ fill: 'var(--primary-foreground)', opacity: 0.1 }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-lg border bg-background p-3 shadow-sm">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="flex flex-col">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Total Feedback
-                              </span>
-                              <span className="font-bold text-blue-600">
-                                {payload[0].value}
-                              </span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Recent (7d)
-                              </span>
-                              <span className="font-bold text-green-600">
-                                {payload[1]?.value || 0}
-                              </span>
+          {chartData.length > 0 ? (
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                  <XAxis 
+                    dataKey="name" 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground"
+                  />
+                  <YAxis 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    className="text-muted-foreground"
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'var(--primary-foreground)', opacity: 0.1 }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-3 shadow-sm">
+                            <div className="space-y-1">
+                              <p className="font-medium">{payload[0]?.payload?.fullName || payload[0]?.payload?.name}</p>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 rounded bg-blue-500"></div>
+                                  <span className="text-sm">Total: {payload[0]?.value}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 rounded bg-green-500"></div>
+                                  <span className="text-sm">Recent: {payload[1]?.value || 0}</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar 
-                  dataKey="total"
-                  radius={[2, 2, 0, 0]}
-                  className="fill-blue-500"
-                />
-                <Bar 
-                  dataKey="recent"
-                  radius={[2, 2, 0, 0]}
-                  className="fill-green-500"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="total"
+                    radius={[2, 2, 0, 0]}
+                    className="fill-blue-500"
+                  />
+                  <Bar 
+                    dataKey="recent"
+                    radius={[2, 2, 0, 0]}
+                    className="fill-green-500"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-[240px] flex items-center justify-center border border-dashed rounded-lg bg-muted/30">
+              <div className="text-center text-muted-foreground">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">No feedback data yet</p>
+                <p className="text-xs">Chart will appear once you start providing feedback</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Team Members Grid - Full Width */}
@@ -171,9 +179,9 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {sortedData.map((employee, index) => (
                 <div 
-                  key={employee.name}
+                  key={employee.employeeId}
                   className="p-3 rounded-lg border bg-slate-50/50 hover:bg-slate-100 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/reviews/${cycleId}/employee/${employee.employeeId}`)}
+                  onClick={() => navigate(`/manager-feedback?employee=${employee.employeeId}`)}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Avatar className="h-9 w-9">
@@ -190,7 +198,9 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-blue-600">{employee.feedbackCount}</span>
-                      <span className="text-xs text-muted-foreground">total</span>
+                      <span className="text-xs text-muted-foreground">
+                        {employee.feedbackCount === 1 ? 'entry' : 'entries'}
+                      </span>
                     </div>
                     {employee.recentFeedback > 0 && (
                       <Badge variant="outline" className="text-xs px-2 py-0 h-5 bg-green-50 text-green-700 border-green-200">
@@ -199,10 +209,15 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
                     )}
                   </div>
                   
-                  {employee.lastFeedbackDate && (
+                  {employee.lastFeedbackDate ? (
                     <div className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       Last: {format(new Date(employee.lastFeedbackDate), 'MMM d')}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      No feedback yet
                     </div>
                   )}
                 </div>
@@ -211,8 +226,8 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
           ) : (
             <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
               <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <h3 className="font-medium mb-1">No team members yet</h3>
-              <p className="text-sm">Add employees to your review cycle to start tracking feedback</p>
+              <h3 className="font-medium mb-1">No team members in this cycle</h3>
+              <p className="text-sm">Add employees to your review cycle to start providing feedback</p>
             </div>
           )}
         </div>
