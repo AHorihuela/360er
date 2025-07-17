@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '../components/ui/use-toast';
 import { supabase } from '../lib/supabase';
-import { generateAIReport } from '../lib/openai';
 import { debounce } from 'lodash';
 import { FeedbackRequest, AIReportType, GenerationStep } from '../types/reviews/employee-review';
 import { ReviewCycleType } from '../types/survey';
@@ -240,15 +239,28 @@ export function useAIReportManagement({
         return;
       }
 
-      // Generate new report
-      console.log('Calling OpenAI to generate report...');
-      const reportContent = await generateAIReport(
-        feedbackRequest.employee?.name || 'Unknown Employee',
-        feedbackRequest.employee?.role || 'Unknown Role',
-        feedbackRequest.feedback,
-        surveyType,
-        surveyQuestions
-      );
+      // Generate new report via server-side API
+      console.log('Calling server API to generate report...');
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employeeName: feedbackRequest.employee?.name || 'Unknown Employee',
+          employeeRole: feedbackRequest.employee?.role || 'Unknown Role',
+          feedback: feedbackRequest.feedback,
+          surveyType: surveyType,
+          surveyQuestions: surveyQuestions
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || `Server error: ${response.status} ${response.statusText}`);
+      }
+
+      const { content: reportContent } = await response.json();
 
       if (!reportContent) {
         throw new Error('Failed to generate report content');
