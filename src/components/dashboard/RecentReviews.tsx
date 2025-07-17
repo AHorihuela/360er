@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import { ManagerSurveyReviewCard } from './ManagerSurveyReviewCard';
 import { DashboardFeedbackResponse } from '@/types/feedback/dashboard';
 import { FeedbackStatus, RelationshipType, CoreFeedbackResponse } from '@/types/feedback/base';
@@ -29,6 +30,8 @@ interface RecentReviewsProps {
   reviewCycleType?: '360_review' | 'manager_effectiveness' | 'manager_to_employee';
   reviewCycleId: string;
 }
+
+
 
 // Manager-to-Employee Timeline Component
 function ManagerFeedbackTimeline({ 
@@ -111,9 +114,12 @@ function ManagerFeedbackTimeline({
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {entry.content || 'No content available'}
-                  </p>
+                  <TruncatedText 
+                    content={entry.content || ''} 
+                    maxLength={200} 
+                    preserveFormatting={true}
+                    className="text-gray-700"
+                  />
                   
                   <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
                     <div className="flex items-center gap-1">
