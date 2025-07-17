@@ -28,17 +28,14 @@ export function ManagerFeedbackSection({
           Add continuous feedback for {feedbackRequest?.employee?.name}
         </p>
       </div>
-      <Card className="border-purple-200 bg-purple-50/30">
-        <CardContent className="p-6">
-          <FeedbackInputForm
-            reviewCycleId={cycleId}
-            employees={feedbackRequest?.employee ? [feedbackRequest.employee as Employee] : []}
-            onSubmissionSuccess={onSubmissionSuccess}
-            cycleTitle={reviewCycle?.title}
-            hideEmployeeSelector={true}
-          />
-        </CardContent>
-      </Card>
+      <FeedbackInputForm
+        reviewCycleId={cycleId}
+        employees={feedbackRequest?.employee ? [feedbackRequest.employee as Employee] : []}
+        onSubmissionSuccess={onSubmissionSuccess}
+        cycleTitle={reviewCycle?.title}
+        hideEmployeeSelector={true}
+        hideHeader={true}
+      />
     </section>
   );
 } 

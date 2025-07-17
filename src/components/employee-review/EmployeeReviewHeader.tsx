@@ -43,7 +43,7 @@ export function EmployeeReviewHeader({
               variant="default"
               size="sm"
               onClick={() => document.getElementById('manager-feedback-input')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700"
+              className="h-8 text-xs flex items-center gap-1.5"
             >
               <Send className="h-3.5 w-3.5" />
               Add Feedback

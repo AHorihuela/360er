@@ -16,6 +16,7 @@ interface FeedbackInputFormProps {
   onSubmissionSuccess?: () => void;
   cycleTitle?: string; // Display cycle context
   hideEmployeeSelector?: boolean; // Hide employee selector when already on specific employee page
+  hideHeader?: boolean; // Hide the card header when used within another section
 }
 
 export function FeedbackInputForm({ 
@@ -23,7 +24,8 @@ export function FeedbackInputForm({
   employees = [], 
   onSubmissionSuccess,
   cycleTitle,
-  hideEmployeeSelector = false
+  hideEmployeeSelector = false,
+  hideHeader = false
 }: FeedbackInputFormProps) {
   const { user } = useAuth();
   const { submitManagerFeedback, isSubmitting } = useManagerFeedback({ 
@@ -116,18 +118,20 @@ export function FeedbackInputForm({
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Quick Feedback Entry
-        </CardTitle>
-        {cycleTitle && (
-          <p className="text-sm text-muted-foreground">
-            Adding feedback to: <span className="font-medium">{cycleTitle}</span>
-          </p>
-        )}
-      </CardHeader>
-      <CardContent>
+      {!hideHeader && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Quick Feedback Entry
+          </CardTitle>
+          {cycleTitle && (
+            <p className="text-sm text-muted-foreground">
+              Adding feedback to: <span className="font-medium">{cycleTitle}</span>
+            </p>
+          )}
+        </CardHeader>
+      )}
+      <CardContent className={hideHeader ? "pt-6" : ""}>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Employee Selection - Only show if not hidden */}
           {!hideEmployeeSelector && (
