@@ -14,9 +14,9 @@ vi.mock('@/components/ui/use-toast', () => ({
   useToast: () => ({ toast: mockToast })
 }));
 
-// Mock auth hook
+// Mock auth hook with a vi.fn so it can be modified
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'test-user-123' } })
+  useAuth: vi.fn(() => ({ user: { id: 'test-user-123' } }))
 }));
 
 // Mock Supabase with proper method chaining
@@ -129,10 +129,10 @@ describe('useReviewCycleForm', () => {
 
     it('should not submit without user', async () => {
       const { supabase } = await import('@/lib/supabase');
+      const { useAuth } = await import('@/hooks/useAuth');
       
       // Mock the auth hook to return no user for this test
-      const { useAuth } = await import('@/hooks/useAuth');
-      vi.mocked(useAuth).mockImplementation(() => ({ user: null } as any));
+      vi.mocked(useAuth).mockReturnValue({ user: null } as any);
 
       const { result } = renderHook(() => useReviewCycleForm());
       const mockEvent = { preventDefault: vi.fn() } as any;
@@ -144,7 +144,7 @@ describe('useReviewCycleForm', () => {
       expect(supabase.from).not.toHaveBeenCalled();
       
       // Restore the mock for other tests
-      vi.mocked(useAuth).mockImplementation(() => ({ user: { id: 'test-user-123' } } as any));
+      vi.mocked(useAuth).mockReturnValue({ user: { id: 'test-user-123' } } as any);
     });
   });
 
