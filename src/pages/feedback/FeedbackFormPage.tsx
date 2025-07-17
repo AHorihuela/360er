@@ -562,9 +562,13 @@ export function FeedbackFormPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">
             {reviewCycleType === '360_review' 
               ? 'Share Your Feedback' 
-              : showNames 
-                ? `Manager Effectiveness Survey: ${feedbackRequest?.employee?.name || 'Manager'}`
-                : 'Manager Effectiveness Survey'}
+              : reviewCycleType === 'manager_effectiveness'
+                ? (showNames 
+                  ? `Manager Effectiveness Survey: ${feedbackRequest?.employee?.name || 'Manager'}`
+                  : 'Manager Effectiveness Survey')
+                : (showNames
+                  ? `Manager to Employee Feedback: ${feedbackRequest?.employee?.name || 'Employee'}`
+                  : 'Manager to Employee Feedback')}
           </h1>
           
           <Button
@@ -586,7 +590,9 @@ export function FeedbackFormPage() {
         <p className="text-muted-foreground">
           {reviewCycleType === '360_review' 
             ? 'Provide anonymous feedback to help your colleague grow and improve.'
-            : 'Share your anonymous feedback about your manager to help improve team effectiveness.'}
+            : reviewCycleType === 'manager_effectiveness'
+            ? 'Share your anonymous feedback about your manager to help improve team effectiveness.'
+            : 'Receive feedback from your manager to support your professional development.'}
         </p>
       </div>
 
