@@ -24,7 +24,7 @@ function determineRequestStatus(request: FeedbackRequest, cycleType?: string): s
   // For manager-to-employee cycles, use different status logic
   if (cycleType === 'manager_to_employee') {
     if (responseCount > 0) return REQUEST_STATUS.IN_PROGRESS
-    return REQUEST_STATUS.PENDING
+    return 'ready' // Ready for feedback instead of pending
   }
   
   // For other cycle types, use traditional target-based logic
@@ -52,6 +52,23 @@ export function FeedbackRequestCard({
   const responseCount = request._count?.responses || 0
   const targetResponses = request.target_responses || 1
   const completionPercentage = Math.min(Math.round((responseCount / targetResponses) * 100), 100)
+  
+  // Calculate recent feedback for M2E cycles (last 30 days)
+  const getRecentFeedbackCount = () => {
+    if (cycleType !== 'manager_to_employee' || !request.feedback_responses) {
+      return responseCount;
+    }
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    return request.feedback_responses.filter(response => {
+      const responseDate = new Date(response.submitted_at);
+      return responseDate >= thirtyDaysAgo;
+    }).length;
+  };
+  
+  const recentFeedbackCount = getRecentFeedbackCount();
   const status = determineRequestStatus(request, cycleType)
   
   // Determine badge color and text based on status
@@ -63,6 +80,8 @@ export function FeedbackRequestCard({
         return "bg-green-500/10 text-green-500 hover:bg-green-500/20"
       case REQUEST_STATUS.IN_PROGRESS:
         return "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20"
+      case 'ready':
+        return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
       default:
         return "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20"
     }
@@ -105,11 +124,11 @@ export function FeedbackRequestCard({
 
               <div>
                 {cycleType === 'manager_to_employee' ? (
-                  // For manager-to-employee cycles, show feedback count instead of completion
+                  // For manager-to-employee cycles, show recent feedback count
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-medium">Feedback Count</span>
+                    <span className="text-sm font-medium">Last 30 Days</span>
                     <span className="text-sm font-medium">
-                      {responseCount} {responseCount === 1 ? 'entry' : 'entries'}
+                      {recentFeedbackCount} {recentFeedbackCount === 1 ? 'entry' : 'entries'}
                     </span>
                   </div>
                 ) : (

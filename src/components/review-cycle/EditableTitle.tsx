@@ -117,49 +117,53 @@ export function EditableTitle({
         </div>
       )}
 
-      {/* Due date editing */}
-      {isEditingDueDate ? (
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">Due</span>
-          <Input
-            type="date"
-            value={editedDueDate}
-            onChange={(e) => setEditedDueDate(e.target.value)}
-            className="w-auto text-sm"
-            autoFocus
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSaveDueDate}
-          >
-            <Check className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancelDueDate}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 group">
-          <p className="text-muted-foreground text-sm">Due {new Date(dueDate).toLocaleDateString()}</p>
-          {!readOnly && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditedDueDate(getLocalDateString(dueDate))
-                setIsEditingDueDate(true)
-              }}
-              className="h-8 w-8"
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
+      {/* Due date editing - only show for non-manager-to-employee cycles */}
+      {type !== 'manager_to_employee' && (
+        <>
+          {isEditingDueDate ? (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">Due</span>
+              <Input
+                type="date"
+                value={editedDueDate}
+                onChange={(e) => setEditedDueDate(e.target.value)}
+                className="w-auto text-sm"
+                autoFocus
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSaveDueDate}
+              >
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelDueDate}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 group">
+              <p className="text-muted-foreground text-sm">Due {new Date(dueDate).toLocaleDateString()}</p>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditedDueDate(getLocalDateString(dueDate))
+                    setIsEditingDueDate(true)
+                  }}
+                  className="h-8 w-8"
+                >
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   )

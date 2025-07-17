@@ -31,6 +31,50 @@ export function CycleAnalytics({ reviewCycle }: Props) {
     ? Math.min(100, (totalResponses / totalTargetResponses) * 100) 
     : 0;
 
+  // Get recent feedback entries for M2E cycles (last 30 days)
+  const getRecentFeedback = () => {
+    if (!isManagerToEmployee || !reviewCycle.feedback_requests) {
+      return [];
+    }
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentFeedback: Array<{
+      employeeName: string;
+      content: string;
+      submittedAt: string;
+      relationship?: string;
+    }> = [];
+    
+    reviewCycle.feedback_requests.forEach(request => {
+      if (request.feedback_responses) {
+        request.feedback_responses.forEach(response => {
+          const responseDate = new Date(response.submitted_at);
+          if (responseDate >= thirtyDaysAgo) {
+            const employeeName = Array.isArray(request.employee) 
+              ? request.employee[0]?.name 
+              : request.employee?.name;
+            
+            recentFeedback.push({
+              employeeName: employeeName || 'Unknown Employee',
+              content: response.strengths || response.areas_for_improvement || 'No content',
+              submittedAt: response.submitted_at,
+              relationship: response.relationship
+            });
+          }
+        });
+      }
+    });
+    
+    // Sort by most recent first
+    return recentFeedback.sort((a, b) => 
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    ).slice(0, 5); // Show last 5 entries
+  };
+
+  const recentFeedback = getRecentFeedback();
+
   const getReviewStage = () => {
     if (progressPercentage === 0) return { label: 'Not Started', variant: 'secondary' as const };
     if (progressPercentage < 100) return { label: 'In Progress', variant: 'default' as const };
@@ -81,6 +125,39 @@ export function CycleAnalytics({ reviewCycle }: Props) {
             }
           </span>
         </div>
+        
+        {/* Recent feedback list for M2E cycles */}
+        {isManagerToEmployee && recentFeedback.length > 0 && (
+          <div className="space-y-3 pt-4 border-t">
+            <h4 className="text-sm font-medium text-muted-foreground">Recent Feedback (Last 30 Days)</h4>
+            <div className="space-y-2">
+              {recentFeedback.map((feedback, index) => (
+                <div key={index} className="text-xs p-2 rounded bg-muted/30">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-medium">{feedback.employeeName}</span>
+                    <span className="text-muted-foreground">
+                      {new Date(feedback.submittedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground line-clamp-2">
+                    {feedback.content.length > 100 
+                      ? `${feedback.content.substring(0, 100)}...` 
+                      : feedback.content
+                    }
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Show message if no recent feedback for M2E cycles */}
+        {isManagerToEmployee && recentFeedback.length === 0 && (
+          <div className="space-y-3 pt-4 border-t">
+            <h4 className="text-sm font-medium text-muted-foreground">Recent Feedback (Last 30 Days)</h4>
+            <p className="text-xs text-muted-foreground">No feedback entries in the last 30 days</p>
+          </div>
+        )}
       </div>
     </Card>
   );
