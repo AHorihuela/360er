@@ -137,7 +137,7 @@ export function useAIReportManagement({
     debouncedSave(value, feedbackRequest.id);
   }, [debouncedSave, feedbackRequest?.id]);
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (overrideTimeRange?: TimeRange) => {
     if (!feedbackRequest?.id || !feedbackRequest.feedback?.length) return;
 
     try {
@@ -261,7 +261,7 @@ export function useAIReportManagement({
           feedback: feedbackRequest.feedback,
           surveyType: surveyType,
           surveyQuestions: surveyQuestions,
-          timeRange: timeRange
+          timeRange: overrideTimeRange || timeRange // Use override if provided, otherwise use prop
         })
       });
 

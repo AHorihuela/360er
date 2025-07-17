@@ -93,8 +93,8 @@ export function EmployeeReviewDetailsPage() {
   // Wrapper function to handle time range
   const handleGenerateReport = (timeRange?: any) => {
     setCurrentTimeRange(timeRange);
-    // The hook will use the updated timeRange on next render
-    setTimeout(() => generateReport(), 0);
+    // Pass timeRange directly to avoid race condition
+    generateReport(timeRange);
   };
 
   // Sorted feedback memo
