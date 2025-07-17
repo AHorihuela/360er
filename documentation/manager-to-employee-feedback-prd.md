@@ -15,11 +15,14 @@ Complete the holistic review ecosystem by adding the third pillar: **Manager-to-
 ## User Stories
 
 ### Manager (Primary User)
-- As a manager, I want to quickly record feedback observations about my direct reports so I can capture insights while they're fresh
+- As a manager, I want to create a "Manager-to-Employee Feedback" review cycle so I can organize continuous feedback for my team
+- As a manager, I want to add team members to my feedback cycle so I can provide ongoing observations about their performance
+- As a manager, I want to quickly record feedback observations about employees in my active cycle so I can capture insights while they're fresh
 - As a manager, I want to use voice-to-text on mobile so I can record feedback while commuting or between meetings
 - As a manager, I want AI to help categorize my feedback so I don't have to think about structure
-- As a manager, I want to generate comprehensive reports from accumulated feedback so I can have meaningful conversations with employees
+- As a manager, I want to generate comprehensive reports from accumulated feedback within a cycle so I can have meaningful conversations with employees
 - As a manager, I want to review and edit AI-generated reports before sharing them to ensure accuracy and tone
+- As a manager, I want to toggle between different review cycle types (360, manager effectiveness, manager-to-employee) to view different types of data
 
 ### Employee (Secondary User)
 - As an employee, I want to receive structured, actionable feedback from my manager so I can understand areas for improvement and growth
@@ -30,30 +33,37 @@ Complete the holistic review ecosystem by adding the third pillar: **Manager-to-
 ### Phase 1: Web Interface (MVP)
 
 #### Core Features
-1. **Feedback Input Interface**
+1. **Review Cycle Creation**
+   - Create "Manager-to-Employee Feedback" review cycles
+   - Add/remove team members to active feedback cycles
+   - Set cycle context/purpose (e.g., "Q1 Development Focus", "New Hire Onboarding")
+   - Ongoing cycles without fixed end dates (unlike 360 reviews)
+
+2. **Feedback Input Interface**
+   - Employee selection from active cycle participants only
    - Text input for quick feedback entry
    - Voice-to-text recording capability
-   - Employee selection dropdown (manager's direct reports only)
    - Mobile-optimized responsive design
 
-2. **AI Processing Pipeline**
+3. **AI Processing Pipeline**
    - Automatic feedback categorization
    - Contextual follow-up questions when beneficial
    - Integration with existing OpenAI infrastructure
 
-3. **Report Generation**
-   - **Time Period Selection**: Manager-controlled date ranges (presets + custom ranges)
+4. **Report Generation**
+   - **Time Period Selection**: Manager-controlled date ranges within cycle (presets + custom ranges)
    - **Feedback Density Indicators**: Show feedback count and quality suggestions for selected periods
-   - **Smart Range Suggestions**: Recommend optimal time ranges based on feedback volume
+   - **Smart Range Suggestions**: Recommend optimal time ranges based on feedback volume within cycle
    - AI-powered report compilation using existing report generation infrastructure
    - Manager review and editing interface (reuse existing components)
-   - **Report Metadata**: Clear indication of time period covered in final reports
+   - **Report Metadata**: Clear indication of cycle and time period covered in final reports
    - Export/download capabilities
 
-4. **Feedback Management**
-   - View/edit individual feedback entries
-   - Delete inappropriate feedback before report generation
-   - Filter by employee, date range, category
+5. **Cycle Management**
+   - View active manager-to-employee cycles
+   - Toggle between different cycle types in dashboard
+   - Archive completed cycles
+   - Data separation ensures no co-mingling with 360 or manager effectiveness data
 
 #### Time Range Selection User Experience
 
