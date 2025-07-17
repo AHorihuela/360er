@@ -55,7 +55,7 @@ export function SearchableEmployeeSelector({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-auto min-h-[44px] px-3 py-2"
+          className="w-full justify-between h-auto min-h-[44px] px-3 py-2 hover:!bg-slate-50 hover:!text-slate-900 focus:!bg-slate-50 focus:!text-slate-900 active:!bg-slate-100 data-[state=open]:!bg-slate-50"
           disabled={disabled}
           onKeyDown={handleKeyDown}
         >
@@ -100,7 +100,7 @@ export function SearchableEmployeeSelector({
                   key={employee.id}
                   value={`${employee.name} ${employee.role}`}
                   onSelect={() => handleSelect(employee.id)}
-                  className="flex items-center gap-3 px-2 py-3 cursor-pointer data-[selected='true']:bg-slate-50 hover:bg-slate-50 rounded-sm transition-colors"
+                  className="flex items-center gap-3 px-2 py-3 cursor-pointer data-[selected=true]:!bg-blue-50 data-[selected=true]:!text-blue-900 hover:bg-slate-50 rounded-sm transition-colors"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs bg-primary/10 text-primary font-medium">
