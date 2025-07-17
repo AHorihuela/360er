@@ -62,15 +62,38 @@ export function VoiceToTextInput({
     onTranscriptionComplete: (text) => {
       if (text.trim()) {
         // Append transcribed text to the base text that was there when recording started
-        const newValue = baseText + (baseText && !baseText.endsWith(' ') && baseText.length > 0 ? ' ' : '') + text;
+        const trimmedText = text.trim();
+        let newValue = baseText;
+        
+        // Add appropriate spacing/formatting between existing text and new transcription
+        if (newValue.length > 0) {
+          // If baseText doesn't end with punctuation or whitespace, add a space
+          if (!newValue.match(/[.!?]\s*$/) && !newValue.endsWith(' ')) {
+            newValue += ' ';
+          }
+          // If baseText ends with punctuation but no space, add a space
+          else if (newValue.match(/[.!?]$/) && !newValue.endsWith(' ')) {
+            newValue += ' ';
+          }
+          // If we have a substantial base text, consider adding a line break for readability
+          else if (newValue.length > 100 && !newValue.endsWith('\n')) {
+            newValue += '\n\n';
+          }
+        }
+        
+        newValue += trimmedText;
         onChange(newValue);
       }
       
-      // Clean up
+      // Clean up and show success message briefly
       setBaseText('');
-      setHasInteracted(false);
       setRecordingStartTime(null);
       stopMonitoring();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setHasInteracted(false);
+      }, 3000);
     },
     language
   });

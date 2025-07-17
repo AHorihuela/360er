@@ -38,23 +38,13 @@ export function VoiceStatusMessages({
         </div>
       )}
 
-      {/* Success Message - Show after transcription completes */}
-      {!isProcessing && transcript && (
+      {/* Simple Success Message - Only show briefly after transcription */}
+      {!isProcessing && transcript && hasInteracted && (
         <div className="p-3 border border-green-200 bg-green-50 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-green-700">
             <Check className="h-4 w-4 flex-shrink-0" />
-            <span>
-              {isMobile ? 
-                "Voice input added! You can edit the text field below." :
-                "Voice input has been transcribed and added to your feedback! You can continue editing."
-              }
-            </span>
+            <span>Voice input added successfully!</span>
           </div>
-          {transcript && (
-            <div className="mt-2 p-2 bg-white border rounded text-xs">
-              <strong>Added:</strong> "{transcript}"
-            </div>
-          )}
         </div>
       )}
 
@@ -74,16 +64,16 @@ export function VoiceStatusMessages({
         </div>
       )}
 
-      {/* User-friendly voice input info */}
+      {/* Helpful guidance for first-time or when idle */}
       {!isProcessing && !error && !hasInteracted && (
         <div className="p-3 border border-blue-200 bg-blue-50 rounded-lg">
           <div className="flex items-start gap-2">
             <Mic className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="space-y-1">
-              <p className="text-xs font-medium text-blue-800">Voice Feedback Ready</p>
+              <p className="text-xs font-medium text-blue-800">Speak Naturally</p>
               <p className="text-xs text-blue-700">
-                Click "Dictate Feedback" to speak your thoughts instead of typing. 
-                Your speech will be automatically converted to text with high accuracy.
+                Just speak your thoughts naturally - no need for perfect sentences. 
+                AI will help structure your feedback into professional reports.
               </p>
             </div>
           </div>
