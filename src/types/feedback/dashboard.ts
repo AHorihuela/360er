@@ -45,7 +45,7 @@ export interface DashboardFeedbackRequest {
   review_cycle_id: string;
   status: string;
   target_responses: number;
-  unique_link: string;
+  unique_link: string | null;
   created_at?: string;
   employee?: Employee;
   feedback_responses?: FeedbackResponse[];
