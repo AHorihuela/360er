@@ -70,9 +70,12 @@ export function DetailedFeedbackSection({
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">Review Cycle</p>
                 <p className="text-sm font-medium">{reviewCycle?.title}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
-                </p>
+                {/* Hide due date for manager-to-employee cycles since they're continuous */}
+                {reviewCycle?.type !== 'manager_to_employee' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Due {reviewCycle?.review_by_date ? new Date(reviewCycle.review_by_date).toLocaleDateString() : 'Not set'}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -107,12 +110,15 @@ export function DetailedFeedbackSection({
                 )}
               </div>
 
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-                <Badge variant={getStatusVariant(feedbackRequest?.status)}>
-                  {formatStatusText(feedbackRequest?.status)}
-                </Badge>
-              </div>
+              {/* Hide status for manager-to-employee cycles since they're continuous */}
+              {reviewCycle?.type !== 'manager_to_employee' && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                  <Badge variant={getStatusVariant(feedbackRequest?.status)}>
+                    {formatStatusText(feedbackRequest?.status)}
+                  </Badge>
+                </div>
+              )}
 
               <Button 
                 variant="outline" 
