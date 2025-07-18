@@ -13,6 +13,7 @@ export function AudioLevelVisualizer({ audioLevel, averageLevel }: AudioLevelVis
   // Use averageLevel for stable status messages (adjusted thresholds for improved sensitivity)
   const speakLouderThreshold = 0.03; // Lowered significantly for normal speech
   const goodSignalThreshold = 0.08;  // Adjusted for new sensitivity
+  const perfectLevelThreshold = 0.15; // Upper bound for showing perfect level
   
   // Determine status based on stable averageLevel
   let statusMessage: string;
@@ -79,8 +80,9 @@ export function AudioLevelVisualizer({ audioLevel, averageLevel }: AudioLevelVis
         })}
       </div>
       
-      {/* Status Badge - Use stable averageLevel, only show if needed */}
-      {averageLevel < goodSignalThreshold && (
+      {/* Status Badge - Show guidance messages for audio levels */}
+      {(averageLevel < goodSignalThreshold || 
+        (averageLevel >= goodSignalThreshold && averageLevel < perfectLevelThreshold)) && (
         <div className="text-center">
           <Badge variant={statusVariant} className="text-xs font-medium px-3 py-1 shadow-sm">
             🎤 {statusMessage}
