@@ -28,9 +28,9 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
       onClick={() => navigate(`/reviews/${activeReviewCycle.id}`)}
       className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10 cursor-pointer hover:bg-primary/10 transition-colors"
     >
-      <CardHeader>
+      <CardHeader className="pb-3 md:pb-6">
         <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <span>{activeReviewCycle.title}</span>
+          <span className="text-base md:text-lg">{activeReviewCycle.title}</span>
           {!isManagerToEmployee && (
             <span className="text-sm font-normal text-muted-foreground">
               Due {new Date(activeReviewCycle.review_by_date).toLocaleDateString()}
@@ -38,9 +38,9 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {isManagerToEmployee ? (
-          <div className="space-y-4">
+          <div className="space-y-2 md:space-y-4">
             <div className="flex justify-between text-sm">
               <span>Feedback Activity</span>
               <span className="font-medium">
@@ -53,7 +53,7 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2 md:space-y-4">
             <div className="flex justify-between text-sm">
               <span>Overall Completion</span>
               <span className="font-medium">
@@ -62,7 +62,7 @@ export function ActiveReviewCycleCard({ activeReviewCycle }: ActiveReviewCycleCa
             </div>
             <Progress 
               value={totalRequests === 0 ? 0 : Math.min((completedRequests / totalRequests) * 100, 100)} 
-              className="h-3"
+              className="h-2 md:h-3"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{completedRequests} reviews completed</span>

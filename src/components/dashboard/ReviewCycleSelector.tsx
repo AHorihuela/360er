@@ -128,10 +128,27 @@ export function ReviewCycleSelector({
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-bold">Dashboard</h1>
           </div>
+          
+          {/* Survey Type Badge - mobile only */}
+          {selectedCycle && (
+            <div className="ml-4 md:hidden">
+              {(() => {
+                const badgeInfo = getSurveyTypeBadge(selectedCycle.type);
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs font-medium ${badgeInfo.className}`}
+                  >
+                    {badgeInfo.label}
+                  </Badge>
+                );
+              })()}
+            </div>
+          )}
         </div>
         
-        {/* Action Buttons - now at the top right */}
-        <div className="flex flex-wrap gap-2 lg:order-last">
+        {/* Action Buttons - now at the top right, hidden on mobile */}
+        <div className="hidden md:flex flex-wrap gap-2 lg:order-last">
           {activeReviewCycle && (
             <Button 
               variant="outline" 
@@ -215,12 +232,12 @@ export function ReviewCycleSelector({
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+                    </Select>
         </div>
 
-        {/* Survey Type Badge */}
+        {/* Survey Type Badge - desktop only (original position) */}
         {selectedCycle && (
-          <div className="flex-shrink-0">
+          <div className="hidden md:flex flex-shrink-0">
             {(() => {
               const badgeInfo = getSurveyTypeBadge(selectedCycle.type);
               return (
@@ -234,7 +251,7 @@ export function ReviewCycleSelector({
             })()}
           </div>
         )}
-      </div>
+        </div>
     </div>
   );
 } 
