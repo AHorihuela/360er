@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,36 +62,51 @@ export function ReportSection({
   const [customEndDate, setCustomEndDate] = useState<Date>();
 
   const isM2E = reviewCycle?.type === 'manager_to_employee';
-  const feedbackCount = feedbackRequest?.feedback?.length || 0;
-  const hasMinimumFeedback = feedbackCount >= MINIMUM_FEEDBACK_COUNT;
 
-  // Get feedback density info
-  const getFeedbackDensity = (count: number) => {
-    if (count < 3) {
+  // Calculate filtered feedback count based on selected time range
+  const filteredFeedbackCount = useMemo(() => {
+    if (!feedbackRequest?.feedback?.length) return 0;
+    
+    return feedbackRequest.feedback.filter((feedback) => {
+      // Use submitted_at if available, otherwise fall back to created_at
+      const feedbackDate = feedback.submitted_at || feedback.created_at;
+      if (!feedbackDate) return true; // Include feedback without dates
+      
+      const date = new Date(feedbackDate);
+      return date >= selectedTimeRange.startDate && date <= selectedTimeRange.endDate;
+    }).length;
+  }, [feedbackRequest?.feedback, selectedTimeRange.startDate, selectedTimeRange.endDate]);
+
+  const totalFeedbackCount = feedbackRequest?.feedback?.length || 0;
+  const hasMinimumFeedback = filteredFeedbackCount >= MINIMUM_FEEDBACK_COUNT;
+
+  // Get feedback density info with cleaner, non-redundant messaging
+  const getFeedbackDensity = (filteredCount: number, totalCount: number) => {
+    if (filteredCount < 3) {
       return { 
-        color: 'text-red-600', 
-        bgColor: 'bg-red-50 border-red-200',
-        message: `${count} feedback entries - need at least ${MINIMUM_FEEDBACK_COUNT} for report generation`,
+        color: 'text-red-600',
+        icon: <AlertCircle className="h-4 w-4 text-red-500" />,
+        message: `Need at least ${MINIMUM_FEEDBACK_COUNT} entries for report generation`,
         suggestion: 'insufficient'
       };
-    } else if (count <= 8) {
+    } else if (filteredCount <= 8) {
       return { 
-        color: 'text-yellow-600', 
-        bgColor: 'bg-yellow-50 border-yellow-200',
-        message: `${count} feedback entries - consider adding more for richer insights`,
+        color: 'text-yellow-600',
+        icon: null,
+        message: `Consider adding more feedback for richer insights`,
         suggestion: 'good'
       };
     } else {
       return { 
-        color: 'text-green-600', 
-        bgColor: 'bg-green-50 border-green-200',
-        message: `${count} feedback entries - excellent for comprehensive report`,
+        color: 'text-green-600',
+        icon: null,
+        message: `Excellent volume for comprehensive report`,
         suggestion: 'excellent'
       };
     }
   };
 
-  const densityInfo = getFeedbackDensity(feedbackCount);
+  const densityInfo = getFeedbackDensity(filteredFeedbackCount, totalFeedbackCount);
 
   const handleTimeRangeChange = (preset: string) => {
     if (preset === 'custom') {
@@ -131,32 +146,31 @@ export function ReportSection({
       {/* M2E Time Range Selection and Generation */}
       {isM2E && (
         <Card>
-          <CardContent className="pt-6">
-            {/* Compact Report Generation Section */}
-            <div className="space-y-4">
-              {/* Feedback Count Badge - Compact */}
+          <CardContent className="pt-4">
+            <div className="space-y-3">
+              {/* Compact feedback count and message */}
               <div className="flex items-center gap-2">
-                {densityInfo.suggestion === 'insufficient' ? (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                ) : (
-                  <Badge variant="outline" className={densityInfo.color}>
-                    {feedbackCount} entries
-                  </Badge>
-                )}
-                <span className={cn("text-sm", densityInfo.color)}>
+                {densityInfo.icon}
+                <Badge variant="outline" className="text-xs">
+                  {filteredFeedbackCount} 
+                  {filteredFeedbackCount !== totalFeedbackCount && (
+                    <span className="text-muted-foreground">/{totalFeedbackCount}</span>
+                  )} entries
+                </Badge>
+                <span className={cn("text-xs", densityInfo.color)}>
                   {densityInfo.message}
                 </span>
               </div>
 
-              {/* Compact Time Range and Generate Section */}
+              {/* Horizontal time range and generate button layout */}
               <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <Label className="text-sm font-medium">Time Range</Label>
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs font-medium text-muted-foreground">Time Range</Label>
                   <Select
                     value={selectedTimeRange.preset || 'custom'}
                     onValueChange={handleTimeRangeChange}
                   >
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1 h-8">
                       <SelectValue placeholder="Select time range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -173,16 +187,17 @@ export function ReportSection({
                 <Button
                   onClick={() => onGenerateReport(selectedTimeRange)}
                   disabled={!hasMinimumFeedback || isGeneratingReport}
-                  className="shrink-0"
+                  size="sm"
+                  className="shrink-0 h-8"
                 >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {existingReport ? 'Generate New Report' : 'Generate Report'}
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  {existingReport ? 'Generate New' : 'Generate'}
                 </Button>
               </div>
 
               {/* Custom Date Range Pickers - Only when needed */}
               {selectedTimeRange.preset === 'custom' && (
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-1">
                   <div className="flex-1">
                     <Label className="text-xs text-muted-foreground">Start Date</Label>
                     <Popover>
@@ -190,12 +205,11 @@ export function ReportSection({
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal mt-1",
+                            "w-full justify-start text-left font-normal mt-1 h-8 text-xs",
                             !customStartDate && "text-muted-foreground"
                           )}
-                          size="sm"
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
                           {customStartDate ? format(customStartDate, "MMM d") : "Start"}
                         </Button>
                       </PopoverTrigger>
@@ -216,12 +230,11 @@ export function ReportSection({
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal mt-1",
+                            "w-full justify-start text-left font-normal mt-1 h-8 text-xs",
                             !customEndDate && "text-muted-foreground"
                           )}
-                          size="sm"
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
                           {customEndDate ? format(customEndDate, "MMM d") : "End"}
                         </Button>
                       </PopoverTrigger>
