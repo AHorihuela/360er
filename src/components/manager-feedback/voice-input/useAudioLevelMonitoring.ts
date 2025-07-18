@@ -21,13 +21,15 @@ export function useAudioLevelMonitoring() {
       analyserRef.current = audioContextRef.current.createAnalyser();
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       
-      // Optimized settings for volume detection
-      analyserRef.current.fftSize = 512;
-      analyserRef.current.smoothingTimeConstant = 0.8;
+      // Optimized settings for speech detection (less twitchy)
+      analyserRef.current.fftSize = 1024; // Increased for better resolution
+      analyserRef.current.smoothingTimeConstant = 0.9; // Higher smoothing for stability
       sourceRef.current.connect(analyserRef.current);
       
       // Use time domain data for better volume detection
       const dataArray = new Uint8Array(analyserRef.current.fftSize);
+      let lastSignificantLevel = 0;
+      let levelHoldTime = 0;
       
       const updateAudioLevel = () => {
         if (!analyserRef.current) return;
@@ -43,16 +45,30 @@ export function useAudioLevelMonitoring() {
         }
         rms = Math.sqrt(rms / dataArray.length);
         
-        // Apply sensitivity boost and smoothing
-        const sensitivity = 3.5; // Increased sensitivity
-        const boostedLevel = Math.min(rms * sensitivity, 1);
+        // Apply sensitivity boost optimized for speech
+        const sensitivity = 4.0; // Slightly increased for better response
+        const currentLevel = Math.min(rms * sensitivity, 1);
         
-        // Smooth the level changes for better visual feedback
-        const smoothingFactor = 0.3;
-        const currentLevel = boostedLevel;
-        const smoothedLevel = audioLevel * (1 - smoothingFactor) + currentLevel * smoothingFactor;
+        // Hold significant levels longer to avoid flickering
+        if (currentLevel > 0.08) { // Threshold for "significant" audio
+          lastSignificantLevel = currentLevel;
+          levelHoldTime = 8; // Hold for 8 frames (~130ms at 60fps)
+        } else if (levelHoldTime > 0) {
+          levelHoldTime--;
+          // Gradually decay the held level
+          lastSignificantLevel *= 0.85;
+        }
         
-        setAudioLevel(smoothedLevel);
+        // Use the held level if we're in hold mode, otherwise use current
+        const displayLevel = levelHoldTime > 0 ? lastSignificantLevel : currentLevel;
+        
+        // Apply longer smoothing for visual stability
+        const smoothingFactor = 0.2; // Slower transitions
+        
+        setAudioLevel(prevLevel => {
+          return prevLevel * (1 - smoothingFactor) + displayLevel * smoothingFactor;
+        });
+        
         animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
       };
       
@@ -61,7 +77,7 @@ export function useAudioLevelMonitoring() {
       // Silently handle errors and reset audio level
       setAudioLevel(0);
     }
-  }, [audioLevel]);
+  }, []);
 
   const stopMonitoring = useCallback(() => {
     if (animationFrameRef.current) {

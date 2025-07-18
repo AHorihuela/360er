@@ -9,9 +9,9 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
   const bars = 8;
   const normalizedLevel = Math.min(audioLevel * 100, 100);
   
-  // Better threshold calibration
-  const speakLouderThreshold = 0.05;
-  const goodSignalThreshold = 0.15;
+  // Adjusted thresholds to match improved audio monitoring
+  const speakLouderThreshold = 0.08; // Matches the monitoring threshold
+  const goodSignalThreshold = 0.2;   // Slightly higher for better indication
   
   // Determine status
   let statusMessage: string;
@@ -21,10 +21,10 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
     statusMessage = '🔇 Speak louder';
     statusVariant = 'destructive';
   } else if (audioLevel < goodSignalThreshold) {
-    statusMessage = '📢 Speak up a bit';
+    statusMessage = '📢 Good - keep going';
     statusVariant = 'secondary';
-  } else if (audioLevel < 0.4) {
-    statusMessage = '🎤 Good signal';
+  } else if (audioLevel < 0.5) {
+    statusMessage = '🎤 Perfect signal';
     statusVariant = 'default';
   } else {
     statusMessage = '🎤 Excellent signal';
@@ -50,14 +50,14 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
             barHeight = minHeight + (maxHeight - minHeight) * levelRatio;
           }
           
-          // Enhanced color coding with gradients
+          // Enhanced color coding with gradients - tuned for speech
           let barColor = 'bg-gray-200';
           if (isActive) {
             if (normalizedLevel < speakLouderThreshold * 100) {
               barColor = 'bg-gradient-to-t from-red-400 to-red-500 shadow-sm';
             } else if (normalizedLevel < goodSignalThreshold * 100) {
-              barColor = 'bg-gradient-to-t from-orange-400 to-orange-500 shadow-sm';
-            } else if (normalizedLevel < 40) {
+              barColor = 'bg-gradient-to-t from-yellow-400 to-orange-500 shadow-sm';
+            } else if (normalizedLevel < 50) {
               barColor = 'bg-gradient-to-t from-green-400 to-green-500 shadow-sm';
             } else {
               barColor = 'bg-gradient-to-t from-emerald-500 to-emerald-600 shadow-sm';
@@ -68,7 +68,7 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
             <div
               key={i}
               className={cn(
-                "w-3 rounded-full transition-all duration-200 ease-out transform",
+                "w-3 rounded-full transition-all duration-300 ease-out transform",
                 barColor,
                 isActive && "scale-105"
               )}

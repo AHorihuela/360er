@@ -34,6 +34,7 @@ export function VoiceToTextInput({
 }: VoiceToTextInputProps) {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showSuccessState, setShowSuccessState] = useState(false);
   const baseTextRef = useRef<string>(''); // Use ref instead of state to avoid closure issues
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
 
@@ -59,7 +60,7 @@ export function VoiceToTextInput({
     error,
     isInitializing,
     isProcessing,
-    audioLevel, // Now comes from the integrated hook
+    audioLevel,
     startRecording,
     stopRecording,
     clearTranscript
@@ -90,14 +91,17 @@ export function VoiceToTextInput({
         onChange(newValue);
       }
       
-      // Clean up and show success message briefly
+      // Clean up and show success state
       baseTextRef.current = '';
       setRecordingStartTime(null);
+      setShowSuccessState(true);
+      setHasInteracted(true);
       
-      // Clear success message after 3 seconds
+      // Clear success state after 4 seconds
       setTimeout(() => {
+        setShowSuccessState(false);
         setHasInteracted(false);
-      }, 3000);
+      }, 4000);
     },
     language
   });
@@ -109,6 +113,7 @@ export function VoiceToTextInput({
 
   const handleVoiceToggle = async () => {
     setHasInteracted(true);
+    setShowSuccessState(false); // Clear any previous success state
     
     if (!isRecording && !isTranscribing) {
       // Start recording - capture current text as base
@@ -189,7 +194,7 @@ export function VoiceToTextInput({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Voice Toggle Button */}
+      {/* Voice Toggle Button - Always visible */}
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -268,25 +273,63 @@ export function VoiceToTextInput({
         </Tooltip>
       </TooltipProvider>
 
-      {/* Recording Interface */}
-      <RecordingInterface
-        isRecording={isRecording}
-        isRecordingStarting={isRecordingStarting}
-        audioLevel={audioLevel}
-        recordingStartTime={recordingStartTime}
-        baseText={baseTextRef.current}
-        isMobile={isMobile}
-      />
+      {/* Recording Interface - Full prominence when active */}
+      {(isRecording || isRecordingStarting) && (
+        <RecordingInterface
+          isRecording={isRecording}
+          isRecordingStarting={isRecordingStarting}
+          audioLevel={audioLevel}
+          recordingStartTime={recordingStartTime}
+          baseText={baseTextRef.current}
+          isMobile={isMobile}
+        />
+      )}
 
-      {/* Status Messages */}
-      <VoiceStatusMessages
-        isProcessing={isProcessing}
-        isTranscribing={isTranscribing}
-        transcript={transcript}
-        error={error}
-        hasInteracted={hasInteracted}
-        isMobile={isMobile}
-      />
+      {/* Processing Status - Shown during transcription */}
+      {isTranscribing && (
+        <VoiceStatusMessages
+          isProcessing={isProcessing}
+          isTranscribing={isTranscribing}
+          transcript={transcript}
+          error={error}
+          hasInteracted={hasInteracted}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Success State - Minimized after completion */}
+      {showSuccessState && transcript && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-green-700">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="font-medium">Voice input added successfully!</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Messages */}
+      {error && !isProcessing && (
+        <VoiceStatusMessages
+          isProcessing={isProcessing}
+          isTranscribing={isTranscribing}
+          transcript={transcript}
+          error={error}
+          hasInteracted={hasInteracted}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Pro Tip - Only show when idle */}
+      {!isProcessing && !showSuccessState && !error && !hasInteracted && (
+        <VoiceStatusMessages
+          isProcessing={isProcessing}
+          isTranscribing={isTranscribing}
+          transcript={transcript}
+          error={error}
+          hasInteracted={hasInteracted}
+          isMobile={isMobile}
+        />
+      )}
     </div>
   );
 } 

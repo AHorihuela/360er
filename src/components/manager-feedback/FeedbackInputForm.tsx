@@ -168,37 +168,47 @@ export function FeedbackInputForm({
               className="mb-3"
             />
             
-            {/* Text Input */}
-            <Textarea
-              id="feedback-content"
-              value={feedbackContent}
-              onChange={(e) => setFeedbackContent(e.target.value)}
-              onKeyDown={(e) => {
-                // Command+Enter or Ctrl+Enter to submit
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault();
-                  if (!isSubmitting && selectedEmployeeId && feedbackContent.trim().length >= 10) {
-                    handleSubmit(e as any);
-                  }
-                }
-              }}
-              placeholder="Share your observations about this team member's performance, contributions, or areas for growth. Be specific and constructive..."
-              className="min-h-32 resize-none"
-              maxLength={2000}
-              disabled={!selectedEmployeeId}
-            />
+            {/* Text Input - Hidden during voice recording for better UX */}
+            {!isVoiceMode && (
+              <>
+                <Textarea
+                  id="feedback-content"
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Command+Enter or Ctrl+Enter to submit
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      if (!isSubmitting && selectedEmployeeId && feedbackContent.trim().length >= 10) {
+                        handleSubmit(e as any);
+                      }
+                    }
+                  }}
+                  placeholder="Share your observations about this team member's performance, contributions, or areas for growth. Be specific and constructive..."
+                  className="min-h-32 resize-none"
+                  maxLength={2000}
+                  disabled={!selectedEmployeeId}
+                />
+                
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {feedbackContent.length < 10 
+                      ? `${10 - feedbackContent.length} more characters needed`
+                      : "Ready to submit • ⌘+Enter to submit quickly"
+                    }
+                  </span>
+                  <span>{feedbackContent.length}/2000</span>
+                </div>
+              </>
+            )}
             
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>
-                {feedbackContent.length < 10 
-                  ? `${10 - feedbackContent.length} more characters needed`
-                  : isVoiceMode 
-                  ? "Voice input active • You can also type to edit"
-                  : "Ready to submit • ⌘+Enter to submit quickly"
-                }
-              </span>
-              <span>{feedbackContent.length}/2000</span>
-            </div>
+            {/* Voice mode status when textarea is hidden */}
+            {isVoiceMode && (
+              <div className="flex justify-between text-xs text-muted-foreground py-2">
+                <span>Voice input active • Recording interface below</span>
+                <span>{feedbackContent.length}/2000</span>
+              </div>
+            )}
           </div>
 
           {/* AI Enhancement Note */}
