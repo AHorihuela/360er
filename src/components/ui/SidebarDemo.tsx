@@ -1,19 +1,36 @@
 "use client";
-import { useState } from "react";
-import { Sidebar, SidebarBody, SidebarLink } from "./sidebar";
+import { useState, useEffect } from "react";
+import { Sidebar, DesktopSidebar, SidebarLink } from "./sidebar";
 import { LayoutDashboard, Users, ClipboardList, Settings, LogOut, BarChart, BookOpen, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useMobileMenu } from "@/components/layout/MainLayout";
 
-export function SidebarDemo() {
+interface SidebarDemoProps {
+  forceOpen?: boolean;
+  sidebarExpanded?: boolean;
+  setSidebarExpanded?: (expanded: boolean) => void;
+}
+
+export function SidebarDemo({ 
+  forceOpen = false, 
+  sidebarExpanded = false, 
+  setSidebarExpanded 
+}: SidebarDemoProps = {}) {
   const navigate = useNavigate();
+  const { closeMobileMenu } = useMobileMenu();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
+    closeMobileMenu();
+  };
+
+  const handleLinkClick = () => {
+    closeMobileMenu();
   };
 
   const mainLinks = [
@@ -23,6 +40,7 @@ export function SidebarDemo() {
       icon: (
         <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
+      onClick: handleLinkClick,
     },
     {
       label: "Team Members",
@@ -30,6 +48,7 @@ export function SidebarDemo() {
       icon: (
         <Users className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
+      onClick: handleLinkClick,
     },
     {
       label: "Review Cycles",
@@ -37,6 +56,7 @@ export function SidebarDemo() {
       icon: (
         <ClipboardList className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
+      onClick: handleLinkClick,
     },
     {
       label: "Manager Feedback",
@@ -44,6 +64,7 @@ export function SidebarDemo() {
       icon: (
         <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
+      onClick: handleLinkClick,
     },
     {
       label: "Analytics",
@@ -51,18 +72,48 @@ export function SidebarDemo() {
       icon: (
         <BarChart className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
+      onClick: handleLinkClick,
     },
   ];
 
   const [open, setOpen] = useState(false);
+
+  // Sync the local open state with the mobile menu expanded state
+  useEffect(() => {
+    if (forceOpen) {
+      setOpen(sidebarExpanded);
+    }
+  }, [forceOpen, sidebarExpanded]);
+
+  // Handle sidebar state changes for desktop hover behavior
+  const handleSetOpen = (value: boolean | ((prevState: boolean) => boolean)) => {
+    const newOpen = typeof value === 'function' ? value(open) : value;
+    setOpen(newOpen);
+    if (setSidebarExpanded && forceOpen) {
+      setSidebarExpanded(newOpen);
+    }
+  };
+
   return (
     <div
       className={cn(
-        "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 flex-shrink-0"
+        "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 flex-shrink-0 h-full"
       )}
     >
-      <Sidebar open={open} setOpen={setOpen}>
-        <SidebarBody className="justify-between gap-10 p-4">
+      <Sidebar open={open} setOpen={handleSetOpen}>
+        {/* Custom sidebar content that shows on mobile when forceOpen is true */}
+        <motion.div
+          className={cn(
+            "h-full px-4 py-4 bg-neutral-100 dark:bg-neutral-800 w-[300px] flex-shrink-0",
+            // Show on mobile when forceOpen is true, otherwise hide on mobile
+            forceOpen ? "flex flex-col" : "hidden md:flex md:flex-col"
+          )}
+          animate={{
+            width: open ? "300px" : "60px",
+          }}
+          onMouseEnter={() => !forceOpen && setOpen(true)}
+          onMouseLeave={() => !forceOpen && setOpen(false)}
+        >
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {open ? <Logo /> : <LogoIcon />}
             <div className="mt-8 flex flex-col gap-2">
@@ -79,6 +130,7 @@ export function SidebarDemo() {
                 icon: (
                   <BookOpen className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
                 ),
+                onClick: handleLinkClick,
               }}
             />
             <SidebarLink
@@ -88,6 +140,7 @@ export function SidebarDemo() {
                 icon: (
                   <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
                 ),
+                onClick: handleLinkClick,
               }}
             />
             <SidebarLink
@@ -101,7 +154,7 @@ export function SidebarDemo() {
               }}
             />
           </div>
-        </SidebarBody>
+        </motion.div>
       </Sidebar>
     </div>
   );

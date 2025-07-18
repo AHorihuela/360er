@@ -20,9 +20,12 @@ import {
   Users,
   BarChart3,
   Layers,
-  Calendar
+  Calendar,
+  Menu,
+  X
 } from 'lucide-react';
 import { ReviewCycle } from '@/types/review';
+import { useMobileMenu } from "@/components/layout/MainLayout";
 
 interface ReviewCycleSelectorProps {
   selectedCycleId: string | null;
@@ -66,6 +69,7 @@ export function ReviewCycleSelector({
   currentUserId
 }: ReviewCycleSelectorProps) {
   const navigate = useNavigate();
+  const { isMobileMenuOpen, toggleMobileMenu } = useMobileMenu();
 
   const getDisplayedCycles = () => {
     if (!allReviewCycles.length) return [];
@@ -107,8 +111,23 @@ export function ReviewCycleSelector({
     <div className="flex flex-col space-y-4 md:space-y-6">
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="flex items-center gap-3">
+          {/* Mobile hamburger menu - only show on mobile */}
+          <button
+            onClick={toggleMobileMenu}
+            className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+          
+          {/* Dashboard title */}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+          </div>
         </div>
         
         {/* Action Buttons - now at the top right */}
