@@ -707,7 +707,14 @@ export function ReviewCyclesPage() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <Badge variant={getStatusColor(cycle)} className="flex-shrink-0 text-xs">
+              <Badge 
+                variant={getStatusColor(cycle)} 
+                className={`flex-shrink-0 text-xs ${
+                  getStatusText(cycle) === 'Active' 
+                    ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' 
+                    : ''
+                }`}
+              >
                 {getStatusText(cycle)}
               </Badge>
             </div>
