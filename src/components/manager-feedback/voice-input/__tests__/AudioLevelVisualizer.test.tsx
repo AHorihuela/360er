@@ -143,13 +143,14 @@ describe('AudioLevelVisualizer', () => {
       expect(screen.getByTestId('badge')).toHaveAttribute('data-variant', 'default');
     });
 
-    it('should not show status message for good signal threshold and above', () => {
+    it('should show perfect level message for good signal threshold', () => {
       render(
         <AudioLevelVisualizer audioLevel={0.9} averageLevel={0.08} />
       );
       
-      // Should not show any status message when averageLevel >= goodSignalThreshold
-      expect(screen.queryByTestId('badge')).not.toBeInTheDocument();
+      // Should show "Perfect level" at goodSignalThreshold
+      expect(screen.getByText('🎤 Perfect level')).toBeInTheDocument();
+      expect(screen.getByTestId('badge')).toBeInTheDocument();
     });
 
     it('should use averageLevel for status determination, not audioLevel', () => {
@@ -241,7 +242,17 @@ describe('AudioLevelVisualizer', () => {
         <AudioLevelVisualizer audioLevel={0.1} averageLevel={0.08} />
       );
       
-      // Should not show badge at exactly the threshold
+      // Should show "Perfect level" badge at exactly the threshold
+      expect(screen.getByText('🎤 Perfect level')).toBeInTheDocument();
+      expect(screen.getByTestId('badge')).toBeInTheDocument();
+    });
+
+    it('should not show badge above perfect level threshold (0.15)', () => {
+      render(
+        <AudioLevelVisualizer audioLevel={0.9} averageLevel={0.16} />
+      );
+      
+      // Should not show any badge when level is above perfectLevelThreshold
       expect(screen.queryByTestId('badge')).not.toBeInTheDocument();
     });
   });

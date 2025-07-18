@@ -228,9 +228,9 @@ describe('VoiceStatusMessages', () => {
       );
       
       const badge = screen.getByTestId('badge');
-      expect(badge).toHaveAttribute('data-variant', 'default');
-      expect(badge.className).toContain('bg-green-100');
-      expect(badge.className).toContain('text-green-800');
+      expect(badge).toHaveAttribute('data-variant', 'outline');
+      expect(badge.className).toContain('bg-orange-100');
+      expect(badge.className).toContain('text-orange-800');
     });
 
     it('should have proper badge styling for processing state', () => {
@@ -242,7 +242,7 @@ describe('VoiceStatusMessages', () => {
       );
       
       const badge = screen.getByTestId('badge');
-      expect(badge).toHaveAttribute('data-variant', 'secondary');
+      expect(badge).toHaveAttribute('data-variant', 'outline');
       expect(badge.className).toContain('bg-blue-100');
       expect(badge.className).toContain('text-blue-800');
     });
