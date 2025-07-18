@@ -129,6 +129,33 @@ export function VoiceToTextInput({
     }
   };
 
+  // Implement Cmd+K keyboard shortcut - must be before any early returns
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        
+        // Calculate support inline to avoid dependency issues
+        const hasBasicAPIs = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+        const shouldForceEnable = hasBasicAPIs;
+        
+        // Only trigger if not disabled and component is supported
+        if (!disabled && (isSupported || shouldForceEnable) && !isInitializing) {
+          handleVoiceToggle();
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [disabled, isSupported, isInitializing, handleVoiceToggle]);
+
   // Show loading state while initializing
   if (isInitializing) {
     return (
@@ -195,84 +222,93 @@ export function VoiceToTextInput({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Voice Toggle Button - Always visible */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={isProcessing ? "destructive" : "outline"}
-              size={isMobile ? "lg" : "default"}
-              onClick={handleVoiceToggle}
-              disabled={disabled || (!isSupported && !shouldForceEnable)}
-              className={cn(
-                "flex items-center justify-center gap-3 transition-all duration-200 font-medium",
-                isMobile ? "w-full h-12" : "w-auto min-w-[180px] h-10",
-                isProcessing && "shadow-lg border-red-300",
-                !isProcessing && "hover:shadow-md hover:border-blue-300",
-                "group"
-              )}
-            >
-              <div className={cn(
-                "flex items-center justify-center transition-all duration-200",
-                isProcessing && "scale-110"
-              )}>
-                {isProcessing ? (
-                  isRecordingStarting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isRecording ? (
-                    <div className="relative">
-                      <Square className="h-4 w-4" />
-                      <div className="absolute -inset-1 bg-red-500 rounded opacity-30 animate-ping" />
-                    </div>
+      {/* Voice Toggle Button with inline pro tip */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={isProcessing ? "destructive" : "outline"}
+                size={isMobile ? "lg" : "default"}
+                onClick={handleVoiceToggle}
+                disabled={disabled || (!isSupported && !shouldForceEnable)}
+                className={cn(
+                  "flex items-center justify-center gap-3 transition-all duration-200 font-medium",
+                  isMobile ? "w-full h-12" : "w-auto min-w-[180px] h-10",
+                  isProcessing && "shadow-lg border-red-300",
+                  !isProcessing && "hover:shadow-md hover:border-blue-300",
+                  "group"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center transition-all duration-200",
+                  isProcessing && "scale-110"
+                )}>
+                  {isProcessing ? (
+                    isRecordingStarting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : isRecording ? (
+                      <div className="relative">
+                        <Square className="h-4 w-4" />
+                        <div className="absolute -inset-1 bg-red-500 rounded opacity-30 animate-ping" />
+                      </div>
+                    ) : (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )
                   ) : (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )
-                ) : (
-                  <Mic className={cn(
-                    "h-4 w-4 transition-all duration-200",
-                    "group-hover:scale-110"
-                  )} />
+                    <Mic className={cn(
+                      "h-4 w-4 transition-all duration-200",
+                      "group-hover:scale-110"
+                    )} />
+                  )}
+                </div>
+                
+                <span className="text-sm">
+                  {isProcessing ? (
+                    isRecordingStarting ? 'Preparing...' : 
+                    isRecording ? 'Stop Recording' : 
+                    'Processing...'
+                  ) : (
+                    isMobile ? 'Voice Input' : 'Start Voice Input'
+                  )}
+                </span>
+                
+                {!isProcessing && !isMobile && (
+                  <kbd className="ml-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-muted px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground opacity-100">
+                    ⌘K
+                  </kbd>
                 )}
-              </div>
-              
-              <span className="text-sm">
-                {isProcessing ? (
-                  isRecordingStarting ? 'Preparing...' : 
-                  isRecording ? 'Stop Recording' : 
-                  'Processing...'
-                ) : (
-                  isMobile ? 'Voice Input' : 'Start Voice Input'
-                )}
-              </span>
-              
-              {!isProcessing && !isMobile && (
-                <kbd className="ml-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-muted px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground opacity-100">
-                  ⌘K
-                </kbd>
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            <div className="text-center">
-              <p className="font-medium">
-                {isProcessing 
-                  ? "Click to stop recording" 
-                  : "Start voice input"
-                }
-              </p>
-              {!isProcessing && (
-                <p className="text-muted-foreground mt-1">
-                  {isMobile 
-                    ? "Tap and speak naturally" 
-                    : "Click or press ⌘K to begin"
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              <div className="text-center">
+                <p className="font-medium">
+                  {isProcessing 
+                    ? "Click to stop recording" 
+                    : "Start voice input"
                   }
                 </p>
-              )}
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+                {!isProcessing && (
+                  <p className="text-muted-foreground mt-1">
+                    {isMobile 
+                      ? "Tap and speak naturally" 
+                      : "Click or press ⌘K to begin"
+                    }
+                  </p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Subtle inline pro tip - only show when idle and not on mobile */}
+        {!isProcessing && !showSuccessState && !error && !hasInteracted && !isMobile && (
+          <span className="text-xs text-muted-foreground">
+            Speak naturally - AI will help organize your thoughts
+          </span>
+        )}
+      </div>
 
       {/* Recording Interface - Full prominence when active */}
       {(isRecording || isRecordingStarting) && (
@@ -311,18 +347,6 @@ export function VoiceToTextInput({
 
       {/* Error Messages */}
       {error && !isProcessing && (
-        <VoiceStatusMessages
-          isProcessing={isProcessing}
-          isTranscribing={isTranscribing}
-          transcript={transcript}
-          error={error}
-          hasInteracted={hasInteracted}
-          isMobile={isMobile}
-        />
-      )}
-
-      {/* Pro Tip - Only show when idle */}
-      {!isProcessing && !showSuccessState && !error && !hasInteracted && (
         <VoiceStatusMessages
           isProcessing={isProcessing}
           isTranscribing={isTranscribing}

@@ -211,20 +211,10 @@ export function FeedbackInputForm({
             )}
           </div>
 
-          {/* AI Enhancement Note - Hidden during voice mode for cleaner UI */}
-          {feedbackContent.length > 20 && !isVoiceMode && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 md:p-3">
-              <p className="text-xs md:text-sm text-blue-800">
-                💡 <strong>AI Enhancement:</strong> After submission, our AI will help categorize this feedback 
-                and suggest any follow-up questions to make it even more actionable.
-              </p>
-            </div>
-          )}
-
           {/* Submit Button */}
           <Button 
             type="submit" 
-            className="w-full"
+            className="w-full flex items-center justify-center gap-2"
             disabled={
               isSubmitting || 
               !selectedEmployeeId || 
@@ -234,13 +224,19 @@ export function FeedbackInputForm({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting Feedback...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Submitting Feedback...</span>
               </>
             ) : (
               <>
-                <Send className="mr-2 h-4 w-4" />
-                Submit Feedback
+                <Send className="h-4 w-4" />
+                <span>Submit Feedback</span>
+                {/* Show keyboard shortcut hint on desktop when ready to submit */}
+                {feedbackContent.trim().length >= 10 && !isVoiceMode && (
+                  <kbd className="hidden sm:inline-flex h-5 max-h-full items-center rounded border border-border bg-background/50 px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground opacity-80">
+                    ⌘↵
+                  </kbd>
+                )}
               </>
             )}
           </Button>
