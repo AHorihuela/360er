@@ -34,6 +34,7 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
     method: req.method,
     url: req.url,
     hasFile: !!req.file,
+    teamMemberName: req.body?.teamMemberName,
     headers: Object.keys(req.headers)
   });
   
@@ -54,6 +55,7 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
     }
 
     const audioFile = req.file;
+    
     console.log('Received audio file:', {
       originalname: audioFile.originalname,
       mimetype: audioFile.mimetype,
@@ -73,13 +75,17 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
     fs.writeFileSync(tempFilePath, audioFile.buffer);
 
     try {
+      // Simple prompt for professional transcription
+      const prompt = 'Employee feedback';
+
       // Transcribe with Whisper
       const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
         model: "whisper-1",
         language: "en", // Can be made configurable
         response_format: "verbose_json", // Get timestamps and confidence
-        temperature: 0.1 // Lower temperature for more consistent results
+        temperature: 0.1, // Lower temperature for more consistent results
+        prompt: prompt // Add context for better name recognition
       });
 
       // Clean up temporary file
@@ -149,6 +155,8 @@ function processTranscription(text: string): string {
   
   return processed;
 }
+
+
 
 // Export the multer middleware for use in routes
 export const audioUpload = upload.single('audio'); 

@@ -421,6 +421,9 @@ export function useWhisperVoiceToText({
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
+      
+
+
 
       const response = await fetch('/api/transcribe', {
         method: 'POST',
