@@ -27,20 +27,20 @@ export function QuickFeedbackSection({
 
   return (
     <Card className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-blue-200/50">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3 md:pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <MessageSquareText className="h-5 w-5 text-blue-600" />
+            <div className="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <MessageSquareText className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-lg">Quick Feedback Entry</CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <CardTitle className="text-base md:text-lg">Quick Feedback Entry</CardTitle>
+              <p className="text-sm text-muted-foreground hidden md:block">
                 Provide feedback for your team members instantly
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
               <Users className="h-3 w-3 mr-1" />
               {cycleEmployees.length} team members
@@ -48,7 +48,7 @@ export function QuickFeedbackSection({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0 px-4 pb-4 md:px-6 md:pb-6">
         <FeedbackInputForm
           reviewCycleId={activeReviewCycle.id}
           employees={cycleEmployees.map(emp => ({

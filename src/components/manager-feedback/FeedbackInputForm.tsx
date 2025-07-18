@@ -128,11 +128,11 @@ export function FeedbackInputForm({
         </CardHeader>
       )}
       <CardContent className={hideHeader ? "pt-6" : ""}>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           {/* Employee Selection - Only show if not hidden */}
           {!hideEmployeeSelector && (
             <div className="space-y-2">
-              <Label htmlFor="employee-select">Select Team Member</Label>
+              <Label htmlFor="employee-select" className="text-sm">Select Team Member</Label>
               <SearchableEmployeeSelector
                 employees={employees}
                 selectedEmployeeId={selectedEmployeeId}
@@ -154,7 +154,7 @@ export function FeedbackInputForm({
           {/* Feedback Content */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="feedback-content">
+              <Label htmlFor="feedback-content" className="text-sm">
                 Your Feedback
               </Label>
             </div>
@@ -203,8 +203,8 @@ export function FeedbackInputForm({
 
           {/* AI Enhancement Note */}
           {feedbackContent.length > 20 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 md:p-3">
+              <p className="text-xs md:text-sm text-blue-800">
                 💡 <strong>AI Enhancement:</strong> After submission, our AI will help categorize this feedback 
                 and suggest any follow-up questions to make it even more actionable.
               </p>
