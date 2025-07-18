@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/badge-variants';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface VoiceStatusMessagesProps {
@@ -27,9 +28,9 @@ export function VoiceStatusMessages({
           <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+              <StatusBadge status="Completed">
                 ✅ Transcription Complete
-              </Badge>
+              </StatusBadge>
             </div>
             <p className="text-sm text-green-700">
               Your voice has been successfully converted to text and added to your feedback.
@@ -47,9 +48,9 @@ export function VoiceStatusMessages({
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 text-blue-600 animate-spin flex-shrink-0" />
           <div className="space-y-1">
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-300">
+            <StatusBadge status="In Progress">
               🎯 Processing Audio
-            </Badge>
+            </StatusBadge>
             <p className="text-sm text-blue-700">
               Converting your speech to text using AI transcription...
             </p>
@@ -66,9 +67,9 @@ export function VoiceStatusMessages({
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
           <div className="space-y-2">
-            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+            <StatusBadge status="Overdue">
               ⚠️ Recording Issue
-            </Badge>
+            </StatusBadge>
             <p className="text-sm text-red-700 leading-relaxed">
               {error}
             </p>
@@ -88,9 +89,9 @@ export function VoiceStatusMessages({
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
           <div className="space-y-2">
-            <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300">
+            <StatusBadge status="Warning">
               🔇 No Audio Detected
-            </Badge>
+            </StatusBadge>
             <p className="text-sm text-amber-700">
               We didn't detect any speech in that recording. Please try again and speak a bit louder.
             </p>

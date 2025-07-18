@@ -1,5 +1,6 @@
 import { Star } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { ConfidenceBadge } from "@/components/ui/badge-variants";
 import { cn } from "@/lib/utils";
 import { StatCard } from './cards/StatCard';
 import { 
@@ -109,15 +110,15 @@ export function TeamSummaryStats({
                   <p className="font-medium text-foreground">Confidence Weights:</p>
                   <ul className="space-y-1">
                     <li className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-green-100 text-green-700">High</Badge>
+                      <ConfidenceBadge level="high">High</ConfidenceBadge>
                       <span>100% weight - Strong evidence & consistent feedback</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-amber-50 text-amber-700">Medium</Badge>
+                      <ConfidenceBadge level="medium">Medium</ConfidenceBadge>
                       <span>70% weight - Moderate evidence with some variation</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-red-100 text-red-700">Low</Badge>
+                      <ConfidenceBadge level="low">Low</ConfidenceBadge>
                       <span>40% weight - Limited evidence or high variation</span>
                     </li>
                   </ul>

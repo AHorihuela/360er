@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { RelationshipBadge } from "@/components/ui/badge-variants";
 import { 
   Users,
   Brain,
@@ -51,21 +52,21 @@ export function MethodologyExplanation() {
                       <h4 className="font-medium text-base mb-4">Who Provides Feedback?</h4>
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="min-w-[100px] text-center bg-blue-500/10 text-blue-700 border-blue-200 font-medium">Senior</Badge>
+                          <RelationshipBadge type="senior" className="min-w-[100px] text-center">Senior</RelationshipBadge>
                           <div className="space-y-1">
                             <p className="text-sm font-medium">Managers & mentors</p>
                             <p className="text-xs text-muted-foreground">Strategic oversight and experience</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="min-w-[100px] text-center bg-green-500/10 text-green-700 border-green-200 font-medium">Peer</Badge>
+                          <RelationshipBadge type="peer" className="min-w-[100px] text-center">Peer</RelationshipBadge>
                           <div className="space-y-1">
                             <p className="text-sm font-medium">Team members</p>
                             <p className="text-xs text-muted-foreground">Day-to-day collaboration insights</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="min-w-[100px] text-center bg-yellow-500/10 text-yellow-700 border-yellow-200 font-medium">Junior</Badge>
+                          <RelationshipBadge type="junior" className="min-w-[100px] text-center">Junior</RelationshipBadge>
                           <div className="space-y-1">
                             <p className="text-sm font-medium">Direct reports</p>
                             <p className="text-xs text-muted-foreground">Upward management perspective</p>

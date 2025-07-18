@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { StatusBadge, CycleTypeBadge } from "@/components/ui/badge-variants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -389,15 +390,7 @@ export function ReviewCyclesPage() {
     }
   }
 
-  // Helper function to get cycle type badge variant - use consistent secondary for all
-  function getCycleTypeBadgeVariant(type: string): 'default' | 'secondary' | 'outline' {
-    return 'secondary'; // Consistent gray color for all cycle types
-  }
 
-  // Helper function to get cycle type badge custom classes - keep minimal styling
-  function getCycleTypeBadgeClasses(type: string): string {
-    return 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
-  }
 
 
 
@@ -472,25 +465,7 @@ export function ReviewCyclesPage() {
     setCycleToDelete(null);
   }
 
-  function getStatusColor(cycle: ReviewCycle): "default" | "destructive" | "secondary" {
-    const progress = calculateProgress(cycle);
-    
-    // For completed cycles, show as completed regardless of type
-    if (progress >= 100) return 'default';
-    
-    // For manager-to-employee cycles (continuous), always show as in progress
-    if (cycle.type === 'manager_to_employee') return 'secondary';
-    
-    // For cycles with due dates, check if overdue
-    if (cycle.review_by_date) {
-      const now = new Date();
-      const reviewByDate = new Date(cycle.review_by_date);
-      return reviewByDate > now ? 'secondary' : 'destructive';
-    }
-    
-    // Default to in progress for cycles without due dates
-    return 'secondary';
-  }
+
 
   function getStatusText(cycle: ReviewCycle): string {
     const progress = calculateProgress(cycle);
@@ -684,12 +659,9 @@ export function ReviewCyclesPage() {
               <div className="space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base font-semibold truncate leading-tight">{cycle.title}</CardTitle>
-                  <Badge 
-                    variant={getCycleTypeBadgeVariant(cycle.type)} 
-                    className={`text-xs flex-shrink-0 mt-0.5 ${getCycleTypeBadgeClasses(cycle.type)}`}
-                  >
+                  <CycleTypeBadge type={cycle.type} className="mt-0.5">
                     {getCycleTypeLabel(cycle.type)}
-                  </Badge>
+                  </CycleTypeBadge>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center text-xs text-muted-foreground">
@@ -707,16 +679,9 @@ export function ReviewCyclesPage() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <Badge 
-                variant={getStatusColor(cycle)} 
-                className={`flex-shrink-0 text-xs ${
-                  getStatusText(cycle) === 'Active' 
-                    ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' 
-                    : ''
-                }`}
-              >
+              <StatusBadge status={getStatusText(cycle)}>
                 {getStatusText(cycle)}
-              </Badge>
+              </StatusBadge>
             </div>
           </div>
           
