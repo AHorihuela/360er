@@ -181,7 +181,7 @@ export function ManagerFeedbackActivity({ feedbackRequests, employees, cycleId }
                 <div 
                   key={employee.employeeId}
                   className="p-3 rounded-lg border bg-slate-50/50 hover:bg-slate-100 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/manager-feedback?employee=${employee.employeeId}`)}
+                  onClick={() => navigate(`/reviews/${cycleId}/employee/${employee.employeeId}`)}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Avatar className="h-9 w-9">

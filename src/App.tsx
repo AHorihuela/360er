@@ -9,7 +9,7 @@ import { NewReviewCyclePage } from './pages/reviews/NewReviewCyclePage';
 import { ReviewCycleDetailsPage } from './pages/reviews/ReviewCycleDetailsPage';
 import { EmployeeReviewDetailsPage } from './pages/reviews/EmployeeReviewDetailsPage';
 import { FeedbackFormPage } from './pages/feedback/FeedbackFormPage';
-import ManagerFeedbackDashboard from './pages/manager-feedback';
+
 import { ThankYouPage } from './pages/feedback/ThankYouPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Button } from './components/ui/button';
@@ -596,16 +596,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/manager-feedback"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <ManagerFeedbackDashboard />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+
           <Route path="/methodology" element={<MainLayout><MethodologyExplanation /></MainLayout>} />
           <Route path="*" element={<Navigate to={session ? '/dashboard' : '/'} replace />} />
         </Routes>
