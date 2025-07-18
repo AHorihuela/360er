@@ -137,28 +137,16 @@ export function useWhisperVoiceToText({
     const hasMediaDevices = !!navigator.mediaDevices;
     const hasGetUserMedia = !!navigator.mediaDevices?.getUserMedia;
     
-    console.log('=== MediaRecorder Support Check ===');
-    console.log('User Agent:', navigator.userAgent);
-    console.log('Is iOS Device:', isIOSDevice);
-    console.log('Has MediaRecorder:', hasMediaRecorder);
-    console.log('Has MediaDevices:', hasMediaDevices);
-    console.log('Has getUserMedia:', hasGetUserMedia);
-    console.log('Location Protocol:', window.location.protocol);
-    console.log('Location Hostname:', window.location.hostname);
-    
     // Basic API availability check
     if (!hasMediaRecorder || !hasMediaDevices || !hasGetUserMedia) {
-      console.log('❌ Basic MediaRecorder APIs missing - returning false');
       return false;
     }
     
     // For iOS, always return true if basic APIs exist
     if (isIOSDevice) {
-      console.log('✅ iOS device detected - FORCING MediaRecorder support to TRUE');
       return true;
     }
     
-    console.log('✅ All MediaRecorder APIs available - returning true');
     return true;
   }, []);
 
@@ -336,47 +324,33 @@ export function useWhisperVoiceToText({
       mediaRecorder.start();
 
     } catch (error: any) {
-      console.error('Error starting recording:', error);
       
       // Reuse iOS detection (already declared above)
       const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      let errorMessage = 'Could not start voice recording';
+      let errorMessage = 'Voice recording unavailable';
       
       if (error.name === 'NotAllowedError') {
-        if (isIOSDevice) {
-          errorMessage = 'Microphone access denied. On iOS, please ensure:\n• You allowed microphone access when prompted\n• Go to Settings > Safari > Microphone and enable access\n• Try refreshing the page and allow permissions again';
-        } else {
-          errorMessage = 'Microphone access denied. Please enable microphone permissions in your browser settings and try again.';
-        }
+        errorMessage = isIOSDevice 
+          ? 'Microphone access denied. Please enable microphone permissions in Safari settings and refresh the page.'
+          : 'Microphone access denied. Please allow microphone access when prompted and try again.';
       } else if (error.name === 'NotFoundError') {
-        errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        errorMessage = 'No microphone detected. Please connect a microphone and try again.';
       } else if (error.name === 'NotSupportedError') {
-        if (isIOSDevice) {
-          errorMessage = 'Audio recording is not supported on this iOS device or browser version. Please try updating your browser or using a different device.';
-        } else {
-          errorMessage = 'Audio recording not supported in this browser.';
-        }
+        errorMessage = isIOSDevice 
+          ? 'Voice recording not supported on this device. Please try using a different browser or device.'
+          : 'Voice recording not supported in this browser.';
       } else if (error.name === 'OverconstrainedError') {
-        // This is common on iOS when audio constraints are too specific
-        if (isIOSDevice) {
-          errorMessage = 'Audio recording constraints not supported on iOS. This is a known limitation - please use manual text input instead.';
-        } else {
-          errorMessage = 'Audio recording constraints not supported. Please check your audio settings.';
-        }
+        errorMessage = isIOSDevice 
+          ? 'Voice recording settings not compatible with this device. Please use manual text input.'
+          : 'Audio device settings conflict. Please check your microphone settings.';
       } else if (isIOSDevice && (error.message?.includes('request') || error.message?.includes('secure'))) {
-        errorMessage = 'iOS requires HTTPS for microphone access. Please ensure you\'re accessing the site securely and try again.';
+        errorMessage = 'Secure connection required. Please access the site using HTTPS.';
       } else if (error.message?.includes('capture failure') || error.message?.includes('MediaStreamTrack ended')) {
-        if (isIOSDevice) {
-          errorMessage = 'iOS camera/microphone access failed. This can happen after switching apps or if another app is using the microphone. Please try again or restart your device if the issue persists.';
-        } else {
-          errorMessage = 'Media capture failed. Please try again.';
-        }
+        errorMessage = isIOSDevice 
+          ? 'Microphone access interrupted. Please close other apps using the microphone and try again.'
+          : 'Audio capture interrupted. Please try again.';
       } else if (error.message?.includes('NotReadableError') || error.message?.includes('Could not start')) {
-        if (isIOSDevice) {
-          errorMessage = 'iOS audio system conflict detected. Please close other apps that might be using the microphone and try again.';
-        } else {
-          errorMessage = 'Could not access audio device. Please check if another application is using the microphone.';
-        }
+        errorMessage = 'Microphone is being used by another application. Please close other apps and try again.';
       }
 
       // Stop monitoring if it was started

@@ -14,7 +14,6 @@ import {
   RecordingInterface, 
   VoiceStatusMessages
 } from './voice-input';
-import { VoiceDebugging } from './VoiceDebugging';
 
 interface VoiceToTextInputProps {
   value: string;
@@ -140,52 +139,47 @@ export function VoiceToTextInput({
   
   // Show unsupported message if browser doesn't support MediaRecorder
   if (!isSupported && !shouldForceEnable) {
-    console.log('❌ Voice input disabled. Support check failed and force enable not applicable.');
-    console.log('isSupported:', isSupported);
-    console.log('shouldForceEnable:', shouldForceEnable);
-    console.log('hasBasicAPIs:', hasBasicAPIs);
     
     return (
-      <div className={cn("space-y-2", className)}>
+      <div className={cn("space-y-3", className)}>
         <Button
           type="button"
           variant="outline"
-          size={isMobile ? "default" : "sm"}
+          size={isMobile ? "lg" : "default"}
           disabled={true}
-          className="flex items-center gap-2 w-full sm:w-auto"
+          className="flex items-center justify-center gap-3 w-full text-muted-foreground"
         >
           <MicOff className="h-4 w-4" />
-          Voice Input (Not Supported)
+          <span>Voice Input Not Available</span>
         </Button>
-        <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-            <div className="space-y-1">
-              <p className="text-xs text-orange-800 font-medium">
-                Voice input not available
+        
+        <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-orange-800">
+                Voice recording not supported
               </p>
-              <p className="text-xs text-orange-700">
-                Your browser doesn't support audio recording. Please use manual text input instead.
+              <p className="text-sm text-orange-700">
+                Your browser or device doesn't support voice recording. Please use the text input field instead.
               </p>
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                <p className="text-red-800 font-medium">API Status:</p>
-                <p className="text-red-700">
-                  MediaRecorder: {typeof MediaRecorder !== 'undefined' ? '✅ Available' : '❌ Missing'}<br/>
-                  getUserMedia: {!!navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'}<br/>
-                  Protocol: {window.location.protocol}
-                </p>
-                {window.location.protocol === 'http:' && (
-                  <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded">
-                    <p className="text-orange-800 font-medium">Solution:</p>
-                    <p className="text-orange-700">
-                      iOS Safari requires HTTPS for microphone access.<br/>
-                      Try accessing: <br/>
-                      <strong>https://localhost:5173</strong><br/>
-                      (Accept the security warning for the self-signed certificate)
-                    </p>
-                  </div>
-                )}
-              </div>
+              
+              {window.location.protocol === 'http:' && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800">
+                    💡 Tip for iOS users:
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Voice input requires a secure connection. Try accessing:{' '}
+                    <strong className="font-mono bg-white px-1 rounded">
+                      https://localhost:5176
+                    </strong>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    (You may need to accept a security warning)
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -194,7 +188,7 @@ export function VoiceToTextInput({
   }
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-3", className)}>
       {/* Voice Toggle Button */}
       <TooltipProvider>
         <Tooltip>
@@ -202,37 +196,74 @@ export function VoiceToTextInput({
             <Button
               type="button"
               variant={isProcessing ? "destructive" : "outline"}
-              size={isMobile ? "default" : "sm"}
+              size={isMobile ? "lg" : "default"}
               onClick={handleVoiceToggle}
               disabled={disabled || (!isSupported && !shouldForceEnable)}
               className={cn(
-                "flex items-center gap-2 transition-all",
-                isMobile ? "w-full" : "w-auto",
-                isProcessing && "animate-pulse"
+                "flex items-center justify-center gap-3 transition-all duration-200 font-medium",
+                isMobile ? "w-full h-12" : "w-auto min-w-[180px] h-10",
+                isProcessing && "shadow-lg border-red-300",
+                !isProcessing && "hover:shadow-md hover:border-blue-300",
+                "group"
               )}
             >
-              {isProcessing ? (
-                <>
-                  <Square className="h-4 w-4" />
-                  {isRecordingStarting ? 'Starting...' : isRecording ? 'Stop Recording' : 'Processing...'}
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4" />
-                  {isMobile ? 'Voice Input' : 'Start Voice Input'}
-                </>
+              <div className={cn(
+                "flex items-center justify-center transition-all duration-200",
+                isProcessing && "scale-110"
+              )}>
+                {isProcessing ? (
+                  isRecordingStarting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isRecording ? (
+                    <div className="relative">
+                      <Square className="h-4 w-4" />
+                      <div className="absolute -inset-1 bg-red-500 rounded opacity-30 animate-ping" />
+                    </div>
+                  ) : (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )
+                ) : (
+                  <Mic className={cn(
+                    "h-4 w-4 transition-all duration-200",
+                    "group-hover:scale-110"
+                  )} />
+                )}
+              </div>
+              
+              <span className="text-sm">
+                {isProcessing ? (
+                  isRecordingStarting ? 'Preparing...' : 
+                  isRecording ? 'Stop Recording' : 
+                  'Processing...'
+                ) : (
+                  isMobile ? 'Voice Input' : 'Start Voice Input'
+                )}
+              </span>
+              
+              {!isProcessing && !isMobile && (
+                <kbd className="ml-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-muted px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground opacity-100">
+                  ⌘K
+                </kbd>
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">
-              {isProcessing 
-                ? "Click to stop recording" 
-                : isMobile 
-                  ? "Tap to record voice input" 
-                  : "Click to start voice recording"
-              }
-            </p>
+          <TooltipContent side="top" className="text-xs">
+            <div className="text-center">
+              <p className="font-medium">
+                {isProcessing 
+                  ? "Click to stop recording" 
+                  : "Start voice input"
+                }
+              </p>
+              {!isProcessing && (
+                <p className="text-muted-foreground mt-1">
+                  {isMobile 
+                    ? "Tap and speak naturally" 
+                    : "Click or press ⌘K to begin"
+                  }
+                </p>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -241,7 +272,7 @@ export function VoiceToTextInput({
       <RecordingInterface
         isRecording={isRecording}
         isRecordingStarting={isRecordingStarting}
-        audioLevel={audioLevel} // Use integrated audio level
+        audioLevel={audioLevel}
         recordingStartTime={recordingStartTime}
         baseText={baseTextRef.current}
         isMobile={isMobile}
@@ -256,11 +287,6 @@ export function VoiceToTextInput({
         hasInteracted={hasInteracted}
         isMobile={isMobile}
       />
-
-      {/* Development Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <VoiceDebugging />
-      )}
     </div>
   );
 } 

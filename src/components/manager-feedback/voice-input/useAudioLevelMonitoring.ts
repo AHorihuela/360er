@@ -58,7 +58,7 @@ export function useAudioLevelMonitoring() {
       
       updateAudioLevel();
     } catch (error) {
-      console.error('Error setting up audio level monitoring:', error);
+      // Silently handle errors and reset audio level
       setAudioLevel(0);
     }
   }, [audioLevel]);

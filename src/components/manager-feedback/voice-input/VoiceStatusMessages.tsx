@@ -1,5 +1,6 @@
-import { AlertCircle, Check, Mic, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface VoiceStatusMessagesProps {
   isProcessing: boolean;
@@ -10,74 +11,6 @@ interface VoiceStatusMessagesProps {
   isMobile: boolean;
 }
 
-// Helper function to get user-friendly error messages
-function getErrorMessage(errorType: string, isMobile: boolean) {
-  switch (errorType) {
-    case 'silent_recording':
-      return {
-        title: 'No Speech Detected',
-        message: isMobile 
-          ? 'Try speaking closer to your microphone and tap record again.'
-          : 'No speech was detected in your recording. Please speak closer to your microphone and try again.',
-        isRetryable: true
-      };
-    
-    case 'no_speech_detected':
-      return {
-        title: 'Audio Too Quiet',
-        message: isMobile
-          ? 'Your voice may have been too quiet. Try speaking louder.'
-          : 'Your speech may have been too quiet to transcribe. Please speak louder and try again.',
-        isRetryable: true
-      };
-    
-    case 'network_error':
-      return {
-        title: 'Connection Issue',
-        message: isMobile
-          ? 'Check your internet connection and try again.'
-          : 'Network error. Please check your internet connection and try again.',
-        isRetryable: true
-      };
-    
-    case 'rate_limit':
-      return {
-        title: 'Too Many Requests',
-        message: isMobile
-          ? 'Please wait a moment before trying again.'
-          : 'Too many requests. Please wait a moment and try again.',
-        isRetryable: true
-      };
-    
-    case 'file_too_large':
-      return {
-        title: 'Recording Too Long',
-        message: isMobile
-          ? 'Keep recordings under 30 seconds.'
-          : 'Recording too long. Please keep recordings under 30 seconds.',
-        isRetryable: false
-      };
-    
-    case 'invalid_audio':
-      return {
-        title: 'Audio Format Error',
-        message: isMobile
-          ? 'There was an issue with the audio format. Try again.'
-          : 'There was an issue with the audio format. Please try recording again.',
-        isRetryable: true
-      };
-    
-    default:
-      return {
-        title: 'Transcription Issue',
-        message: isMobile
-          ? 'Something went wrong. Please try again.'
-          : 'There was an issue processing your speech. Please try again.',
-        isRetryable: true
-      };
-  }
-}
-
 export function VoiceStatusMessages({
   isProcessing,
   isTranscribing,
@@ -86,71 +19,105 @@ export function VoiceStatusMessages({
   hasInteracted,
   isMobile
 }: VoiceStatusMessagesProps) {
-  const errorInfo = error ? getErrorMessage(error, isMobile) : null;
-
-  return (
-    <>
-      {/* Transcribing Interface */}
-      {isTranscribing && (
-        <div className={cn(
-          "space-y-3 p-4 border-2 border-blue-200 rounded-lg bg-blue-50/50",
-          isMobile && "p-3"
-        )}>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 text-blue-700 font-medium mb-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {isMobile ? "Processing..." : "Processing your speech..."}
+  // Show transcription success
+  if (transcript && hasInteracted) {
+    return (
+      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+                ✅ Transcription Complete
+              </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Using AI to transcribe your speech with high accuracy.
+            <p className="text-sm text-green-700">
+              Your voice has been successfully converted to text and added to your feedback.
             </p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Simple Success Message - Only show briefly after transcription */}
-      {!isProcessing && transcript && hasInteracted && (
-        <div className="p-3 border border-green-200 bg-green-50 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-green-700">
-            <Check className="h-4 w-4 flex-shrink-0" />
-            <span>Voice input added successfully!</span>
+  // Show transcribing status
+  if (isTranscribing) {
+    return (
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 text-blue-600 animate-spin flex-shrink-0" />
+          <div className="space-y-1">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-300">
+              🎯 Processing Audio
+            </Badge>
+            <p className="text-sm text-blue-700">
+              Converting your speech to text using AI transcription...
+            </p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Error Display */}
-      {error && errorInfo && (
-        <div className={cn(
-          "p-3 border rounded-lg",
-          errorInfo.isRetryable 
-            ? "border-orange-200 bg-orange-50" 
-            : "border-red-200 bg-red-50",
-          isMobile && "p-2"
-        )}>
-          <div className="flex items-start gap-2">
-            {errorInfo.isRetryable ? (
-              <RotateCcw className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-            )}
-            <div className="space-y-1">
-              <p className={cn(
-                "text-xs font-medium",
-                errorInfo.isRetryable ? "text-orange-800" : "text-red-800"
-              )}>
-                {errorInfo.title}
-              </p>
-              <p className={cn(
-                "text-xs",
-                errorInfo.isRetryable ? "text-orange-700" : "text-red-700"
-              )}>
-                {errorInfo.message}
-              </p>
-            </div>
+  // Show errors
+  if (error && error !== 'silent_recording') {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+              ⚠️ Recording Issue
+            </Badge>
+            <p className="text-sm text-red-700 leading-relaxed">
+              {error}
+            </p>
+            <p className="text-xs text-red-600">
+              Don't worry - you can always use the text input field to add your feedback manually.
+            </p>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-    </>
-  );
+  // Handle silent recording separately
+  if (error === 'silent_recording') {
+    return (
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300">
+              🔇 No Audio Detected
+            </Badge>
+            <p className="text-sm text-amber-700">
+              We didn't detect any speech in that recording. Please try again and speak a bit louder.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show helpful tip when not processing
+  if (!isProcessing && !hasInteracted) {
+    return (
+      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+        <div className="text-center space-y-2">
+          <Badge variant="outline" className="text-slate-700">
+            💡 Pro Tip
+          </Badge>
+          <p className="text-sm text-slate-600">
+            {isMobile 
+              ? "Tap the voice button and speak naturally - no need for perfect sentences. The AI will help structure your thoughts."
+              : "Click the voice button or press ⌘K to start. Speak naturally and conversationally - the AI will help organize your feedback."
+            }
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 } 
