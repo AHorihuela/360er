@@ -274,7 +274,7 @@ export function VoiceToTextInput({
                   )}
                 </span>
                 
-                {!isProcessing && !isMobile && (
+                {((!isProcessing || isRecording) && !isMobile) && (
                   <kbd className="ml-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-muted px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground opacity-100">
                     ⌘K
                   </kbd>
