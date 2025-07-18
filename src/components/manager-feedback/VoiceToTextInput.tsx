@@ -61,6 +61,7 @@ export function VoiceToTextInput({
     isInitializing,
     isProcessing,
     audioLevel,
+    averageLevel,
     startRecording,
     stopRecording,
     clearTranscript
@@ -279,6 +280,7 @@ export function VoiceToTextInput({
           isRecording={isRecording}
           isRecordingStarting={isRecordingStarting}
           audioLevel={audioLevel}
+          averageLevel={averageLevel}
           recordingStartTime={recordingStartTime}
           baseText={baseTextRef.current}
           isMobile={isMobile}

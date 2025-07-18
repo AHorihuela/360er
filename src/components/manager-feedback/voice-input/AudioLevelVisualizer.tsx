@@ -3,37 +3,35 @@ import { Badge } from '@/components/ui/badge';
 
 interface AudioLevelVisualizerProps {
   audioLevel: number;
+  averageLevel: number;
 }
 
-export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) {
+export function AudioLevelVisualizer({ audioLevel, averageLevel }: AudioLevelVisualizerProps) {
   const bars = 8;
   const normalizedLevel = Math.min(audioLevel * 100, 100);
   
-  // Adjusted thresholds to match improved audio monitoring
-  const speakLouderThreshold = 0.08; // Matches the monitoring threshold
-  const goodSignalThreshold = 0.2;   // Slightly higher for better indication
+  // Use averageLevel for stable status messages (adjusted thresholds for improved sensitivity)
+  const speakLouderThreshold = 0.03; // Lowered significantly for normal speech
+  const goodSignalThreshold = 0.08;  // Adjusted for new sensitivity
   
-  // Determine status
+  // Determine status based on stable averageLevel
   let statusMessage: string;
   let statusVariant: "default" | "secondary" | "destructive" | "outline";
   
-  if (audioLevel < speakLouderThreshold) {
-    statusMessage = '🔇 Speak louder';
+  if (averageLevel < speakLouderThreshold) {
+    statusMessage = 'Speak louder';
     statusVariant = 'destructive';
-  } else if (audioLevel < goodSignalThreshold) {
-    statusMessage = '📢 Good - keep going';
+  } else if (averageLevel < goodSignalThreshold) {
+    statusMessage = 'Good signal';
     statusVariant = 'secondary';
-  } else if (audioLevel < 0.5) {
-    statusMessage = '🎤 Perfect signal';
-    statusVariant = 'default';
   } else {
-    statusMessage = '🎤 Excellent signal';
+    statusMessage = 'Perfect level';
     statusVariant = 'default';
   }
   
   return (
     <div className="space-y-3">
-      {/* Audio Level Bars */}
+      {/* Audio Level Bars - Use responsive audioLevel */}
       <div className="flex items-center justify-center gap-1 h-12 px-4 py-2 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border">
         {Array.from({ length: bars }).map((_, i) => {
           const barThreshold = (i + 1) * (100 / bars);
@@ -68,7 +66,7 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
             <div
               key={i}
               className={cn(
-                "w-3 rounded-full transition-all duration-300 ease-out transform",
+                "w-3 rounded-full transition-all duration-200 ease-out transform",
                 barColor,
                 isActive && "scale-105"
               )}
@@ -81,12 +79,14 @@ export function AudioLevelVisualizer({ audioLevel }: AudioLevelVisualizerProps) 
         })}
       </div>
       
-      {/* Status Badge */}
-      <div className="text-center">
-        <Badge variant={statusVariant} className="text-xs font-medium px-3 py-1 shadow-sm">
-          {statusMessage}
-        </Badge>
-      </div>
+      {/* Status Badge - Use stable averageLevel, only show if needed */}
+      {averageLevel < goodSignalThreshold && (
+        <div className="text-center">
+          <Badge variant={statusVariant} className="text-xs font-medium px-3 py-1 shadow-sm">
+            🎤 {statusMessage}
+          </Badge>
+        </div>
+      )}
     </div>
   );
 } 

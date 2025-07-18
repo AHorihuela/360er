@@ -16,11 +16,13 @@ interface VoiceToTextState {
   error: string | null;
   isInitializing: boolean;
   audioLevel: number;
+  averageLevel: number;
 }
 
 // Audio level monitoring integrated into the hook
 function useIntegratedAudioLevel() {
   const [audioLevel, setAudioLevel] = useState(0);
+  const [averageLevel, setAverageLevel] = useState(0);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -41,6 +43,10 @@ function useIntegratedAudioLevel() {
       // Use time domain data for better volume detection
       const dataArray = new Uint8Array(analyserRef.current.fftSize);
       
+      // For status message stability - longer term averaging
+      const statusHistorySize = 60; // 1 second at 60fps
+      const statusHistory: number[] = [];
+      
       const updateAudioLevel = () => {
         if (!analyserRef.current) return;
         
@@ -55,17 +61,28 @@ function useIntegratedAudioLevel() {
         }
         rms = Math.sqrt(rms / dataArray.length);
         
-        // Apply sensitivity boost and smoothing
-        const sensitivity = 3.5; // Increased sensitivity
-        const boostedLevel = Math.min(rms * sensitivity, 1);
+        // Improved sensitivity - much more responsive to normal speech
+        const sensitivity = 8.0; // Doubled sensitivity for normal speech levels
+        const currentLevel = Math.min(rms * sensitivity, 1);
         
         // Smooth the level changes for better visual feedback
         const smoothingFactor = 0.3;
-        const currentLevel = boostedLevel;
         
         setAudioLevel(prevLevel => {
           return prevLevel * (1 - smoothingFactor) + currentLevel * smoothingFactor;
         });
+        
+        // Long-term averaging for stable status messages
+        statusHistory.push(currentLevel);
+        if (statusHistory.length > statusHistorySize) {
+          statusHistory.shift();
+        }
+        
+        // Calculate average over the last second for status stability
+        if (statusHistory.length >= 30) { // Wait for at least 0.5 seconds of data
+          const recentAverage = statusHistory.slice(-30).reduce((sum, val) => sum + val, 0) / 30;
+          setAverageLevel(recentAverage);
+        }
         
         animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
       };
@@ -74,6 +91,7 @@ function useIntegratedAudioLevel() {
     } catch (error) {
       console.error('Error setting up audio level monitoring:', error);
       setAudioLevel(0);
+      setAverageLevel(0);
     }
   }, []);
 
@@ -95,6 +113,7 @@ function useIntegratedAudioLevel() {
     
     analyserRef.current = null;
     setAudioLevel(0);
+    setAverageLevel(0);
   }, []);
 
   // Cleanup on unmount
@@ -114,6 +133,7 @@ function useIntegratedAudioLevel() {
 
   return {
     audioLevel,
+    averageLevel,
     startMonitoring,
     stopMonitoring
   };
@@ -128,7 +148,7 @@ export function useWhisperVoiceToText({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const { audioLevel, startMonitoring, stopMonitoring } = useIntegratedAudioLevel();
+  const { audioLevel, averageLevel, startMonitoring, stopMonitoring } = useIntegratedAudioLevel();
   
   // Simple support detection - especially permissive for iOS
   const checkMediaRecorderSupport = useCallback(() => {
@@ -158,7 +178,8 @@ export function useWhisperVoiceToText({
     transcript: '',
     error: null,
     isInitializing: true,
-    audioLevel: 0
+    audioLevel: 0,
+    averageLevel: 0
   });
 
   // Initialize support check
@@ -175,6 +196,11 @@ export function useWhisperVoiceToText({
   useEffect(() => {
     setState(prev => ({ ...prev, audioLevel }));
   }, [audioLevel]);
+  
+  // Add averageLevel to state updates
+  useEffect(() => {
+    setState(prev => ({ ...prev, averageLevel }));
+  }, [averageLevel]);
 
   // Start recording audio
   const startRecording = useCallback(async () => {
@@ -507,6 +533,7 @@ export function useWhisperVoiceToText({
     isInitializing: state.isInitializing,
     isProcessing,
     audioLevel: state.audioLevel, // Expose audioLevel to the component
+    averageLevel: state.averageLevel, // Expose averageLevel to the component
     
     // Actions
     startRecording,

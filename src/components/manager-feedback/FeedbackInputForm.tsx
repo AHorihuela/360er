@@ -211,8 +211,8 @@ export function FeedbackInputForm({
             )}
           </div>
 
-          {/* AI Enhancement Note */}
-          {feedbackContent.length > 20 && (
+          {/* AI Enhancement Note - Hidden during voice mode for cleaner UI */}
+          {feedbackContent.length > 20 && !isVoiceMode && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 md:p-3">
               <p className="text-xs md:text-sm text-blue-800">
                 💡 <strong>AI Enhancement:</strong> After submission, our AI will help categorize this feedback 

@@ -9,6 +9,7 @@ declare global {
 
 export function useAudioLevelMonitoring() {
   const [audioLevel, setAudioLevel] = useState(0);
+  const [averageLevel, setAverageLevel] = useState(0); // For status messages
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -21,15 +22,19 @@ export function useAudioLevelMonitoring() {
       analyserRef.current = audioContextRef.current.createAnalyser();
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       
-      // Optimized settings for speech detection (less twitchy)
-      analyserRef.current.fftSize = 1024; // Increased for better resolution
-      analyserRef.current.smoothingTimeConstant = 0.9; // Higher smoothing for stability
+      // Optimized settings for better speech sensitivity
+      analyserRef.current.fftSize = 2048; // Higher resolution for better detection
+      analyserRef.current.smoothingTimeConstant = 0.85; // Balanced smoothing
       sourceRef.current.connect(analyserRef.current);
       
       // Use time domain data for better volume detection
       const dataArray = new Uint8Array(analyserRef.current.fftSize);
       let lastSignificantLevel = 0;
       let levelHoldTime = 0;
+      
+      // For status message stability - longer term averaging
+      const statusHistorySize = 60; // 1 second at 60fps
+      const statusHistory: number[] = [];
       
       const updateAudioLevel = () => {
         if (!analyserRef.current) return;
@@ -45,29 +50,41 @@ export function useAudioLevelMonitoring() {
         }
         rms = Math.sqrt(rms / dataArray.length);
         
-        // Apply sensitivity boost optimized for speech
-        const sensitivity = 4.0; // Slightly increased for better response
+        // Improved sensitivity - much more responsive to normal speech
+        const sensitivity = 8.0; // Doubled sensitivity for normal speech levels
         const currentLevel = Math.min(rms * sensitivity, 1);
         
-        // Hold significant levels longer to avoid flickering
-        if (currentLevel > 0.08) { // Threshold for "significant" audio
+        // Hold significant levels longer to avoid flickering in bars
+        if (currentLevel > 0.05) { // Lower threshold for detection
           lastSignificantLevel = currentLevel;
-          levelHoldTime = 8; // Hold for 8 frames (~130ms at 60fps)
+          levelHoldTime = 6; // Reduced hold time for more responsiveness
         } else if (levelHoldTime > 0) {
           levelHoldTime--;
           // Gradually decay the held level
-          lastSignificantLevel *= 0.85;
+          lastSignificantLevel *= 0.9;
         }
         
         // Use the held level if we're in hold mode, otherwise use current
         const displayLevel = levelHoldTime > 0 ? lastSignificantLevel : currentLevel;
         
-        // Apply longer smoothing for visual stability
-        const smoothingFactor = 0.2; // Slower transitions
+        // Apply shorter smoothing for more responsive bars
+        const smoothingFactor = 0.3; // More responsive transitions
         
         setAudioLevel(prevLevel => {
           return prevLevel * (1 - smoothingFactor) + displayLevel * smoothingFactor;
         });
+        
+        // Long-term averaging for stable status messages
+        statusHistory.push(currentLevel);
+        if (statusHistory.length > statusHistorySize) {
+          statusHistory.shift();
+        }
+        
+        // Calculate average over the last second for status stability
+        if (statusHistory.length >= 30) { // Wait for at least 0.5 seconds of data
+          const recentAverage = statusHistory.slice(-30).reduce((sum, val) => sum + val, 0) / 30;
+          setAverageLevel(recentAverage);
+        }
         
         animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
       };
@@ -76,6 +93,7 @@ export function useAudioLevelMonitoring() {
     } catch (error) {
       // Silently handle errors and reset audio level
       setAudioLevel(0);
+      setAverageLevel(0);
     }
   }, []);
 
@@ -97,6 +115,7 @@ export function useAudioLevelMonitoring() {
     
     analyserRef.current = null;
     setAudioLevel(0);
+    setAverageLevel(0);
   }, []);
 
   // Cleanup on unmount
@@ -116,6 +135,7 @@ export function useAudioLevelMonitoring() {
 
   return {
     audioLevel,
+    averageLevel, // For stable status messages
     startMonitoring,
     stopMonitoring
   };
