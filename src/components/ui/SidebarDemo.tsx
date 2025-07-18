@@ -29,7 +29,8 @@ export function SidebarDemo({
     closeMobileMenu();
   };
 
-  const handleLinkClick = () => {
+  const handleLinkClick = (href: string) => {
+    navigate(href);
     closeMobileMenu();
   };
 
@@ -40,7 +41,7 @@ export function SidebarDemo({
       icon: (
         <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-      onClick: handleLinkClick,
+      onClick: () => handleLinkClick("/dashboard"),
     },
     {
       label: "Team Members",
@@ -48,7 +49,7 @@ export function SidebarDemo({
       icon: (
         <Users className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-      onClick: handleLinkClick,
+      onClick: () => handleLinkClick("/employees"),
     },
     {
       label: "Review Cycles",
@@ -56,7 +57,7 @@ export function SidebarDemo({
       icon: (
         <ClipboardList className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-      onClick: handleLinkClick,
+      onClick: () => handleLinkClick("/reviews"),
     },
     {
       label: "Manager Feedback",
@@ -64,7 +65,7 @@ export function SidebarDemo({
       icon: (
         <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-      onClick: handleLinkClick,
+      onClick: () => handleLinkClick("/manager-feedback"),
     },
     {
       label: "Analytics",
@@ -72,7 +73,7 @@ export function SidebarDemo({
       icon: (
         <BarChart className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
-      onClick: handleLinkClick,
+      onClick: () => handleLinkClick("/analytics"),
     },
   ];
 
@@ -130,7 +131,7 @@ export function SidebarDemo({
                 icon: (
                   <BookOpen className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
                 ),
-                onClick: handleLinkClick,
+                onClick: () => handleLinkClick("/methodology"),
               }}
             />
             <SidebarLink
@@ -140,7 +141,7 @@ export function SidebarDemo({
                 icon: (
                   <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
                 ),
-                onClick: handleLinkClick,
+                onClick: () => handleLinkClick("/account"),
               }}
             />
             <SidebarLink
