@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, Sparkles, AlertCircle } from 'lucide-react';
-import { format, subDays, subMonths } from 'date-fns';
+import { format, subDays, subMonths, isAfter, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AIReport } from './AIReport';
 import { ReviewCycle, FeedbackRequest, GenerationStep } from '@/types/reviews/employee-review';
@@ -73,7 +73,12 @@ export function ReportSection({
       if (!feedbackDate) return true; // Include feedback without dates
       
       const date = new Date(feedbackDate);
-      return date >= selectedTimeRange.startDate && date <= selectedTimeRange.endDate;
+      
+      // Use full day ranges: start of day for start date, end of day for end date
+      const rangeStart = startOfDay(selectedTimeRange.startDate);
+      const rangeEnd = endOfDay(selectedTimeRange.endDate);
+      
+      return date >= rangeStart && date <= rangeEnd;
     }).length;
   }, [feedbackRequest?.feedback, selectedTimeRange.startDate, selectedTimeRange.endDate]);
 
@@ -108,6 +113,13 @@ export function ReportSection({
 
   const densityInfo = getFeedbackDensity(filteredFeedbackCount, totalFeedbackCount);
 
+  // Function to disable future dates (dates after today)
+  const disableFutureDates = (date: Date) => {
+    const today = startOfDay(new Date());
+    const checkDate = startOfDay(date);
+    return isAfter(checkDate, today);
+  };
+
   const handleTimeRangeChange = (preset: string) => {
     if (preset === 'custom') {
       setSelectedTimeRange({
@@ -126,6 +138,29 @@ export function ReportSection({
           label: presetConfig.label
         });
       }
+    }
+  };
+
+  // Update the custom date range when dates are selected
+  const handleCustomStartDateSelect = (date: Date | undefined) => {
+    setCustomStartDate(date);
+    if (date && selectedTimeRange.preset === 'custom') {
+      setSelectedTimeRange(prev => ({
+        ...prev,
+        startDate: date,
+        label: 'Custom range'
+      }));
+    }
+  };
+
+  const handleCustomEndDateSelect = (date: Date | undefined) => {
+    setCustomEndDate(date);
+    if (date && selectedTimeRange.preset === 'custom') {
+      setSelectedTimeRange(prev => ({
+        ...prev,
+        endDate: date,
+        label: 'Custom range'
+      }));
     }
   };
 
@@ -152,10 +187,11 @@ export function ReportSection({
               <div className="flex items-center gap-2">
                 {densityInfo.icon}
                 <Badge variant="outline" className="text-xs">
-                  {filteredFeedbackCount} 
+                  {filteredFeedbackCount}
                   {filteredFeedbackCount !== totalFeedbackCount && (
                     <span className="text-muted-foreground">/{totalFeedbackCount}</span>
-                  )} entries
+                  )}
+                  &nbsp;entries
                 </Badge>
                 <span className={cn("text-xs", densityInfo.color)}>
                   {densityInfo.message}
@@ -217,7 +253,8 @@ export function ReportSection({
                         <Calendar
                           mode="single"
                           selected={customStartDate}
-                          onSelect={setCustomStartDate}
+                          onSelect={handleCustomStartDateSelect}
+                          disabled={disableFutureDates}
                           initialFocus
                         />
                       </PopoverContent>
@@ -242,7 +279,8 @@ export function ReportSection({
                         <Calendar
                           mode="single"
                           selected={customEndDate}
-                          onSelect={setCustomEndDate}
+                          onSelect={handleCustomEndDateSelect}
+                          disabled={disableFutureDates}
                           initialFocus
                         />
                       </PopoverContent>
