@@ -177,6 +177,7 @@ export function ReviewCyclesPage() {
           id,
           title,
           status,
+          type,
           review_by_date,
           created_at,
           updated_at,
@@ -315,7 +316,7 @@ export function ReviewCyclesPage() {
             updated_at: cycle.updated_at,
             created_by: cycle.user_id,
             user_id: cycle.user_id,
-            type: (cycle as any).type || '360_review',
+            type: cycle.type || '360_review',
             feedback_requests: validFeedbackRequests,
             _count: {
               feedback_requests: validFeedbackRequests.length,
@@ -377,6 +378,28 @@ export function ReviewCyclesPage() {
       setIsLoading(false);
     }
   }
+
+  // Helper function to get cycle type display name
+  function getCycleTypeLabel(type: string): string {
+    switch (type) {
+      case '360_review': return '360° Feedback';
+      case 'manager_effectiveness': return 'Manager Survey';
+      case 'manager_to_employee': return 'Manager Feedback';
+      default: return 'Review';
+    }
+  }
+
+  // Helper function to get cycle type badge variant - use consistent secondary for all
+  function getCycleTypeBadgeVariant(type: string): 'default' | 'secondary' | 'outline' {
+    return 'secondary'; // Consistent gray color for all cycle types
+  }
+
+  // Helper function to get cycle type badge custom classes - keep minimal styling
+  function getCycleTypeBadgeClasses(type: string): string {
+    return 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+  }
+
+
 
   async function handleDelete(cycleId: string) {
     if (isDeletingId) return;
@@ -450,22 +473,44 @@ export function ReviewCyclesPage() {
   }
 
   function getStatusColor(cycle: ReviewCycle): "default" | "destructive" | "secondary" {
-    const now = new Date();
-    const reviewByDate = new Date(cycle.review_by_date);
     const progress = calculateProgress(cycle);
     
+    // For completed cycles, show as completed regardless of type
     if (progress >= 100) return 'default';
-    return reviewByDate > now ? 'secondary' : 'destructive';
+    
+    // For manager-to-employee cycles (continuous), always show as in progress
+    if (cycle.type === 'manager_to_employee') return 'secondary';
+    
+    // For cycles with due dates, check if overdue
+    if (cycle.review_by_date) {
+      const now = new Date();
+      const reviewByDate = new Date(cycle.review_by_date);
+      return reviewByDate > now ? 'secondary' : 'destructive';
+    }
+    
+    // Default to in progress for cycles without due dates
+    return 'secondary';
   }
 
   function getStatusText(cycle: ReviewCycle): string {
-    const now = new Date();
-    const reviewByDate = new Date(cycle.review_by_date);
     const progress = calculateProgress(cycle);
     
+    // For completed cycles, show as completed regardless of type
     if (progress >= 100) return 'Completed';
-    if (reviewByDate > now) return 'In Progress';
-    return 'Overdue';
+    
+    // For manager-to-employee cycles (continuous), show as active
+    if (cycle.type === 'manager_to_employee') return 'Active';
+    
+    // For cycles with due dates, check if overdue
+    if (cycle.review_by_date) {
+      const now = new Date();
+      const reviewByDate = new Date(cycle.review_by_date);
+      if (reviewByDate > now) return 'In Progress';
+      return 'Overdue';
+    }
+    
+    // Default to in progress for cycles without due dates
+    return 'In Progress';
   }
 
   function formatDate(dateString: string) {
@@ -479,6 +524,7 @@ export function ReviewCyclesPage() {
   function calculateProgress(cycle: ReviewCycle): number {
     if (!cycle.feedback_requests?.length) return 0;
     
+    // For traditional cycles (360, manager effectiveness), use target-based progress
     const totalResponses = cycle.feedback_requests.reduce((acc, req) => 
       acc + (req.feedback_responses?.length || 0), 0);
     const totalTargetResponses = cycle.feedback_requests.reduce((acc, req) => 
@@ -632,24 +678,39 @@ export function ReviewCyclesPage() {
         }`}
         onClick={() => navigate(`/reviews/${cycle.id}`)}
       >
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base font-semibold truncate">{cycle.title}</CardTitle>
-              <div className="mt-1 space-y-1">
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
-                  Due {formatDate(cycle.review_by_date)}
+              <div className="space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base font-semibold truncate leading-tight">{cycle.title}</CardTitle>
+                  <Badge 
+                    variant={getCycleTypeBadgeVariant(cycle.type)} 
+                    className={`text-xs flex-shrink-0 mt-0.5 ${getCycleTypeBadgeClasses(cycle.type)}`}
+                  >
+                    {getCycleTypeLabel(cycle.type)}
+                  </Badge>
                 </div>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Users className="mr-1 h-3 w-3 flex-shrink-0" />
-                  {cycle._count?.feedback_requests || 0} reviewees
+                <div className="space-y-1">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                    {cycle.type === 'manager_to_employee' 
+                      ? `Started ${formatDate(cycle.created_at)}`
+                      : `Due ${formatDate(cycle.review_by_date)}`
+                    }
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Users className="mr-1 h-3 w-3 flex-shrink-0" />
+                    {cycle._count?.feedback_requests || 0} {cycle.type === 'manager_to_employee' ? 'team members' : 'reviewees'}
+                  </div>
                 </div>
               </div>
             </div>
-            <Badge variant={getStatusColor(cycle)} className="flex-shrink-0 text-xs">
-              {getStatusText(cycle)}
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant={getStatusColor(cycle)} className="flex-shrink-0 text-xs">
+                {getStatusText(cycle)}
+              </Badge>
+            </div>
           </div>
           
           {/* Owner badge for master account mode */}
@@ -666,21 +727,57 @@ export function ReviewCyclesPage() {
           })()}
         </CardHeader>
         
-        <CardContent className="py-3">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{progress}%</span>
+        {/* Content section - show different content based on cycle type */}
+        <CardContent className="py-4">
+          {cycle.type === 'manager_to_employee' ? (
+            /* Manager feedback cycles show recent activity */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground font-medium">Total Activity</span>
+                <span className="text-xs text-muted-foreground">All time</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-lg font-semibold text-slate-700">
+                    {cycle.feedback_requests?.reduce((acc, req) => acc + (req.feedback_responses?.length || 0), 0) || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Feedback entries</div>
+                </div>
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-lg font-semibold text-slate-700">
+                    {cycle._count?.feedback_requests || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Team members</div>
+                </div>
+              </div>
             </div>
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{completed} completed</span>
-              <span>{pending} pending</span>
+          ) : (
+            /* Traditional cycles show progress */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground font-medium">Progress</span>
+                <span className="font-semibold text-primary">{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2.5" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {completed} completed
+                </span>
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {pending} pending
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
         
-        <CardFooter className="pt-0 pb-3">
+        <CardFooter className="pt-0 pb-4">
           <div className="flex items-center justify-between w-full">
             {/* Only show delete button for user's own reviews */}
             {isOwnedByCurrentUser && (
