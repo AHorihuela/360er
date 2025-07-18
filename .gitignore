@@ -48,3 +48,6 @@ lerna-debug.log*
 
 # Cursor
 .cursorrules
+
+# SSL certificates for development
+localhost*.pem

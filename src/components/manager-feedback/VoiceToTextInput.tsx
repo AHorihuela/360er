@@ -12,9 +12,9 @@ import { useWhisperVoiceToText } from '@/hooks/useWhisperVoiceToText';
 import { cn } from '@/lib/utils';
 import { 
   RecordingInterface, 
-  VoiceStatusMessages, 
-  useAudioLevelMonitoring 
+  VoiceStatusMessages
 } from './voice-input';
+import { VoiceDebugging } from './VoiceDebugging';
 
 interface VoiceToTextInputProps {
   value: string;
@@ -37,8 +37,6 @@ export function VoiceToTextInput({
   const [isMobile, setIsMobile] = useState(false);
   const baseTextRef = useRef<string>(''); // Use ref instead of state to avoid closure issues
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
-  
-  const { audioLevel, startMonitoring, stopMonitoring } = useAudioLevelMonitoring();
 
   // Detect mobile device
   useEffect(() => {
@@ -62,6 +60,7 @@ export function VoiceToTextInput({
     error,
     isInitializing,
     isProcessing,
+    audioLevel, // Now comes from the integrated hook
     startRecording,
     stopRecording,
     clearTranscript
@@ -95,7 +94,6 @@ export function VoiceToTextInput({
       // Clean up and show success message briefly
       baseTextRef.current = '';
       setRecordingStartTime(null);
-      stopMonitoring();
       
       // Clear success message after 3 seconds
       setTimeout(() => {
@@ -119,12 +117,10 @@ export function VoiceToTextInput({
       clearTranscript();
       setRecordingStartTime(Date.now());
       await startRecording();
-      await startMonitoring();
     } else {
       // Stop recording
       setRecordingStartTime(null);
       stopRecording();
-      stopMonitoring();
     }
   };
 
@@ -138,8 +134,17 @@ export function VoiceToTextInput({
     );
   }
 
+  // Emergency override for iOS testing
+  const hasBasicAPIs = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  const shouldForceEnable = hasBasicAPIs;
+  
   // Show unsupported message if browser doesn't support MediaRecorder
-  if (!isSupported) {
+  if (!isSupported && !shouldForceEnable) {
+    console.log('❌ Voice input disabled. Support check failed and force enable not applicable.');
+    console.log('isSupported:', isSupported);
+    console.log('shouldForceEnable:', shouldForceEnable);
+    console.log('hasBasicAPIs:', hasBasicAPIs);
+    
     return (
       <div className={cn("space-y-2", className)}>
         <Button
@@ -162,6 +167,25 @@ export function VoiceToTextInput({
               <p className="text-xs text-orange-700">
                 Your browser doesn't support audio recording. Please use manual text input instead.
               </p>
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                <p className="text-red-800 font-medium">API Status:</p>
+                <p className="text-red-700">
+                  MediaRecorder: {typeof MediaRecorder !== 'undefined' ? '✅ Available' : '❌ Missing'}<br/>
+                  getUserMedia: {!!navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'}<br/>
+                  Protocol: {window.location.protocol}
+                </p>
+                {window.location.protocol === 'http:' && (
+                  <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded">
+                    <p className="text-orange-800 font-medium">Solution:</p>
+                    <p className="text-orange-700">
+                      iOS Safari requires HTTPS for microphone access.<br/>
+                      Try accessing: <br/>
+                      <strong>https://localhost:5173</strong><br/>
+                      (Accept the security warning for the self-signed certificate)
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -170,112 +194,73 @@ export function VoiceToTextInput({
   }
 
   return (
-    <TooltipProvider>
-      <div className={cn("space-y-3", className)}>
-        {/* Voice Recording Button */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+    <div className={cn("space-y-2", className)}>
+      {/* Voice Toggle Button */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button
               type="button"
               variant={isProcessing ? "destructive" : "outline"}
               size={isMobile ? "default" : "sm"}
               onClick={handleVoiceToggle}
-              disabled={disabled}
+              disabled={disabled || (!isSupported && !shouldForceEnable)}
               className={cn(
-                "flex items-center gap-2 transition-all duration-200",
-                isMobile ? "min-h-[44px] px-4" : "",
-                isProcessing && "shadow-lg"
+                "flex items-center gap-2 transition-all",
+                isMobile ? "w-full" : "w-auto",
+                isProcessing && "animate-pulse"
               )}
             >
-              {isRecording ? (
-                <Square className="h-4 w-4" />
-              ) : isRecordingStarting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isTranscribing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {isProcessing ? (
+                <>
+                  <Square className="h-4 w-4" />
+                  {isRecordingStarting ? 'Starting...' : isRecording ? 'Stop Recording' : 'Processing...'}
+                </>
               ) : (
-                <Mic className="h-4 w-4" />
+                <>
+                  <Mic className="h-4 w-4" />
+                  {isMobile ? 'Voice Input' : 'Start Voice Input'}
+                </>
               )}
-              
-              {isMobile ? (
-                isRecording ? "Finish Recording" : 
-                isRecordingStarting ? "Starting..." :
-                isTranscribing ? "Processing..." : 
-                "Dictate"
-              ) : (
-                isRecording ? "Finish Recording" : 
-                isRecordingStarting ? "Starting Recording..." :
-                isTranscribing ? "Transcribing..." : 
-                "Dictate Feedback"
-              )}
-              
-              {isMobile && !isProcessing && <Smartphone className="h-3 w-3 opacity-60" />}
             </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">
+              {isProcessing 
+                ? "Click to stop recording" 
+                : isMobile 
+                  ? "Tap to record voice input" 
+                  : "Click to start voice recording"
+              }
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-            {/* Informational Tooltip */}
-            {!isProcessing && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="space-y-1">
-                    <p className="font-medium">Speak Naturally</p>
-                    <p className="text-xs">
-                      Just speak your thoughts naturally - no need for perfect sentences. 
-                      AI will help structure your feedback into professional reports.
-                    </p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+      {/* Recording Interface */}
+      <RecordingInterface
+        isRecording={isRecording}
+        isRecordingStarting={isRecordingStarting}
+        audioLevel={audioLevel} // Use integrated audio level
+        recordingStartTime={recordingStartTime}
+        baseText={baseTextRef.current}
+        isMobile={isMobile}
+      />
 
-          {/* Status Badge */}
-          {isProcessing && (
-            <Badge 
-              variant={isRecording ? "destructive" : "secondary"} 
-              className={cn(
-                isMobile && "px-2 py-1",
-                isRecording && "animate-pulse"
-              )}
-            >
-              {isRecording && <div className="w-2 h-2 bg-white rounded-full mr-1" />}
-              {isRecording ? (isMobile ? "Recording" : "Recording...") :
-               isRecordingStarting ? (isMobile ? "Starting" : "Starting...") :
-               isTranscribing ? (isMobile ? "Processing" : "Processing...") : 
-               "Ready"}
-            </Badge>
-          )}
-        </div>
+      {/* Status Messages */}
+      <VoiceStatusMessages
+        isProcessing={isProcessing}
+        isTranscribing={isTranscribing}
+        transcript={transcript}
+        error={error}
+        hasInteracted={hasInteracted}
+        isMobile={isMobile}
+      />
 
-        {/* Recording Interface */}
-        <RecordingInterface
-          isRecording={isRecording}
-          isRecordingStarting={isRecordingStarting}
-          audioLevel={audioLevel}
-          recordingStartTime={recordingStartTime}
-          baseText={baseTextRef.current}
-          isMobile={isMobile}
-        />
-
-        {/* Status Messages */}
-        <VoiceStatusMessages
-          isProcessing={isProcessing}
-          isTranscribing={isTranscribing}
-          transcript={transcript}
-          error={error}
-          hasInteracted={hasInteracted}
-          isMobile={isMobile}
-        />
-      </div>
-    </TooltipProvider>
+      {/* Development Debug Info */}
+      {process.env.NODE_ENV === 'development' && (
+        <VoiceDebugging />
+      )}
+    </div>
   );
 } 
