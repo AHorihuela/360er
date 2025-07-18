@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Send, Copy } from 'lucide-react';
+import { ArrowLeft, Send, Copy, FileText, Eye, Sparkles } from 'lucide-react';
 import { ReviewCycle, FeedbackRequest } from '@/types/reviews/employee-review';
 import { getSurveyTypeBadge } from './utils';
 
@@ -40,7 +40,7 @@ export function EmployeeReviewHeader({
           <>
             <Button
               key="add-feedback"
-              variant="default"
+              variant="outline"
               size="sm"
               onClick={() => document.getElementById('manager-feedback-input')?.scrollIntoView({ behavior: 'smooth' })}
               className="h-8 text-xs flex items-center gap-1.5"
@@ -53,17 +53,19 @@ export function EmployeeReviewHeader({
               variant="outline"
               size="sm"
               onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs"
+              className="h-8 text-xs flex items-center gap-1.5"
             >
+              <FileText className="h-3.5 w-3.5" />
               Generate Report
             </Button>
             <Button
               key="detailed-feedback"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs"
+              className="h-8 text-xs flex items-center gap-1.5"
             >
+              <Eye className="h-3.5 w-3.5" />
               View Responses
             </Button>
           </>
@@ -81,20 +83,22 @@ export function EmployeeReviewHeader({
             </Button>
             <Button
               key="ai-report"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => document.getElementById('ai-report')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs"
+              className="h-8 text-xs flex items-center gap-1.5"
             >
+              <Sparkles className="h-3.5 w-3.5" />
               AI Report
             </Button>
             <Button
               key="detailed-feedback"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => document.getElementById('detailed-feedback')?.scrollIntoView({ behavior: 'smooth' })}
-              className="h-8 text-xs"
+              className="h-8 text-xs flex items-center gap-1.5"
             >
+              <Eye className="h-3.5 w-3.5" />
               Detailed Feedback
             </Button>
           </>

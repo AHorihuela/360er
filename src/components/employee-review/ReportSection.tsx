@@ -6,7 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Sparkles, AlertCircle, FileText } from 'lucide-react';
+import { CalendarIcon, Sparkles, AlertCircle } from 'lucide-react';
 import { format, subDays, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AIReport } from './AIReport';
@@ -130,16 +130,11 @@ export function ReportSection({
 
       {/* M2E Time Range Selection and Generation */}
       {isM2E && (
-        <Card className="border-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Report Generation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Feedback Count and Density */}
-            <div className={cn("p-3 rounded-lg border", densityInfo.bgColor)}>
+        <Card>
+          <CardContent className="pt-6">
+            {/* Compact Report Generation Section */}
+            <div className="space-y-4">
+              {/* Feedback Count Badge - Compact */}
               <div className="flex items-center gap-2">
                 {densityInfo.suggestion === 'insufficient' ? (
                   <AlertCircle className="h-4 w-4 text-red-500" />
@@ -148,48 +143,60 @@ export function ReportSection({
                     {feedbackCount} entries
                   </Badge>
                 )}
-                <span className={cn("text-sm font-medium", densityInfo.color)}>
+                <span className={cn("text-sm", densityInfo.color)}>
                   {densityInfo.message}
                 </span>
               </div>
-            </div>
 
-            {/* Time Range Selection */}
-            <div className="space-y-3">
-              <Label>Time Range</Label>
-              <Select
-                value={selectedTimeRange.preset || 'custom'}
-                onValueChange={handleTimeRangeChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeRangePresets.map((preset) => (
-                    <SelectItem key={preset.preset} value={preset.preset}>
-                      {preset.label}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">Custom date range</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Compact Time Range and Generate Section */}
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <Label className="text-sm font-medium">Time Range</Label>
+                  <Select
+                    value={selectedTimeRange.preset || 'custom'}
+                    onValueChange={handleTimeRangeChange}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select time range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeRangePresets.map((preset) => (
+                        <SelectItem key={preset.preset} value={preset.preset}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Custom date range</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button
+                  onClick={() => onGenerateReport(selectedTimeRange)}
+                  disabled={!hasMinimumFeedback || isGeneratingReport}
+                  className="shrink-0"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {existingReport ? 'Generate New Report' : 'Generate Report'}
+                </Button>
+              </div>
 
-              {/* Custom Date Range */}
+              {/* Custom Date Range Pickers - Only when needed */}
               {selectedTimeRange.preset === 'custom' && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <div className="flex-1">
-                    <Label className="text-xs">Start Date</Label>
+                    <Label className="text-xs text-muted-foreground">Start Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal",
+                            "w-full justify-start text-left font-normal mt-1",
                             !customStartDate && "text-muted-foreground"
                           )}
+                          size="sm"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customStartDate ? format(customStartDate, "PPP") : "Pick start date"}
+                          {customStartDate ? format(customStartDate, "MMM d") : "Start"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -203,18 +210,19 @@ export function ReportSection({
                     </Popover>
                   </div>
                   <div className="flex-1">
-                    <Label className="text-xs">End Date</Label>
+                    <Label className="text-xs text-muted-foreground">End Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal",
+                            "w-full justify-start text-left font-normal mt-1",
                             !customEndDate && "text-muted-foreground"
                           )}
+                          size="sm"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customEndDate ? format(customEndDate, "PPP") : "Pick end date"}
+                          {customEndDate ? format(customEndDate, "MMM d") : "End"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -230,17 +238,6 @@ export function ReportSection({
                 </div>
               )}
             </div>
-
-            {/* Generate Button */}
-            <Button
-              onClick={() => onGenerateReport(selectedTimeRange)}
-              disabled={!hasMinimumFeedback || isGeneratingReport}
-              className="w-full"
-              size="lg"
-            >
-              <Sparkles className="mr-2 h-4 w-4" />
-              {existingReport ? 'Generate New Report' : 'Generate Report'}
-            </Button>
           </CardContent>
         </Card>
       )}
