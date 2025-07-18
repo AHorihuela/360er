@@ -186,7 +186,6 @@ export function FeedbackInputForm({
                   }}
                   placeholder="Share your observations about this team member's performance, contributions, or areas for growth. Be specific and constructive..."
                   className="min-h-32 resize-none"
-                  maxLength={2000}
                   disabled={!selectedEmployeeId}
                 />
                 
@@ -197,7 +196,7 @@ export function FeedbackInputForm({
                       : "Ready to submit • ⌘+Enter to submit quickly"
                     }
                   </span>
-                  <span>{feedbackContent.length}/2000</span>
+                  <span>{feedbackContent.length} characters • {feedbackContent.trim().split(/\s+/).filter(word => word.length > 0).length} words</span>
                 </div>
               </>
             )}
@@ -206,7 +205,7 @@ export function FeedbackInputForm({
             {isVoiceMode && (
               <div className="flex justify-between text-xs text-muted-foreground py-2">
                 <span>Voice input active • Recording interface below</span>
-                <span>{feedbackContent.length}/2000</span>
+                <span>{feedbackContent.length} characters • {feedbackContent.trim().split(/\s+/).filter(word => word.length > 0).length} words</span>
               </div>
             )}
           </div>

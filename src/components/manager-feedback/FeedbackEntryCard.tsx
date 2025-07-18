@@ -191,7 +191,6 @@ export function FeedbackEntryCard({
               onChange={(e) => setEditedContent(e.target.value)}
               placeholder="Update your feedback..."
               className="min-h-24 resize-none"
-              maxLength={2000}
             />
             
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -201,7 +200,7 @@ export function FeedbackEntryCard({
                   : "Ready to save"
                 }
               </span>
-              <span>{editedContent.length}/2000</span>
+              <span>{editedContent.length} characters • {editedContent.trim().split(/\s+/).filter(word => word.length > 0).length} words</span>
             </div>
 
             <div className="flex gap-2">

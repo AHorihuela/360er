@@ -23,14 +23,14 @@ describe('Feedback Validation Utils', () => {
         expect(result.showLengthWarning).toBe(true);
       });
 
-      it('should accept feedback longer than maximum limit', () => {
-        // Create text with enough words (20+) but over 2000 characters
+      it('should accept feedback longer than previous 2000 character limit', () => {
+        // Create text with enough words (20+) and over 2000 characters - should now be accepted
         const longWord = 'comprehensive';
         const longText = Array(200).fill(longWord).join(' '); // 200 words, way over 2000 chars
         const result = validateFeedback(longText, true);
 
-        expect(result.isValid).toBe(false);
-        expect(result.message).toContain('Exceeds maximum length of 2000 characters');
+        expect(result.isValid).toBe(true);
+        expect(result.message).not.toContain('Exceeds maximum length');
         expect(result.showLengthWarning).toBe(true);
       });
 
@@ -155,10 +155,9 @@ describe('Feedback Validation Utils', () => {
         const result1 = validateFeedback(exactMinText, true);
         expect(result1.isValid).toBe(false); // Still need 20 words
 
-        // Exactly 2000 characters
-        const exactMaxText = 'This is a comprehensive feedback that meets requirements. '.repeat(36);
-        const truncatedMaxText = exactMaxText.substring(0, 2000);
-        const result2 = validateFeedback(truncatedMaxText, true);
+        // Text that was previously at the 2000 character limit (now unlimited)
+        const longText = 'This is a comprehensive feedback that meets requirements. '.repeat(36);
+        const result2 = validateFeedback(longText, true);
         expect(result2.isValid).toBe(true);
       });
 

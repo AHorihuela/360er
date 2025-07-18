@@ -6,7 +6,6 @@ interface ValidationResult {
 }
 
 const MIN_FEEDBACK_LENGTH = 100;
-const MAX_FEEDBACK_LENGTH = 2000;
 const MIN_WORDS = 20;
 
 // Common generic phrases that might indicate low-quality feedback
@@ -95,13 +94,7 @@ export function validateFeedback(text: string, showLengthRequirements: boolean =
     }
   }
 
-  if (text.length > MAX_FEEDBACK_LENGTH) {
-    return {
-      isValid: false,
-      message: `Exceeds maximum length of ${MAX_FEEDBACK_LENGTH} characters`,
-      showLengthWarning: true
-    };
-  }
+
 
   // Check for generic phrases
   const genericPhrases = containsGenericPhrases(text);
@@ -128,7 +121,7 @@ export function validateFeedback(text: string, showLengthRequirements: boolean =
 
   return {
     isValid: true,
-    message: showLengthRequirements ? `${text.length}/${MAX_FEEDBACK_LENGTH} characters` : '',
+    message: showLengthRequirements ? `${text.length} characters` : '',
     warnings: warnings.length > 0 ? warnings : undefined,
     showLengthWarning: showLengthRequirements
   };
