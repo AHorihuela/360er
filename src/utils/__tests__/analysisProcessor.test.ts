@@ -158,7 +158,7 @@ describe('Analysis Processor Utils', () => {
         );
 
         // Should make API calls for each relationship type
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -168,7 +168,7 @@ describe('Analysis Processor Utils', () => {
           })
         });
 
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -178,7 +178,7 @@ describe('Analysis Processor Utils', () => {
           })
         });
 
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -334,7 +334,7 @@ describe('Analysis Processor Utils', () => {
         );
 
         // Should make API calls for senior feedback
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -345,7 +345,7 @@ describe('Analysis Processor Utils', () => {
         });
 
         // Should make API calls for junior feedback  
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -429,7 +429,7 @@ describe('Analysis Processor Utils', () => {
         );
 
         // Verify the API calls are made with correct format
-        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/analyze-feedback-analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

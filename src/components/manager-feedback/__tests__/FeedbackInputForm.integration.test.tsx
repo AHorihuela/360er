@@ -5,7 +5,7 @@ import { FeedbackInputForm } from '../FeedbackInputForm';
 import { VoiceToTextInput } from '../VoiceToTextInput';
 
 // Mock hooks
-const mockSubmitManagerFeedback = vi.fn();
+const mockSubmitManagerFeedback = vi.fn().mockResolvedValue(true);
 const mockUseManagerFeedback = {
   submitManagerFeedback: mockSubmitManagerFeedback,
   isSubmitting: false
@@ -51,19 +51,27 @@ vi.mock('@/hooks/useWhisperVoiceToText', () => ({
   useWhisperVoiceToText: () => mockVoiceHook
 }));
 
+let mockVoiceActive = false;
+
 vi.mock('../VoiceToTextInput', () => ({
   VoiceToTextInput: vi.fn(({ value, onChange, onVoiceToggle, disabled }: any) => {
     const handleVoiceClick = () => {
-      // Simulate voice recording workflow
-      onVoiceToggle?.(true); // Start voice mode
-      
-      // Add voice content after a brief delay to simulate recording
-      setTimeout(() => {
-        const newText = value + ' Voice input added';
-        onChange(newText);
-        // Note: Keep voice mode active so source is detected as 'voice'
-        // onVoiceToggle(false) would be called after form submission
-      }, 10);
+      if (!mockVoiceActive) {
+        // Start voice mode
+        mockVoiceActive = true;
+        onVoiceToggle?.(true);
+        
+        // Add voice content after a brief delay to simulate recording
+        setTimeout(() => {
+          const newText = value + ' Voice input added';
+          onChange(newText);
+          // Keep voice mode active for testing
+        }, 10);
+      } else {
+        // Stop voice mode
+        mockVoiceActive = false;
+        onVoiceToggle?.(false);
+      }
     };
 
     return (
@@ -73,11 +81,14 @@ vi.mock('../VoiceToTextInput', () => ({
           onClick={handleVoiceClick}
           disabled={disabled}
         >
-          Start Voice Input
+          {mockVoiceActive ? 'Stop Voice Input' : 'Start Voice Input'}
         </button>
         <div data-testid="voice-status">
           {disabled ? 'Voice Disabled' : 'Voice Enabled'}
         </div>
+        {mockVoiceActive && (
+          <div data-testid="voice-active-indicator">Voice input active</div>
+        )}
       </div>
     );
   })
@@ -164,7 +175,8 @@ describe('FeedbackInputForm Voice Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseManagerFeedback.isSubmitting = false;
-    mockSubmitManagerFeedback.mockResolvedValue({ success: true });
+    mockSubmitManagerFeedback.mockResolvedValue(true);
+    mockVoiceActive = false; // Reset voice state
   });
 
   afterEach(() => {
@@ -205,6 +217,17 @@ describe('FeedbackInputForm Voice Integration', () => {
       
       // Use voice input
       const voiceButton = screen.getByTestId('voice-button');
+      fireEvent.click(voiceButton);
+      
+      // Wait for voice content to be added
+      await waitFor(() => {
+        expect(screen.getByTestId('voice-active-indicator')).toBeInTheDocument();
+      });
+      
+      // Wait for the async content to be processed
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Stop voice mode to reveal the textarea
       fireEvent.click(voiceButton);
       
       await waitFor(() => {
@@ -294,7 +317,7 @@ describe('FeedbackInputForm Voice Integration', () => {
       
       // Wait for voice mode to be active and content to be processed
       await waitFor(() => {
-        expect(screen.getByText(/Voice input active/)).toBeInTheDocument();
+        expect(screen.getByTestId('voice-active-indicator')).toBeInTheDocument();
       });
       
       // Wait a bit for the async voice content to be added
@@ -348,6 +371,14 @@ describe('FeedbackInputForm Voice Integration', () => {
       const voiceButton = screen.getByTestId('voice-button');
       fireEvent.click(voiceButton);
       
+      // Wait for voice content to be added
+      await waitFor(() => {
+        expect(screen.getByTestId('voice-active-indicator')).toBeInTheDocument();
+      });
+      
+      // Wait for the async content to be processed
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       // Submit form
       const form = screen.getByTestId('card-content').querySelector('form');
       fireEvent.submit(form!);
@@ -377,7 +408,7 @@ describe('FeedbackInputForm Voice Integration', () => {
       
       // Wait for voice mode to be active
       await waitFor(() => {
-        expect(screen.getByText(/Voice input active/)).toBeInTheDocument();
+        expect(screen.getByTestId('voice-active-indicator')).toBeInTheDocument();
       });
       
       // Wait a bit for the async voice content to be added

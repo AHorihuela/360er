@@ -355,7 +355,10 @@ export function useWhisperVoiceToText({
       const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
       let errorMessage = 'Voice recording unavailable';
       
-      if (error.name === 'NotAllowedError') {
+      // Handle our specific iOS HTTPS error first
+      if (error.message === 'iOS requires HTTPS for microphone access') {
+        errorMessage = error.message;
+      } else if (error.name === 'NotAllowedError') {
         errorMessage = isIOSDevice 
           ? 'Microphone access denied. Please enable microphone permissions in Safari settings and refresh the page.'
           : 'Microphone access denied. Please allow microphone access when prompted and try again.';
@@ -422,8 +425,10 @@ export function useWhisperVoiceToText({
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
       
-
-
+      // Add language parameter if provided
+      if (language) {
+        formData.append('language', language);
+      }
 
       const response = await fetch('/api/transcribe', {
         method: 'POST',
@@ -511,7 +516,7 @@ export function useWhisperVoiceToText({
         }, 5000);
       }
     }
-  }, [onTranscriptionUpdate, onTranscriptionComplete, toast]);
+  }, [onTranscriptionUpdate, onTranscriptionComplete, toast, language]);
 
   // Clear transcript and reset state
   const clearTranscript = useCallback(() => {

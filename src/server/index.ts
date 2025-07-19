@@ -46,7 +46,15 @@ app.post('/api/analyze-feedback', async (req, res) => {
     const { relationship, strengths, areas_for_improvement } = req.body;
     
     if (!process.env.OPENAI_API_KEY) {
+      console.error('OpenAI API key not configured');
       return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+    
+    if (!relationship || !strengths || !areas_for_improvement) {
+      console.error('Missing required fields:', { relationship, strengths, areas_for_improvement });
+      return res.status(400).json({ 
+        error: 'Missing required fields: relationship, strengths, and areas_for_improvement are required' 
+      });
     }
 
     const openai = getOpenAIClient();
@@ -101,10 +109,14 @@ Provide your response in this exact JSON format:
     res.json(analysis);
   } catch (error) {
     console.error('OpenAI API error:', error);
-    res.status(500).json({
-      error: 'Failed to analyze feedback',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    
+    // Ensure we always send a valid JSON response
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Failed to analyze feedback',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
 });
 

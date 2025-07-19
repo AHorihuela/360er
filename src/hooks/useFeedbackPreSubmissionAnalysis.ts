@@ -56,27 +56,49 @@ export function useFeedbackPreSubmissionAnalysis({ feedbackRequestId }: UseFeedb
       callbacks.onStepComplete();
       
       // Make server-side API call instead of direct OpenAI call
+      const requestBody = {
+        relationship: feedbackData.relationship,
+        strengths: feedbackData.strengths,
+        areas_for_improvement: feedbackData.areas_for_improvement
+      };
+      
+      console.log('Sending feedback analysis request:', requestBody);
+      
       const response = await fetch('/api/analyze-feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          relationship: feedbackData.relationship,
-          strengths: feedbackData.strengths,
-          areas_for_improvement: feedbackData.areas_for_improvement
-        })
+        body: JSON.stringify(requestBody)
       });
+      
+      console.log('Response status:', response.status, response.statusText);
+      // Note: headers.entries() may not be available in test environment
+      if (response.headers && response.headers.entries) {
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          // If error response is not valid JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       // Step 2: Review content
       callbacks.onStepComplete();
       
-      const analysis: AiFeedbackResponse = await response.json();
+      let analysis: AiFeedbackResponse;
+      try {
+        analysis = await response.json();
+      } catch (jsonError) {
+        throw new Error('Invalid response format from analysis service');
+      }
       
       // Step 3: Evaluate
       callbacks.onStepComplete();

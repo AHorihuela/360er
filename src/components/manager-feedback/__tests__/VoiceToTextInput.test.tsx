@@ -93,9 +93,8 @@ describe('VoiceToTextInput', () => {
       averageLevel: 0
     });
 
-    // Mock document event listeners
-    document.addEventListener = vi.fn();
-    document.removeEventListener = vi.fn();
+    // Don't mock document event listeners for keyboard shortcut tests
+    // The component needs to actually register event listeners for the tests to work
 
     // Mock mobile detection
     Object.defineProperty(window, 'innerWidth', {
@@ -327,16 +326,19 @@ describe('VoiceToTextInput', () => {
       const preventDefault = vi.fn();
       render(<VoiceToTextInput {...defaultProps} />);
       
-      // Get the actual event handler
-      const eventHandler = (document.addEventListener as any).mock.calls[0][1];
-      
-      const mockEvent = {
+      // Simulate Cmd+K keydown event directly on document
+      const keydownEvent = new KeyboardEvent('keydown', {
         metaKey: true,
         key: 'k',
-        preventDefault
-      };
+        bubbles: true
+      });
       
-      eventHandler(mockEvent);
+      // Override preventDefault to use our spy
+      Object.defineProperty(keydownEvent, 'preventDefault', {
+        value: preventDefault
+      });
+      
+      document.dispatchEvent(keydownEvent);
       
       expect(preventDefault).toHaveBeenCalled();
     });

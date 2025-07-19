@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -109,6 +109,21 @@ export function FeedbackInputForm({
     }
   };
 
+  // Global keyboard shortcut handler for Cmd+Enter/Ctrl+Enter
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!isSubmitting && selectedEmployeeId && feedbackContent.trim().length >= 10) {
+          handleSubmit(e as any);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSubmitting, selectedEmployeeId, feedbackContent, handleSubmit]);
+
   const handleVoiceToggle = (voiceMode: boolean) => {
     setIsVoiceMode(voiceMode);
   };
@@ -174,6 +189,7 @@ export function FeedbackInputForm({
               <>
                 <Textarea
                   id="feedback-content"
+                  data-testid="feedback-textarea"
                   value={feedbackContent}
                   onChange={(e) => setFeedbackContent(e.target.value)}
                   onKeyDown={(e) => {
@@ -214,6 +230,7 @@ export function FeedbackInputForm({
           {/* Submit Button */}
           <Button 
             type="submit" 
+            data-testid="submit-button"
             className="w-full flex items-center justify-center gap-2"
             disabled={
               isSubmitting || 

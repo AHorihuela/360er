@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -113,7 +113,7 @@ export function VoiceToTextInput({
     onVoiceToggle?.(isProcessing);
   }, [isProcessing, onVoiceToggle]);
 
-  const handleVoiceToggle = async () => {
+  const handleVoiceToggle = useCallback(async () => {
     setHasInteracted(true);
     setShowSuccessState(false); // Clear any previous success state
     
@@ -128,7 +128,7 @@ export function VoiceToTextInput({
       setRecordingStartTime(null);
       stopRecording();
     }
-  };
+  }, [isRecording, isTranscribing, value, clearTranscript, startRecording, stopRecording]);
 
   // Implement Cmd+K keyboard shortcut - must be before any early returns
   useEffect(() => {

@@ -205,7 +205,7 @@ describe('useFeedbackPreSubmissionAnalysis', () => {
         }
       });
 
-      expect(result.current.error).toBe('Unexpected end of JSON input');
+      expect(result.current.error).toBe('Invalid response format from analysis service');
       expect(mockCallbacks.onError).toHaveBeenCalled();
     });
 
