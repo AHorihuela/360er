@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { 
-  Loader2, 
   Trash2, 
   Copy, 
   ArrowUpIcon, 
@@ -21,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { ReviewCycle, FeedbackRequest } from '@/types/reviews/employee-review';
 import { CoreFeedbackResponse } from '@/types/feedback/base';
 import { getStatusVariant, formatStatusText, getSurveyTypeBadge } from './utils';
+import { LoadingSpinner, InlineLoading } from '@/components/ui/loading-variants';
 
 interface DetailedFeedbackSectionProps {
   reviewCycle: ReviewCycle;
@@ -183,7 +183,7 @@ export function DetailedFeedbackSection({
                             aria-label="Delete feedback"
                           >
                             {deletingFeedbackId === feedback.id ? (
-                              <Loader2 key={`${feedback.id}-loader`} className="h-3.5 w-3.5 animate-spin" />
+                              <LoadingSpinner key={`${feedback.id}-loader`} size="xs" color="primary" />
                             ) : (
                               <Trash2 key={`${feedback.id}-trash`} className="h-3.5 w-3.5" />
                             )}
@@ -198,8 +198,11 @@ export function DetailedFeedbackSection({
                             
                             {isQuestionsLoading ? (
                               <div className="py-2 flex items-center justify-center">
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                <span className="text-sm text-blue-600">Loading questions...</span>
+                                <InlineLoading 
+                                  text="Loading questions..." 
+                                  size="sm" 
+                                  color="primary"
+                                />
                               </div>
                             ) : (
                               // Sort responses by question order and then render

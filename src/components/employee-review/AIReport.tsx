@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, Sparkles, RefreshCw, FileDown, ChevronDown } from 'lucide-react';
+import { FileText, Sparkles, RefreshCw, FileDown, ChevronDown } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { cn } from '@/lib/utils';
 import { FeedbackResponse } from '@/types/feedback';
 import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
 import { useToast } from '@/components/ui/use-toast';
 import { ReviewCycleType } from '@/types/survey';
+import { LoadingSpinner, LoadingButton, ProgressStep, LoadingContainer } from '@/components/ui/loading-variants';
 
 interface Props {
   feedbackRequest: {
@@ -51,36 +52,41 @@ export function AIReport({
   onGenerateReport,
   isGeneratingReport,
   generationStep,
+  startTime,
   elapsedSeconds,
   surveyType,
   isSaving = false,
   hideHeader = false
 }: Props) {
   const { toast } = useToast();
+  
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
     // Initialize with existing report if available
-    const existingReport = feedbackRequest.ai_reports?.[0];
-    return existingReport ? {
-      content: existingReport.content,
-      created_at: existingReport.updated_at
-    } : null;
-  });
-  
-  // Track button loading state separately for immediate feedback
-  const [isButtonLoading, setIsButtonLoading] = useState(false);
-  
-  // Initialize expanded state from localStorage or defaults
-  const [isReportOpen, setIsReportOpen] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      // First check localStorage for saved preference
-      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedState !== null) {
-        return JSON.parse(savedState);
-      }
+    if (feedbackRequest?.ai_reports?.[0]) {
+      return {
+        content: feedbackRequest.ai_reports[0].content,
+        created_at: feedbackRequest.ai_reports[0].updated_at
+      };
     }
-    // Default to open if localStorage doesn't have a value
-    return true;
+    return null;
   });
+
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  // Create ProgressSteps for report generation
+  const getGenerationSteps = (): ProgressStep[] => {
+    return generationSteps.map((label, index) => ({
+      id: `step-${index}`,
+      label,
+      status: isGeneratingReport 
+        ? (index < generationStep ? 'completed' : index === generationStep ? 'in_progress' : 'pending')
+        : 'pending'
+    }));
+  };
 
   // Update local button state based on parent component state
   useEffect(() => {
@@ -102,19 +108,33 @@ export function AIReport({
     }
   }, [isReportOpen]);
 
-  // Auto-expand when a new report is generated
+  // Handle updates to feedback request
   useEffect(() => {
-    if (feedbackRequest.ai_reports?.[0]) {
-      const latestReport = feedbackRequest.ai_reports[0];
-      setAiReport({
-        content: latestReport.content,
-        created_at: latestReport.updated_at
+    if (feedbackRequest?.ai_reports?.[0]) {
+      const newReport = {
+        content: feedbackRequest.ai_reports[0].content,
+        created_at: feedbackRequest.ai_reports[0].updated_at
+      };
+      
+      // Only update if the content actually changed
+      setAiReport(prev => {
+        if (!prev || prev.content !== newReport.content) {
+          return newReport;
+        }
+        return prev;
       });
-    } else if (!feedbackRequest.ai_reports || feedbackRequest.ai_reports.length === 0) {
-      // Clear local state if no reports exist
+    } else if (!isGeneratingReport) {
+      // Only clear the report if we're not generating (to avoid clearing during generation)
       setAiReport(null);
     }
-  }, [feedbackRequest.ai_reports]);
+  }, [feedbackRequest?.ai_reports, isGeneratingReport]);
+
+  // Handle generation completion
+  useEffect(() => {
+    if (!isGeneratingReport && isButtonLoading) {
+      setIsButtonLoading(false);
+    }
+  }, [isGeneratingReport, isButtonLoading]);
 
   // Add page leave warning during AI report generation
   useEffect(() => {
@@ -133,35 +153,45 @@ export function AIReport({
     }
   }, [isGeneratingReport]);
 
-  const handleReportChange = (newContent: string) => {
-    // Update local state immediately for responsive UI
-    setAiReport(prev => prev ? {
-      ...prev,
-      content: newContent
-    } : null);
+  const handleToggleExpand = () => {
+    const newValue = !isReportOpen;
+    setIsReportOpen(newValue);
+    localStorage.setItem(LOCAL_STORAGE_KEY, newValue.toString());
+  };
 
-    // Call the parent's change handler (from useAIReportManagement)
-    // which handles the debounced save to database
-    if (onReportChange) {
-      onReportChange(newContent);
+  const handleGenerateReport = async () => {
+    setIsButtonLoading(true);
+    try {
+      await onGenerateReport();
+    } catch (error) {
+      console.error('Error generating report:', error);
+    } finally {
+      setIsButtonLoading(false);
     }
   };
 
-  // Handle generate report with immediate loading state
-  const handleGenerateReport = () => {
-    setIsButtonLoading(true);
-    onGenerateReport();
+  const handleReportChange = (value: string) => {
+    setAiReport(prev => prev ? {
+      ...prev,
+      content: value
+    } : null);
+    // Call the parent's change handler (from useAIReportManagement)
+    onReportChange?.(value);
   };
 
-  const formatLastAnalyzed = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    });
+  const formatLastAnalyzed = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'recently';
+    }
   };
 
   // Get the report type label based on survey type
@@ -171,11 +201,6 @@ export function AIReport({
     : surveyType === 'manager_to_employee'
     ? 'Manager to Employee Feedback Report'
     : '360-Degree Feedback Report';
-  };
-
-  // Handle toggle with localStorage update
-  const handleToggleExpand = () => {
-    setIsReportOpen(prevState => !prevState);
   };
 
   return (
@@ -225,25 +250,18 @@ export function AIReport({
                             <FileDown className="h-4 w-4 mr-2" />
                             Export PDF
                           </Button>
-                          <Button
+                          <LoadingButton
                             variant="outline"
                             size="sm"
                             onClick={handleGenerateReport}
                             disabled={isGeneratingReport || isButtonLoading || !feedbackRequest?.feedback?.length}
+                            isLoading={isGeneratingReport || isButtonLoading}
+                            loadingText={generationSteps[generationStep] || "Starting generation..."}
                             className="whitespace-nowrap"
                           >
-                            {isGeneratingReport || isButtonLoading ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {generationSteps[generationStep] || "Starting generation..."} {elapsedSeconds > 0 ? `(${elapsedSeconds}s)` : ''}
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Regenerate
-                              </>
-                            )}
-                          </Button>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Regenerate
+                          </LoadingButton>
                         </>
                       }
                     />
@@ -260,24 +278,17 @@ export function AIReport({
                           The report content has been removed or is not available. 
                           Click below to regenerate the report.
                         </p>
-                        <Button
+                        <LoadingButton
                           size="default"
                           onClick={handleGenerateReport}
                           disabled={isGeneratingReport || isButtonLoading}
+                          isLoading={isGeneratingReport || isButtonLoading}
+                          loadingText="Preparing report..."
                           className="mt-2 w-full sm:w-auto"
                         >
-                          {isGeneratingReport || isButtonLoading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              <span>Preparing report...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              <span>Regenerate Report</span>
-                            </>
-                          )}
-                        </Button>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          <span>Regenerate Report</span>
+                        </LoadingButton>
                       </>
                     ) : (
                       <>
@@ -299,39 +310,26 @@ export function AIReport({
                 )}
               </div>
             ) : isGeneratingReport ? (
-              <div className="flex flex-col items-center justify-center space-y-6 py-8">
-                <div className="w-full max-w-md space-y-4">
-                  <div className="flex flex-col items-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                    <p className="text-lg font-medium text-primary text-center px-4">
-                      {generationSteps[generationStep]}
+              <LoadingContainer
+                title="Generating AI Report"
+                description={`${generationSteps[generationStep]} (${elapsedSeconds}s elapsed)`}
+                steps={getGenerationSteps()}
+                showProgress={true}
+                size="md"
+                className="py-4"
+              >
+                <div className="space-y-3 mt-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    This process typically takes 30-45 seconds to complete.
+                    We're using AI to carefully analyze all feedback and generate comprehensive insights.
+                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-800 text-center font-medium">
+                      ⚠️ Please do not leave or refresh this page while the report is being generated
                     </p>
-                  </div>
-
-                  <div className="w-full space-y-2 px-4">
-                    <Progress 
-                      value={((generationStep + 1) / generationSteps.length) * 100} 
-                      className="h-2"
-                    />
-                    <div className="flex flex-col sm:flex-row justify-between text-sm text-muted-foreground gap-2 text-center sm:text-left">
-                      <span>Step {generationStep + 1} of {generationSteps.length}</span>
-                      <span>Time elapsed: {elapsedSeconds}s</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 mt-4 px-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      This process typically takes 30-45 seconds to complete.
-                      We're using AI to carefully analyze all feedback and generate comprehensive insights.
-                    </p>
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                      <p className="text-sm text-amber-800 text-center font-medium">
-                        ⚠️ Please do not leave or refresh this page while the report is being generated
-                      </p>
-                    </div>
                   </div>
                 </div>
-              </div>
+              </LoadingContainer>
             ) : (
               <div className="text-center space-y-3 border border-primary/20 rounded-lg p-4 sm:p-6 bg-primary/5">
                 <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
@@ -344,24 +342,17 @@ export function AIReport({
                       {feedbackRequest.feedback.length} {feedbackRequest.feedback.length === 1 ? 'review' : 'reviews'} collected. 
                       Click below to generate an AI-powered analysis of the feedback.
                     </p>
-                    <Button
+                    <LoadingButton
                       size="default"
                       onClick={handleGenerateReport}
                       disabled={isButtonLoading}
+                      isLoading={isButtonLoading}
+                      loadingText="Preparing report..."
                       className="mt-2 w-full sm:w-auto"
                     >
-                      {isButtonLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          <span>Preparing report...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          <span>Generate Report</span>
-                        </>
-                      )}
-                    </Button>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      <span>Generate Report</span>
+                    </LoadingButton>
                   </>
                 ) : (
                   <>
