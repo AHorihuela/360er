@@ -131,7 +131,7 @@ app.post('/api/analyze-feedback-analytics', async (req, res) => {
 1. Key insights/themes from the feedback
 2. Competency scores based on evidence in the feedback
 
-Focus on these core competencies: Communication, Technical Skills, Leadership, Problem Solving, Collaboration, Adaptability, Initiative.
+Focus on these core competencies: Technical/Functional Expertise, Leadership & Influence, Collaboration & Communication, Innovation & Problem-Solving, Execution & Accountability, Emotional Intelligence & Culture Fit, Growth & Development.
 
 Rate each competency from 1-5 based on evidence in the feedback (1=Poor, 2=Below Average, 3=Average, 4=Good, 5=Excellent). Only include competencies that have clear evidence in the feedback.`
         },
@@ -149,7 +149,7 @@ Provide your response in this exact JSON format:
 {
   "competency_scores": [
     {
-      "name": "Communication",
+      "name": "Collaboration & Communication",
       "score": 4,
       "evidence": "Quote from feedback that supports this score",
       "confidence": "high"

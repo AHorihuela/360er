@@ -152,6 +152,24 @@ import { FieldError } from '@/components/ui/loading-variants';
 <FieldError error={["Email is required", "Email must be valid"]} />
 ```
 
+### 📊 Competency System
+
+**IMPORTANT**: The application uses a comprehensive 7-competency system defined in `src/lib/competencies.ts`:
+
+1. **Technical/Functional Expertise** - Role-specific skills and knowledge
+2. **Leadership & Influence** - Taking initiative and guiding others  
+3. **Collaboration & Communication** - Teamwork and communication skills
+4. **Innovation & Problem-Solving** - Creative thinking and problem resolution
+5. **Execution & Accountability** - Getting things done reliably
+6. **Emotional Intelligence & Culture Fit** - EQ and cultural alignment
+7. **Growth & Development** - Learning and development mindset
+
+**Key Features**:
+- **Shows ALL competencies** - Even those without AI scores display as "Not assessed"
+- **AI Mapping** - Simple AI competency names automatically map to comprehensive system
+- **Evidence Support** - Displays supporting quotes when available
+- **Confidence Indicators** - Shows assessment confidence levels
+
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 
 These patterns are inconsistent and should be replaced with unified design system components:
@@ -285,50 +303,3 @@ interface CompetencyAnalysisProps {
 
 ### TeamSummaryStats
 **Location**: `src/components/dashboard/TeamSummaryStats.tsx`
-**Purpose**: Provides team-level analytics summary.
-**Features**:
-- Employee coverage metrics
-- Review completion stats
-- Evidence distribution
-- Confidence aggregation
-- Team-wide score analysis
-
-## Dashboard Data Management Hooks 🏗️
-
-### Core Dashboard Architecture
-Our dashboard data management uses a modular hook architecture for improved maintainability, performance, and testability.
-
-### useDashboardData (Main Orchestrator)
-**Location**: `src/hooks/useDashboardData.ts`
-**Purpose**: Main dashboard data orchestrator hook (refactored from 563 to ~120 lines)
-**Features**:
-- Orchestrates all dashboard data loading
-- Manages loading states and error handling
-- Coordinates between focused data hooks
-- Provides unified dashboard state
-- Uses Promise.all for concurrent data fetching
-
-**Key Improvements**:
-- 65% reduction in complexity
-- Concurrent data loading with Promise.all
-- Improved error handling and state management
-- Better separation of concerns
-
-### useEmployeesData
-**Location**: `src/hooks/useEmployeesData.ts` (66 lines)
-**Purpose**: Dedicated employee data management
-**Features**:
-- Fetches and manages employee list
-- Handles employee filtering
-- Manages employee-related loading states
-- Provides employee CRUD operations
-
-**Returns**:
-```typescript
-{
-  employees: Employee[];
-  loading: boolean;
-  error: string | null;
-  refreshEmployees: () => Promise<void>;
-}
-```
