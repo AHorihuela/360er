@@ -78,7 +78,7 @@ export function InsightContent({ insight }: Props) {
         description: aiCompetency?.description || '',
         evidenceCount: aiCompetency?.evidenceCount || 0,
         roleSpecificNotes: aiCompetency?.roleSpecificNotes || '',
-        evidenceQuotes: aiCompetency?.evidenceQuotes || [],
+        evidenceQuotes: aiCompetency?.evidence ? [aiCompetency.evidence] : (aiCompetency?.evidenceQuotes || []),
         details: competencyDef,
         hasScore: !!aiCompetency
       } as CompetencyDetail;

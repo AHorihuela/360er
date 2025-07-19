@@ -180,9 +180,17 @@ import { FieldError } from '@/components/ui/loading-variants';
 **Generate Report Button Enhancement**:
 - Refactored LoadingButton to use actual shadcn Button component
 - Applied `variant="outline"` for minimalistic white button design
+- **Improved hover color**: Changed from ugly yellow accent to subtle `hover:bg-gray-50` for better UX
 - Added proper visual styling (background, border, shadow, hover states)
 - Improved user experience with clear call-to-action appearance
 - Better contrast and accessibility compared to previous orange/colored styling
+
+**Supporting Evidence Display Fix**:
+- **Fixed missing Supporting Evidence** in competency assessments
+- **Root cause**: API returns `evidence` string, frontend expected `evidenceQuotes` array
+- **Solution**: Updated frontend to convert API `evidence` field to `evidenceQuotes` array
+- **Added TypeScript support** for `evidence` field in `CompetencyScore` interface
+- Supporting Evidence now properly displays under each competency with quotes
 
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 
