@@ -2,6 +2,144 @@
 
 This document serves as a catalog of reusable components across the application. Each component is documented with its purpose, props, and usage examples.
 
+## 🎨 Design System Components (PREFERRED)
+
+**IMPORTANT**: Always use these unified design system components instead of creating inline implementations. This ensures consistency, maintainability, and accessibility across the application.
+
+### Loading System Components
+**Location**: `src/components/ui/loading-variants.tsx`
+
+#### LoadingSpinner
+**Purpose**: Unified spinner component replacing all `Loader2` instances.
+**Usage**: 
+```typescript
+import { LoadingSpinner } from '@/components/ui/loading-variants';
+
+// Replace: <Loader2 className="h-4 w-4 animate-spin" />
+<LoadingSpinner size="sm" color="primary" />
+```
+
+**Props**:
+- `size`: "xs" | "sm" | "md" | "lg"
+- `color`: "primary" | "muted"
+
+#### LoadingButton
+**Purpose**: Button with integrated loading state, replacing inline loading implementations.
+**Usage**:
+```typescript
+import { LoadingButton } from '@/components/ui/loading-variants';
+
+// Replace manual loading button implementations
+<LoadingButton
+  isLoading={isSubmitting}
+  loadingText="Saving..."
+  disabled={!isValid}
+  onClick={handleSubmit}
+>
+  Submit
+</LoadingButton>
+```
+
+**Props**:
+- `isLoading`: boolean
+- `loadingText`: string
+- `size`: "sm" | "default" | "lg" | "icon"
+- Standard button props
+
+#### LoadingContainer
+**Purpose**: Complex loading scenarios with progress steps and descriptions.
+**Usage**:
+```typescript
+import { LoadingContainer } from '@/components/ui/loading-variants';
+
+<LoadingContainer
+  title="Processing Data"
+  description="Analyzing feedback and generating insights..."
+  steps={progressSteps}
+  showProgress={true}
+  size="md"
+/>
+```
+
+#### InlineLoading
+**Purpose**: Simple text + spinner combinations.
+**Usage**:
+```typescript
+import { InlineLoading } from '@/components/ui/loading-variants';
+
+// Replace: <Loader2 className="..." /><span>Loading...</span>
+<InlineLoading text="Loading questions..." size="sm" color="primary" />
+```
+
+### Progress System Components
+
+#### ProgressSteps
+**Purpose**: Step-by-step progress visualization with status indicators.
+**Usage**:
+```typescript
+import { ProgressSteps } from '@/components/ui/loading-variants';
+
+const steps: ProgressStep[] = [
+  { id: 'step1', label: 'Processing', status: 'completed' },
+  { id: 'step2', label: 'Analyzing', status: 'in_progress' },
+  { id: 'step3', label: 'Finalizing', status: 'pending' }
+];
+
+<ProgressSteps steps={steps} layout="vertical" showDescriptions={true} />
+```
+
+#### StatusIcon
+**Purpose**: Individual status indicators with proper styling and animations.
+**Status Types**: 'pending' | 'in_progress' | 'completed' | 'error' | 'cancelled'
+
+## 🚫 DEPRECATED PATTERNS (DO NOT USE)
+
+**❌ Avoid These Patterns:**
+```typescript
+// DON'T: Manual Loader2 implementations
+<Loader2 className="h-4 w-4 animate-spin" />
+
+// DON'T: Inline loading button logic
+{isLoading ? (
+  <>
+    <Loader2 className="..." />
+    <span>Loading...</span>
+  </>
+) : (
+  <>
+    <Icon />
+    <span>Submit</span>
+  </>
+)}
+
+// DON'T: Custom progress implementations
+<div className="custom-loading-state">
+  <div className="spinner" />
+  <div className="progress-bar" />
+</div>
+```
+
+**✅ Use These Instead:**
+```typescript
+// DO: Use design system components
+<LoadingSpinner size="sm" color="primary" />
+<LoadingButton isLoading={isLoading} loadingText="Processing...">Submit</LoadingButton>
+<LoadingContainer title="Processing" steps={steps} />
+```
+
+## 📋 Migration Checklist
+
+When creating new components or updating existing ones:
+
+- [ ] ✅ Use `LoadingSpinner` instead of `Loader2`
+- [ ] ✅ Use `LoadingButton` for buttons with loading states
+- [ ] ✅ Use `LoadingContainer` for complex multi-step processes
+- [ ] ✅ Use `InlineLoading` for simple text + spinner combinations
+- [ ] ✅ Follow size and color conventions from design tokens
+- [ ] ✅ Handle loading states at component level through props
+- [ ] ✅ Test loading states in unit tests
+- [ ] ✅ Ensure accessibility with proper ARIA labels
+
 ## UI Components
 
 ### CompetencySummaryCard
