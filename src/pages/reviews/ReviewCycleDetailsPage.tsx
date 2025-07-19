@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -25,6 +25,7 @@ import { useReviewCycle } from '@/hooks/useReviewCycle';
 export function ReviewCycleDetailsPage() {
   const { cycleId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { 
     isLoading,
@@ -50,6 +51,17 @@ export function ReviewCycleDetailsPage() {
   
   // Cycle owner email for master mode
   const [cycleOwnerEmail, setCycleOwnerEmail] = useState<string | null>(null);
+
+  // Auto-open Add Employees dialog for newly created cycles
+  useEffect(() => {
+    if (searchParams.get('new') === 'true' && reviewCycle) {
+      setShowAddEmployeesDialog(true);
+      // Clear the parameter to avoid re-opening on refresh
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('new');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, reviewCycle, setSearchParams]);
 
   useEffect(() => {
     if (showAddEmployeesDialog) {
