@@ -91,6 +91,7 @@ export interface OpenAICompetencyScore {
   evidenceCount: number;
   effectiveEvidenceCount: number;
   evidenceQuotes?: string[];
+  evidence?: string; // Evidence text from analytics API
 }
 
 export interface OpenAIAggregateSection {

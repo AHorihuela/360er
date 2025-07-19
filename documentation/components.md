@@ -187,10 +187,16 @@ import { FieldError } from '@/components/ui/loading-variants';
 
 **Supporting Evidence Display Fix**:
 - **Fixed missing Supporting Evidence** in competency assessments
-- **Root cause**: API returns `evidence` string, frontend expected `evidenceQuotes` array
-- **Solution**: Updated frontend to convert API `evidence` field to `evidenceQuotes` array
-- **Added TypeScript support** for `evidence` field in `CompetencyScore` interface
-- Supporting Evidence now properly displays under each competency with quotes
+- **Root cause**: Multiple data transformation issues in analytics pipeline
+  1. API returns `evidence` string, frontend expected `evidenceQuotes` array
+  2. Frontend mapping was incomplete in InsightContent component
+  3. Analytics processor wasn't transforming evidence field properly
+- **Solution**: Fixed the complete data pipeline
+  1. Updated `OpenAICompetencyScore` interface to include `evidence` field
+  2. Fixed `createRelationshipInsight` transformation: `score.evidence ? [score.evidence] : (score.evidenceQuotes || [])`
+  3. Updated `combineEvidenceQuotes` function to handle both evidence formats
+  4. Enhanced frontend mapping in InsightContent component
+- **Result**: Supporting Evidence now properly displays under each competency with actual feedback quotes
 
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 

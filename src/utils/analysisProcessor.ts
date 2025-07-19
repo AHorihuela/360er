@@ -209,7 +209,7 @@ function createRelationshipInsight(
       description: score.description,
       evidenceCount: score.evidenceCount,
       roleSpecificNotes: "",
-      evidenceQuotes: score.evidenceQuotes
+      evidenceQuotes: score.evidence ? [score.evidence] : (score.evidenceQuotes || [])
     })) || [],
     responseCount,
     uniquePerspectives: []
@@ -248,10 +248,16 @@ function combineEvidenceQuotes(
   peerScore?: OpenAICompetencyScore,
   juniorScore?: OpenAICompetencyScore
 ) {
+  const getEvidence = (score?: OpenAICompetencyScore): string[] => {
+    if (!score) return [];
+    if (score.evidence) return [score.evidence];
+    return score.evidenceQuotes || [];
+  };
+
   return [
-    ...(seniorScore?.evidenceQuotes ?? []),
-    ...(peerScore?.evidenceQuotes ?? []),
-    ...(juniorScore?.evidenceQuotes ?? [])
+    ...getEvidence(seniorScore),
+    ...getEvidence(peerScore),
+    ...getEvidence(juniorScore)
   ];
 }
 
