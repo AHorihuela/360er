@@ -322,6 +322,7 @@ export function ReportSection({
           elapsedSeconds={elapsedSeconds}
           surveyType={reviewCycle?.type}
           isSaving={isSaving}
+          hideHeader={true}
         />
       )}
     </section>

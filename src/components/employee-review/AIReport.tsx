@@ -9,6 +9,7 @@ import { MarkdownEditor } from '@/components/feedback/MarkdownEditor';
 import { useToast } from '@/components/ui/use-toast';
 import { ReviewCycleType } from '@/types/survey';
 import { LoadingSpinner, LoadingButton, ProgressStep, LoadingContainer } from '@/components/ui/loading-variants';
+import { Badge } from '@/components/ui/badge';
 
 interface Props {
   feedbackRequest: {
@@ -208,11 +209,6 @@ export function AIReport({
       {!hideHeader && (
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">AI-Generated Report</h2>
-          {aiReport?.created_at && (
-            <p className="text-sm text-muted-foreground">
-              Generated {formatLastAnalyzed(aiReport.created_at)}
-            </p>
-          )}
         </div>
       )}
 
@@ -223,7 +219,12 @@ export function AIReport({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CardTitle className="text-lg">Performance Summary</CardTitle>
+              <CardTitle className="text-lg">AI Report</CardTitle>
+              {aiReport?.created_at && (
+                <Badge variant="outline" className="text-xs">
+                  Generated {formatLastAnalyzed(aiReport.created_at)}
+                </Badge>
+              )}
             </div>
             <ChevronDown className={cn("h-5 w-5 transition-transform", isReportOpen && "rotate-180")} />
           </div>
@@ -267,24 +268,26 @@ export function AIReport({
                     />
                   </div>
                 ) : (
-                  <div className="text-center space-y-3 border border-primary/20 rounded-lg p-4 sm:p-6 bg-primary/5">
+                  <div className="text-center space-y-4 border border-primary/20 rounded-lg p-6 bg-primary/5">
                     <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
                     {feedbackRequest?.feedback?.length ? (
                       <>
-                        <h3 className="text-base font-semibold">Report Content Missing</h3>
-                        <p className="text-muted-foreground text-sm px-2">
-                          The report content has been removed or is not available. 
-                          Click below to regenerate the report.
-                        </p>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold">Report Content Missing</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                            The report content has been removed or is not available. 
+                            Click below to regenerate the report.
+                          </p>
+                        </div>
                         <LoadingButton
-                          size="default"
+                          size="lg"
                           onClick={handleGenerateReport}
                           disabled={isGeneratingReport || isButtonLoading}
                           isLoading={isGeneratingReport || isButtonLoading}
                           loadingText="Preparing report..."
-                          className="mt-2 w-full sm:w-auto"
+                          className="mt-4"
                         >
                           <Sparkles className="h-4 w-4 mr-2" />
                           <span>Regenerate Report</span>
@@ -292,14 +295,16 @@ export function AIReport({
                       </>
                     ) : (
                       <>
-                        <h3 className="text-base font-semibold">Waiting for Reviews</h3>
-                        <p className="text-muted-foreground text-sm px-2">
-                          No reviews have been submitted yet. The AI report will be available once feedback is collected.
-                        </p>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold">Waiting for Reviews</h3>
+                          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                            No reviews have been submitted yet. The AI report will be available once feedback is collected.
+                          </p>
+                        </div>
                         <Button
-                          size="default"
+                          size="lg"
                           disabled
-                          className="mt-2 w-full sm:w-auto"
+                          className="mt-4"
                         >
                           <Sparkles className="h-4 w-4 mr-2" />
                           Generate Report
@@ -331,24 +336,26 @@ export function AIReport({
                 </div>
               </LoadingContainer>
             ) : (
-              <div className="text-center space-y-3 border border-primary/20 rounded-lg p-4 sm:p-6 bg-primary/5">
+              <div className="text-center space-y-4 border border-primary/20 rounded-lg p-6 bg-primary/5">
                 <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto">
                   <FileText className="h-6 w-6 text-primary" />
                 </div>
                 {feedbackRequest?.feedback?.length ? (
                   <>
-                    <h3 className="text-base font-semibold">Ready to Generate Report</h3>
-                    <p className="text-muted-foreground text-sm px-2">
-                      {feedbackRequest.feedback.length} {feedbackRequest.feedback.length === 1 ? 'review' : 'reviews'} collected. 
-                      Click below to generate an AI-powered analysis of the feedback.
-                    </p>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
+                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        {feedbackRequest.feedback.length} {feedbackRequest.feedback.length === 1 ? 'review' : 'reviews'} collected. 
+                        Click below to generate an AI-powered analysis of the feedback.
+                      </p>
+                    </div>
                     <LoadingButton
-                      size="default"
+                      size="lg"
                       onClick={handleGenerateReport}
                       disabled={isButtonLoading}
                       isLoading={isButtonLoading}
                       loadingText="Preparing report..."
-                      className="mt-2 w-full sm:w-auto"
+                      className="mt-4"
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       <span>Generate Report</span>
@@ -356,14 +363,16 @@ export function AIReport({
                   </>
                 ) : (
                   <>
-                    <h3 className="text-base font-semibold">Waiting for Reviews</h3>
-                    <p className="text-muted-foreground text-sm px-2">
-                      No reviews have been submitted yet. The AI report will be available once feedback is collected.
-                    </p>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">Waiting for Reviews</h3>
+                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        No reviews have been submitted yet. The AI report will be available once feedback is collected.
+                      </p>
+                    </div>
                     <Button
-                      size="default"
+                      size="lg"
                       disabled
-                      className="mt-2 w-full sm:w-auto"
+                      className="mt-4"
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Generate Report

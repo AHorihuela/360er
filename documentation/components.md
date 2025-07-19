@@ -170,6 +170,20 @@ import { FieldError } from '@/components/ui/loading-variants';
 - **Evidence Support** - Displays supporting quotes when available
 - **Confidence Indicators** - Shows assessment confidence levels
 
+### 🎨 UI/UX Improvements
+
+**Header Hierarchy Simplification**:
+- **Removed redundant headers** in 360 review report generation
+- **Before**: "Generate Report" → "AI-Generated Report" → "Performance Summary" 
+- **After**: "Generate Report" → "AI Report" (clean, single hierarchy)
+- **Implementation**: Use `hideHeader={true}` on AIReport when embedded in sections
+
+**Enhanced Button Styling**:
+- **Large, prominent Generate Report buttons** using `size="lg"`
+- **Consistent LoadingButton usage** with proper loading states
+- **Clear visual hierarchy** with proper spacing and grouping
+- **Professional appearance** following design system patterns
+
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 
 These patterns are inconsistent and should be replaced with unified design system components:
