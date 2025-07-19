@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Send, User } from 'lucide-react';
+import { Send, User } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { useManagerFeedback } from '@/hooks/useManagerFeedback';
 import { SearchableEmployeeSelector } from './SearchableEmployeeSelector';
@@ -223,7 +224,7 @@ export function FeedbackInputForm({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LoadingSpinner size="sm" color="primary" />
                 <span>Submitting Feedback...</span>
               </>
             ) : (

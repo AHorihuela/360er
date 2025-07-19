@@ -114,6 +114,30 @@ export const colors = {
       border: "border-amber-200",
       hover: "hover:bg-amber-200"
     }
+  },
+
+  // Loading state colors
+  loading: {
+    primary: {
+      spinner: "text-primary",
+      background: "bg-background"
+    },
+    muted: {
+      spinner: "text-muted-foreground", 
+      background: "bg-muted"
+    },
+    success: {
+      spinner: "text-green-500",
+      background: "bg-green-50"
+    },
+    error: {
+      spinner: "text-red-500",
+      background: "bg-red-50"
+    },
+    warning: {
+      spinner: "text-amber-500",
+      background: "bg-amber-50"
+    }
   }
 } as const;
 
@@ -126,6 +150,43 @@ export const spacing = {
   badge: {
     gap: "gap-2",
     margin: "mt-0.5"
+  },
+  loading: {
+    container: {
+      sm: "p-2",
+      md: "p-4",
+      lg: "p-6"
+    },
+    gap: {
+      sm: "gap-2",
+      md: "gap-3", 
+      lg: "gap-4"
+    }
+  }
+} as const;
+
+export const sizes = {
+  // Loading spinner sizes
+  spinner: {
+    xs: "h-3 w-3",
+    sm: "h-4 w-4",
+    md: "h-6 w-6", 
+    lg: "h-8 w-8",
+    xl: "h-12 w-12"
+  },
+  // Status icon sizes
+  statusIcon: {
+    sm: "h-4 w-4",
+    md: "h-5 w-5",
+    lg: "h-6 w-6"
+  }
+} as const;
+
+export const animations = {
+  loading: {
+    spin: "animate-spin",
+    pulse: "animate-pulse",
+    ping: "animate-ping"
   }
 } as const;
 
@@ -161,4 +222,9 @@ export function getRelationshipColorClasses(variant: keyof typeof colors.relatio
 export function getFeatureColorClasses(variant: keyof typeof colors.feature) {
   const color = colors.feature[variant];
   return `${color.bg} ${color.text} ${color.border} ${color.hover}`;
-} 
+}
+
+export function getLoadingColorClasses(variant: keyof typeof colors.loading) {
+  const color = colors.loading[variant];
+  return `${color.spinner} ${color.background}`;
+}
