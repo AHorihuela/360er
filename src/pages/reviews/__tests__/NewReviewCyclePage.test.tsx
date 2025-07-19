@@ -245,7 +245,7 @@ describe('NewReviewCyclePage', () => {
         title: "Success",
         description: "Review cycle created successfully",
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/reviews');
+      expect(mockNavigate).toHaveBeenCalledWith('/reviews/123');
     }, { timeout: 3000 });
   });
 

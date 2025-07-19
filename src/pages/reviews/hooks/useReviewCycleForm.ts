@@ -61,7 +61,7 @@ export function useReviewCycleForm() {
         description: "Review cycle created successfully",
       });
 
-      navigate('/reviews');
+      navigate(`/reviews/${data.id}`);
     } catch (error) {
       console.error('Error creating review cycle:', error);
       toast({
