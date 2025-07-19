@@ -105,6 +105,7 @@ interface LoadingButtonProps {
   loadingText?: string;
   children: React.ReactNode;
   className?: string;
+  size?: "sm" | "default" | "lg" | "icon";
   [key: string]: any; // For spreading button props
 }
 
@@ -113,19 +114,36 @@ export function LoadingButton({
   loadingText = "Loading...",
   children,
   className,
+  size = "default",
   ...props
 }: LoadingButtonProps) {
+  const sizeClasses = {
+    default: "h-9 px-4 py-2",
+    sm: "h-8 rounded-md px-3 text-xs",
+    lg: "h-10 rounded-md px-8",
+    icon: "h-9 w-9"
+  };
+
   return (
     <button
       {...props}
       disabled={isLoading || props.disabled}
       className={cn(
-        "flex items-center justify-center gap-2",
+        // Base button styles matching shadcn Button component
+        "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        sizeClasses[size],
+        "gap-2", // For spacing between spinner and text
         className
       )}
     >
-      {isLoading && <LoadingSpinner size="sm" color="primary" />}
-      <span>{isLoading ? loadingText : children}</span>
+      {isLoading ? (
+        <>
+          <LoadingSpinner size="sm" color="primary" />
+          <span>{loadingText}</span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }
