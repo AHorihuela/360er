@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { LoadingButton, InlineLoading } from "@/components/ui/loading-variants"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from '@/lib/utils'
@@ -112,7 +112,7 @@ export function AddEmployeesDialog({
           </div>
         ) : isLoading ? (
           <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <InlineLoading text="Loading employees..." />
           </div>
         ) : availableEmployees.length > 0 ? (
           <div className="p-4 space-y-4">
@@ -151,21 +151,14 @@ export function AddEmployeesDialog({
               >
                 Create New
               </Button>
-              <Button
+              <LoadingButton
                 onClick={handleAddEmployees}
-                disabled={selectedEmployeeIds.size === 0 || isAddingEmployees}
+                disabled={selectedEmployeeIds.size === 0}
+                isLoading={isAddingEmployees}
+                loadingText="Adding..."
               >
-                {isAddingEmployees ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    Add ({selectedEmployeeIds.size})
-                  </>
-                )}
-              </Button>
+                Add ({selectedEmployeeIds.size})
+              </LoadingButton>
             </div>
           </div>
         ) : (

@@ -127,7 +127,7 @@ export function AiFeedbackReview({
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg sm:text-xl">AI Feedback Review</CardTitle>
-          {aiResponse && (
+          {aiResponse && aiResponse.overallQuality && (
             <Badge 
               className={qualityColors[aiResponse.overallQuality]}
               variant={aiResponse.overallQuality === 'needs_improvement' ? 'destructive' : 
@@ -137,7 +137,7 @@ export function AiFeedbackReview({
             </Badge>
           )}
         </div>
-        {aiResponse && (
+        {aiResponse && aiResponse.summary && (
           <CardDescription className="text-sm sm:text-base text-gray-700 leading-relaxed mt-2">
             {aiResponse.summary}
           </CardDescription>
@@ -166,7 +166,7 @@ export function AiFeedbackReview({
               <TabsTrigger value="edit" className="text-xs sm:text-sm">Edit & Preview</TabsTrigger>
               <TabsTrigger value="suggestions" className="text-xs sm:text-sm">
                 AI Suggestions
-                {aiResponse && aiResponse.suggestions.length > 0 && (
+                {aiResponse && aiResponse.suggestions && aiResponse.suggestions.length > 0 && (
                   <Badge 
                     variant="outline" 
                     className="ml-2 text-[11px] h-5 min-w-5 px-1.5 bg-black text-white rounded-full">
@@ -203,7 +203,7 @@ export function AiFeedbackReview({
                 {/* Critical Suggestions */}
                 <div className="space-y-2 sm:space-y-3">
                   <h4 className="text-sm sm:text-base font-medium">Critical Improvements Needed</h4>
-                  {aiResponse.suggestions
+                  {aiResponse.suggestions && aiResponse.suggestions
                     .filter(s => s.type === 'critical')
                     .map((suggestion, index) => (
                       <div key={index} className="rounded-lg border bg-red-50 p-3 sm:p-4 space-y-2">
@@ -225,7 +225,7 @@ export function AiFeedbackReview({
                 {/* Enhancement Suggestions */}
                 <div className="space-y-2 sm:space-y-3">
                   <h4 className="text-sm sm:text-base font-medium">Suggested Enhancements</h4>
-                  {aiResponse.suggestions
+                  {aiResponse.suggestions && aiResponse.suggestions
                     .filter(s => s.type === 'enhancement')
                     .map((suggestion, index) => (
                       <div key={index} className="rounded-lg border bg-blue-50 p-3 sm:p-4 space-y-2">

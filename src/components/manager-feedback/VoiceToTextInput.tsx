@@ -7,7 +7,8 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import { Mic, MicOff, Square, Loader2, AlertCircle, Smartphone, Info } from 'lucide-react';
+import { Mic, MicOff, Square, AlertCircle, Smartphone, Info } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useWhisperVoiceToText } from '@/hooks/useWhisperVoiceToText';
 import { cn } from '@/lib/utils';
 import { 
@@ -160,7 +161,7 @@ export function VoiceToTextInput({
   if (isInitializing) {
     return (
       <div className={cn("flex items-center justify-center p-4", className)}>
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoadingSpinner size="sm" color="primary" />
         <span className="ml-2 text-sm text-muted-foreground">Initializing voice input...</span>
       </div>
     );
@@ -247,14 +248,14 @@ export function VoiceToTextInput({
                 )}>
                   {isProcessing ? (
                     isRecordingStarting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LoadingSpinner size="sm" color="primary" />
                     ) : isRecording ? (
                       <div className="relative">
                         <Square className="h-4 w-4" />
                         <div className="absolute -inset-1 bg-red-500 rounded opacity-30 animate-ping" />
                       </div>
                     ) : (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LoadingSpinner size="sm" color="primary" />
                     )
                   ) : (
                     <Mic className={cn(

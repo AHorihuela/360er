@@ -38,7 +38,7 @@ app.post('/api/transcribe', audioUpload, transcribeAudio);
 // Serve static files from the dist directory (after API routes)
 app.use(express.static(path.join(__dirname, '../../dist')));
 
-// Analyze feedback endpoint (kept in main file for now - could be moved to routes later)
+// Analyze feedback endpoint with structured response for AI suggestions
 app.post('/api/analyze-feedback', async (req, res) => {
   try {
     console.log('Received request body:', JSON.stringify(req.body, null, 2));
@@ -49,49 +49,56 @@ app.post('/api/analyze-feedback', async (req, res) => {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    // Prepare the feedback text for analysis
-    const feedbackText = `
-Relationship: ${relationship}
-Strengths: ${strengths}
-Areas for Improvement: ${areas_for_improvement}
-    `.trim();
-
     const openai = getOpenAIClient();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content: `You are an AI assistant that analyzes 360-degree feedback and provides insights.
-          
-Analyze the feedback and provide:
-1. Key themes in the feedback
-2. Specific actionable recommendations
-3. Areas of strength to build upon
-4. Growth opportunities
+        { 
+          role: "system", 
+          content: `You are an expert in performance reviews and feedback. Analyze the provided feedback and provide structured suggestions for improvement. Focus on:
 
-Be constructive, specific, and professional. Focus on actionable insights that can help with professional development.`
+1. Clarity: Is the feedback clear and easy to understand?
+2. Specificity: Does it include specific examples and behaviors?
+3. Actionability: Are there concrete suggestions for improvement?
+4. Tone: Is the feedback constructive and professional?
+5. Completeness: Are all aspects adequately addressed?
+
+Categorize suggestions as either 'critical' (must be addressed) or 'enhancement' (would improve but not essential).`
         },
-        {
-          role: "user",
-          content: `Please analyze this feedback: ${feedbackText}`
+        { 
+          role: "user", 
+          content: `Please analyze this feedback:
+
+Strengths:
+${strengths}
+
+Areas for Improvement:
+${areas_for_improvement}
+
+Provide your response in this exact JSON format:
+{
+  "overallQuality": "excellent" | "good" | "needs_improvement",
+  "summary": "A brief 1-2 sentence overview",
+  "suggestions": [
+    {
+      "type": "critical" | "enhancement",
+      "category": "clarity" | "specificity" | "actionability" | "tone" | "completeness",
+      "suggestion": "The specific suggestion",
+      "context": "The relevant text from the feedback (if applicable)"
+    }
+  ]
+}`
         }
       ],
       temperature: 0.7,
-      max_tokens: 1000
+      response_format: { type: "json_object" }
     });
 
-    const analysis = completion.choices[0].message.content;
+    const analysis = JSON.parse(completion.choices[0].message.content!);
+    console.log('AI Analysis Response:', JSON.stringify(analysis, null, 2));
     
-    res.json({
-      analysis,
-      feedback: {
-        relationship,
-        strengths,
-        areas_for_improvement
-      }
-    });
+    res.json(analysis);
   } catch (error) {
     console.error('OpenAI API error:', error);
     res.status(500).json({

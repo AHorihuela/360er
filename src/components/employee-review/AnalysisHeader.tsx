@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-variants";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatLastAnalyzed } from "@/utils/feedback";
 
@@ -78,45 +79,29 @@ export function AnalysisHeader({
         )}
       </div>
       {needsInitialAnalysis ? (
-        <Button
+        <LoadingButton
           variant="default"
           size="sm"
           onClick={onAnalyze}
-          disabled={isAnalyzing}
+          isLoading={isAnalyzing}
           className="h-8 text-xs"
+          loadingText="Analyzing..."
         >
-          {isAnalyzing ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span className="ml-1.5">Analyzing...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span className="ml-1.5">Generate Analysis</span>
-            </>
-          )}
-        </Button>
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span className="ml-1.5">Generate Analysis</span>
+        </LoadingButton>
       ) : shouldShowUpdateButton && (
-        <Button
+        <LoadingButton
           variant="outline"
           size="sm"
           onClick={onAnalyze}
-          disabled={isAnalyzing}
+          isLoading={isAnalyzing}
           className="h-8 text-xs"
+          loadingText="Analyzing..."
         >
-          {isAnalyzing ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span className="ml-1.5">Analyzing...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span className="ml-1.5">Update Analysis</span>
-            </>
-          )}
-        </Button>
+          <RefreshCw className="h-3.5 w-3.5" />
+          <span className="ml-1.5">Update Analysis</span>
+        </LoadingButton>
       )}
     </div>
   );

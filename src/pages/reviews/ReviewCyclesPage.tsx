@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { LoadingButton, InlineLoading } from '@/components/ui/loading-variants';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, ChevronRight, Calendar, Users, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Calendar, Users } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Card,
@@ -551,7 +553,7 @@ export function ReviewCyclesPage() {
         
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <InlineLoading text="Loading review cycles..." />
           </div>
         ) : reviewCycles.length === 0 ? (
           <div className="text-center py-12 border border-dashed rounded-lg">
@@ -764,7 +766,7 @@ export function ReviewCyclesPage() {
                 className="text-destructive hover:text-destructive-foreground p-1 h-auto"
               >
                 {isDeletingId === cycle.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <LoadingSpinner size="sm" color="error" />
                 ) : (
                   <Trash2 className="h-3 w-3" />
                 )}

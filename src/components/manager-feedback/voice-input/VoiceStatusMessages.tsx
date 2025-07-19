@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/badge-variants';
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 interface VoiceStatusMessagesProps {
   isProcessing: boolean;
@@ -46,7 +47,7 @@ export function VoiceStatusMessages({
     return (
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-center gap-3">
-          <Loader2 className="h-5 w-5 text-blue-600 animate-spin flex-shrink-0" />
+          <LoadingSpinner size="md" color="primary" className="flex-shrink-0" />
           <div className="space-y-1">
             <StatusBadge status="In Progress">
               🎯 Processing Audio

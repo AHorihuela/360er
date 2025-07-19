@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-variants';
 import { SurveyQuestion, StructuredResponses, ReviewCycleType } from '@/types/survey';
 import { LikertScaleQuestion } from './LikertScaleQuestion';
 import { OpenEndedQuestion } from './OpenEndedQuestion';
-import { ArrowLeft, ArrowRight, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
@@ -222,25 +223,18 @@ export function DynamicSurveyForm({
             <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         ) : (
-          <Button
+          <LoadingButton
             type="button"
             onClick={handleSubmit}
-            disabled={!allValid || isSubmitting}
+            disabled={!allValid}
+            isLoading={isSubmitting}
             className="bg-green-600 hover:bg-green-700 w-28 sm:w-32 h-10"
             size="sm"
+            loadingText="Submitting..."
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                <span className="text-xs sm:text-sm">Submitting...</span>
-              </>
-            ) : (
-              <>
-                <span className="text-xs sm:text-sm">Submit</span>
-                <Send className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
-              </>
-            )}
-          </Button>
+            <span className="text-xs sm:text-sm">Submit</span>
+            <Send className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+          </LoadingButton>
         )}
       </div>
     </div>
