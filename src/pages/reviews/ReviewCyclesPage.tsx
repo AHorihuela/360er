@@ -650,7 +650,7 @@ export function ReviewCyclesPage() {
     return (
       <Card 
         key={cycle.id} 
-        className={`relative cursor-pointer hover:shadow-md transition-all duration-200 ${
+        className={`relative cursor-pointer hover:shadow-md transition-all duration-200 flex flex-col min-h-[280px] ${
           !isOwnedByCurrentUser ? "border-blue-200 bg-blue-50/30" : ""
         }`}
         onClick={() => navigate(`/reviews/${cycle.id}`)}
@@ -658,10 +658,15 @@ export function ReviewCyclesPage() {
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="space-y-1">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base font-semibold truncate leading-tight">{cycle.title}</CardTitle>
-                  <CycleTypeBadge type={cycle.type} className="mt-0.5">
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base font-semibold leading-tight break-words">{cycle.title}</CardTitle>
+                    <StatusBadge status={getStatusText(cycle)} className="flex-shrink-0">
+                      {getStatusText(cycle)}
+                    </StatusBadge>
+                  </div>
+                  <CycleTypeBadge type={cycle.type} className="w-fit">
                     {getCycleTypeLabel(cycle.type)}
                   </CycleTypeBadge>
                 </div>
@@ -681,9 +686,7 @@ export function ReviewCyclesPage() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <StatusBadge status={getStatusText(cycle)}>
-                {getStatusText(cycle)}
-              </StatusBadge>
+              {/* Removed StatusBadge from here since it's now next to the title */}
             </div>
           </div>
           
@@ -702,7 +705,7 @@ export function ReviewCyclesPage() {
         </CardHeader>
         
         {/* Content section - show different content based on cycle type */}
-        <CardContent className="py-4">
+        <CardContent className="py-4 flex-1">
           {cycle.type === 'manager_to_employee' ? (
             /* Manager feedback cycles show recent activity */
             <div className="space-y-3">
