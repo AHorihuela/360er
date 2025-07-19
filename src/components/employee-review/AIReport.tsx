@@ -283,6 +283,7 @@ export function AIReport({
                         </div>
                         <LoadingButton
                           size="lg"
+                          variant="outline"
                           onClick={handleGenerateReport}
                           disabled={isGeneratingReport || isButtonLoading}
                           isLoading={isGeneratingReport || isButtonLoading}
@@ -303,6 +304,7 @@ export function AIReport({
                         </div>
                         <Button
                           size="lg"
+                          variant="outline"
                           disabled
                           className="mt-4"
                         >
@@ -351,6 +353,7 @@ export function AIReport({
                     </div>
                     <LoadingButton
                       size="lg"
+                      variant="outline"
                       onClick={handleGenerateReport}
                       disabled={isButtonLoading}
                       isLoading={isButtonLoading}
@@ -369,11 +372,12 @@ export function AIReport({
                         No reviews have been submitted yet. The AI report will be available once feedback is collected.
                       </p>
                     </div>
-                    <Button
-                      size="lg"
-                      disabled
-                      className="mt-4"
-                    >
+                                             <Button
+                           size="lg"
+                           variant="outline"
+                           disabled
+                           className="mt-4"
+                         >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Generate Report
                     </Button>

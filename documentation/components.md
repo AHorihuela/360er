@@ -24,17 +24,17 @@ import { LoadingSpinner } from '@/components/ui/loading-variants';
 - `color`: "primary" | "muted"
 
 #### LoadingButton
-**Purpose**: Button with integrated loading state, replacing inline loading implementations.
+**Purpose**: Buttons with loading states using unified design.
 **Usage**:
 ```typescript
 import { LoadingButton } from '@/components/ui/loading-variants';
 
-// Replace manual loading button implementations
-<LoadingButton
-  isLoading={isSubmitting}
-  loadingText="Saving..."
-  disabled={!isValid}
-  onClick={handleSubmit}
+// Replace: {isLoading ? <Loader2 /> : "Submit"}
+<LoadingButton 
+  isLoading={isSubmitting} 
+  loadingText="Submitting..."
+  variant="outline"
+  size="lg"
 >
   Submit
 </LoadingButton>
@@ -42,9 +42,9 @@ import { LoadingButton } from '@/components/ui/loading-variants';
 
 **Props**:
 - `isLoading`: boolean
-- `loadingText`: string
+- `loadingText`: string  
+- `variant`: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "gradient"
 - `size`: "sm" | "default" | "lg" | "icon"
-- Standard button props
 
 #### LoadingContainer
 **Purpose**: Complex loading scenarios with progress steps and descriptions.
@@ -173,16 +173,16 @@ import { FieldError } from '@/components/ui/loading-variants';
 ### 🎨 UI/UX Improvements
 
 **Header Hierarchy Simplification**:
-- **Removed redundant headers** in 360 review report generation
-- **Before**: "Generate Report" → "AI-Generated Report" → "Performance Summary" 
-- **After**: "Generate Report" → "AI Report" (clean, single hierarchy)
-- **Implementation**: Use `hideHeader={true}` on AIReport when embedded in sections
+- Removed duplicate "Performance Summary" header
+- Renamed "Performance Summary" to "AI Report" for clarity  
+- Made "Generate Report" a prominent button instead of text link
 
-**Enhanced Button Styling**:
-- **Large, prominent Generate Report buttons** using `size="lg"`
-- **Consistent LoadingButton usage** with proper loading states
-- **Clear visual hierarchy** with proper spacing and grouping
-- **Professional appearance** following design system patterns
+**Generate Report Button Enhancement**:
+- Refactored LoadingButton to use actual shadcn Button component
+- Applied `variant="outline"` for minimalistic white button design
+- Added proper visual styling (background, border, shadow, hover states)
+- Improved user experience with clear call-to-action appearance
+- Better contrast and accessibility compared to previous orange/colored styling
 
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 

@@ -25,6 +25,7 @@ import { Progress } from "./progress";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "./card";
 import { spacing } from "@/styles/design-tokens";
 import { AlertTriangle, XCircle, AlertCircle, Info } from "lucide-react";
+import { Button } from "./button";
 
 // Compound loading container component
 interface LoadingContainerProps {
@@ -105,8 +106,9 @@ interface LoadingButtonProps {
   isLoading?: boolean;
   loadingText?: string;
   children: React.ReactNode;
-  className?: string;
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "gradient";
   size?: "sm" | "default" | "lg" | "icon";
+  className?: string;
   [key: string]: any; // For spreading button props
 }
 
@@ -114,28 +116,18 @@ export function LoadingButton({
   isLoading = false,
   loadingText = "Loading...",
   children,
-  className,
+  variant = "default",
   size = "default",
+  className,
   ...props
 }: LoadingButtonProps) {
-  const sizeClasses = {
-    default: "h-9 px-4 py-2",
-    sm: "h-8 rounded-md px-3 text-xs",
-    lg: "h-10 rounded-md px-8",
-    icon: "h-9 w-9"
-  };
-
   return (
-    <button
+    <Button
       {...props}
+      variant={variant}
+      size={size}
       disabled={isLoading || props.disabled}
-      className={cn(
-        // Base button styles matching shadcn Button component
-        "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        sizeClasses[size],
-        "gap-2", // For spacing between spinner and text
-        className
-      )}
+      className={cn("gap-2", className)}
     >
       {isLoading ? (
         <>
@@ -145,7 +137,7 @@ export function LoadingButton({
       ) : (
         children
       )}
-    </button>
+    </Button>
   );
 }
 
