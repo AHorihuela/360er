@@ -100,7 +100,7 @@ async function analyzeRelationshipFeedbackViaAPI(
   const combinedStrengths = feedback.map(f => f.strengths).join('\n\n');
   const combinedImprovements = feedback.map(f => f.areas_for_improvement).join('\n\n');
 
-  const response = await fetch('/api/analyze-feedback', {
+  const response = await fetch('/api/analyze-feedback-analytics', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

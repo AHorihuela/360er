@@ -19,6 +19,7 @@ import { exportToPDF } from '@/utils/pdf';
 import { useFeedbackManagement } from '@/hooks/useFeedbackManagement';
 import { useAIReportManagement } from '@/hooks/useAIReportManagement';
 import { useEmployeeReviewData } from '@/hooks/useEmployeeReviewData';
+import { ErrorMessage } from '@/components/ui/loading-variants';
 import { EmployeeReviewHeader } from '@/components/employee-review/EmployeeReviewHeader';
 import { ManagerFeedbackSection } from '@/components/employee-review/ManagerFeedbackSection';
 import { AnalyticsSection } from '@/components/employee-review/AnalyticsSection';
@@ -204,7 +205,7 @@ export function EmployeeReviewDetailsPage() {
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="flex items-center gap-2 text-destructive mb-4">
           <AlertCircle className="h-5 w-5" />
-          <p className="text-lg font-medium">{error}</p>
+          <ErrorMessage message={error} size="md" />
         </div>
         <Button variant="outline" onClick={() => navigate(`/reviews/${cycleId}`)}>
           <ArrowLeft className="h-4 w-4 mr-2" />

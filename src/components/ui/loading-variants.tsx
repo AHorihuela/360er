@@ -24,6 +24,7 @@ import { ProgressSteps, ProgressStep, calculateStepsProgress } from "./progress-
 import { Progress } from "./progress";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "./card";
 import { spacing } from "@/styles/design-tokens";
+import { AlertTriangle, XCircle, AlertCircle, Info } from "lucide-react";
 
 // Compound loading container component
 interface LoadingContainerProps {
@@ -148,5 +149,167 @@ export function LoadingButton({
   );
 }
 
+// ============================================================================
+// ERROR HANDLING COMPONENTS
+// ============================================================================
+
+// Error message component for inline error text
+interface ErrorMessageProps {
+  message: string;
+  size?: "sm" | "md";
+  className?: string;
+}
+
+export function ErrorMessage({
+  message,
+  size = "sm",
+  className
+}: ErrorMessageProps) {
+  const sizeClasses = {
+    sm: "text-sm",
+    md: "text-base"
+  };
+
+  return (
+    <p className={cn(
+      "text-destructive font-medium",
+      sizeClasses[size],
+      className
+    )}>
+      {message}
+    </p>
+  );
+}
+
+// Error container for more prominent error states
+interface ErrorContainerProps {
+  title?: string;
+  message: string;
+  variant?: "error" | "warning" | "info";
+  showIcon?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+export function ErrorContainer({
+  title,
+  message,
+  variant = "error",
+  showIcon = true,
+  className,
+  children
+}: ErrorContainerProps) {
+  const variants = {
+    error: {
+      container: "border-red-200 bg-red-50",
+      text: "text-red-800",
+      icon: XCircle,
+      iconColor: "text-red-500"
+    },
+    warning: {
+      container: "border-amber-200 bg-amber-50",
+      text: "text-amber-800",
+      icon: AlertTriangle,
+      iconColor: "text-amber-500"
+    },
+    info: {
+      container: "border-blue-200 bg-blue-50",
+      text: "text-blue-800",
+      icon: Info,
+      iconColor: "text-blue-500"
+    }
+  };
+
+  const config = variants[variant];
+  const Icon = config.icon;
+
+  return (
+    <div className={cn(
+      "rounded-lg border p-4",
+      config.container,
+      className
+    )}>
+      <div className="flex items-start gap-3">
+        {showIcon && (
+          <Icon className={cn("h-5 w-5 mt-0.5 flex-shrink-0", config.iconColor)} />
+        )}
+        <div className="flex-1 space-y-2">
+          {title && (
+            <h3 className={cn("font-semibold", config.text)}>
+              {title}
+            </h3>
+          )}
+          <p className={cn("text-sm", config.text)}>
+            {message}
+          </p>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Error state component for full page/section errors
+interface ErrorStateProps {
+  title?: string;
+  message: string;
+  action?: React.ReactNode;
+  className?: string;
+}
+
+export function ErrorState({
+  title = "Something went wrong",
+  message,
+  action,
+  className
+}: ErrorStateProps) {
+  return (
+    <div className={cn(
+      "flex flex-col items-center justify-center text-center space-y-4 py-8",
+      className
+    )}>
+      <div className="rounded-full bg-red-100 p-3">
+        <AlertCircle className="h-6 w-6 text-red-600" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        <p className="text-muted-foreground max-w-md">{message}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+// Form field error component
+interface FieldErrorProps {
+  error?: string | string[];
+  className?: string;
+}
+
+export function FieldError({
+  error,
+  className
+}: FieldErrorProps) {
+  if (!error) return null;
+
+  const errors = Array.isArray(error) ? error : [error];
+
+  return (
+    <div className={cn("space-y-1", className)}>
+      {errors.map((err, index) => (
+        <ErrorMessage key={index} message={err} size="sm" />
+      ))}
+    </div>
+  );
+}
+
 // Export compound components
-export type { LoadingContainerProps, InlineLoadingProps, LoadingButtonProps }; 
+export type { 
+  LoadingContainerProps, 
+  InlineLoadingProps, 
+  LoadingButtonProps,
+  ErrorMessageProps,
+  ErrorContainerProps,
+  ErrorStateProps,
+  FieldErrorProps
+}; 

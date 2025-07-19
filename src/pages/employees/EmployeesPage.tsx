@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { ErrorMessage } from '@/components/ui/loading-variants';
 
 interface FeedbackRequest {
   id: string;
@@ -471,7 +472,7 @@ export function EmployeesPage() {
           </div>
         ) : error ? (
           <div className="rounded-lg border border-destructive p-4">
-            <p className="text-destructive">{error}</p>
+                              <ErrorMessage message={error} />
           </div>
         ) : employees.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">

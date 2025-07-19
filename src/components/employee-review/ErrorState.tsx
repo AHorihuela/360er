@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { ErrorState as UnifiedErrorState } from "@/components/ui/loading-variants";
 
 interface Props {
   error: string;
@@ -6,10 +6,9 @@ interface Props {
 
 export function ErrorState({ error }: Props) {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="text-sm text-destructive text-center">{error}</div>
-      </CardContent>
-    </Card>
+    <UnifiedErrorState 
+      message={error}
+      title="Analysis Error"
+    />
   );
 } 

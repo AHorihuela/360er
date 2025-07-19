@@ -92,30 +92,101 @@ const steps: ProgressStep[] = [
 **Purpose**: Individual status indicators with proper styling and animations.
 **Status Types**: 'pending' | 'in_progress' | 'completed' | 'error' | 'cancelled'
 
+### Error Handling Components
+
+#### ErrorMessage
+**Purpose**: Unified inline error text, replacing inconsistent text-destructive patterns.
+**Usage**:
+```typescript
+import { ErrorMessage } from '@/components/ui/loading-variants';
+
+// Replace: <p className="text-destructive">{error}</p>
+<ErrorMessage message={errorText} size="sm" />
+```
+
+**Props**:
+- `message`: string
+- `size`: "sm" | "md"
+
+#### ErrorContainer
+**Purpose**: Prominent error states with consistent styling and icons.
+**Usage**:
+```typescript
+import { ErrorContainer } from '@/components/ui/loading-variants';
+
+// Replace: <div className="p-4 border border-red-500 rounded">Error: ...</div>
+<ErrorContainer 
+  title="Configuration Error"
+  message="Unable to load survey questions"
+  variant="error"
+  showIcon={true}
+/>
+```
+
+**Props**:
+- `title?`: string
+- `message`: string
+- `variant`: "error" | "warning" | "info" 
+- `showIcon`: boolean
+
+#### ErrorState
+**Purpose**: Full page/section error states with action buttons.
+**Usage**:
+```typescript
+import { ErrorState } from '@/components/ui/loading-variants';
+
+<ErrorState
+  title="Something went wrong"
+  message="Unable to load data. Please try again."
+  action={<Button onClick={retry}>Retry</Button>}
+/>
+```
+
+#### FieldError
+**Purpose**: Form field validation errors with consistent styling.
+**Usage**:
+```typescript
+import { FieldError } from '@/components/ui/loading-variants';
+
+<FieldError error={fieldErrors.email} />
+<FieldError error={["Email is required", "Email must be valid"]} />
+```
+
 ## 🚫 DEPRECATED PATTERNS (DO NOT USE)
 
-**❌ Avoid These Patterns:**
+These patterns are inconsistent and should be replaced with unified design system components:
+
+### ❌ Loading Patterns (Use Loading Components Instead)
 ```typescript
-// DON'T: Manual Loader2 implementations
+// DON'T: Inline spinners
 <Loader2 className="h-4 w-4 animate-spin" />
 
-// DON'T: Inline loading button logic
-{isLoading ? (
-  <>
-    <Loader2 className="..." />
-    <span>Loading...</span>
-  </>
-) : (
-  <>
-    <Icon />
-    <span>Submit</span>
-  </>
-)}
+// DON'T: Custom loading buttons
+{isLoading ? <LoaderIcon /> : "Submit"}
 
-// DON'T: Custom progress implementations
-<div className="custom-loading-state">
-  <div className="spinner" />
-  <div className="progress-bar" />
+// DON'T: Inconsistent loading containers  
+<div className="flex items-center gap-2">
+  <Loader2 className="h-5 w-5 animate-spin" />
+  <span>Loading...</span>
+</div>
+```
+
+### ❌ Error Patterns (Use Error Components Instead)
+```typescript
+// DON'T: Inconsistent error text
+<p className="text-destructive">{error}</p>
+<span className="text-red-500">{error}</span>
+<div className="text-red-600 font-medium">{error}</div>
+
+// DON'T: Custom error containers
+<div className="p-4 border border-red-500 rounded">
+  Error: {message}
+</div>
+
+// DON'T: Inconsistent error states
+<div className="text-center text-red-500">
+  <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+  <p>{error}</p>
 </div>
 ```
 
@@ -261,194 +332,3 @@ Our dashboard data management uses a modular hook architecture for improved main
   refreshEmployees: () => Promise<void>;
 }
 ```
-
-### useReviewCyclesData
-**Location**: `src/hooks/useReviewCyclesData.ts` (153 lines)
-**Purpose**: Review cycle operations and state management
-**Features**:
-- Manages review cycle data
-- Handles cycle filtering and selection
-- Manages feedback requests
-- Provides cycle-related operations
-
-**Returns**:
-```typescript
-{
-  reviewCycles: ReviewCycle[];
-  feedbackRequests: FeedbackRequest[];
-  loading: boolean;
-  error: string | null;
-  refreshCycles: () => Promise<void>;
-}
-```
-
-### useSurveyQuestions
-**Location**: `src/hooks/useSurveyQuestions.ts` (63 lines)
-**Purpose**: Survey question management
-**Features**:
-- Fetches survey questions
-- Manages question state
-- Handles survey type switching
-- Provides question filtering
-
-**Returns**:
-```typescript
-{
-  surveyQuestions: SurveyQuestion[];
-  loading: boolean;
-  error: string | null;
-  refreshQuestions: () => Promise<void>;
-}
-```
-
-### useCycleSelection
-**Location**: `src/hooks/useCycleSelection.ts` (123 lines)
-**Purpose**: Cycle selection logic and validation
-**Features**:
-- Manages selected cycle state
-- Handles cycle switching
-- Validates cycle selections
-- Provides cycle-related utilities
-
-**Returns**:
-```typescript
-{
-  selectedCycle: ReviewCycle | null;
-  setSelectedCycle: (cycle: ReviewCycle | null) => void;
-  isValidCycle: boolean;
-  cycleEmployees: Employee[];
-}
-```
-
-## Utility Hooks
-
-### useAIReportManagement
-**Location**: `src/hooks/useAIReportManagement.ts`
-**Purpose**: Manages AI report generation and state (recently refactored)
-**Features**:
-- Handles report generation steps
-- Manages generation state
-- Uses dedicated role checking functions
-- Provides report update functionality
-
-**Recent Improvements**:
-- Simplified role checking with `checkMasterAccountStatus`
-- Enhanced error handling
-- Better separation of concerns
-- Improved testability
-
-### useFeedbackManagement
-**Location**: `src/hooks/useFeedbackManagement.ts`
-**Purpose**: Manages feedback state and operations.
-**Features**:
-- Handles feedback deletion
-- Manages feedback state
-- Provides feedback update functionality
-
-### useFeedbackSubmission
-**Location**: `src/hooks/useFeedbackSubmission.ts`
-**Purpose**: Manages feedback submission process.
-
-### useFeedbackFormState
-**Location**: `src/hooks/useFeedbackFormState.ts`
-**Purpose**: Manages feedback form state and validation.
-
-## Utility Functions
-
-### dashboardUtils
-**Location**: `src/utils/dashboardUtils.ts` (76 lines)
-**Purpose**: Shared utility functions for dashboard operations
-**Features**:
-- Data transformation utilities
-- Calculation helpers
-- Validation functions
-- Common dashboard operations
-
-## Protected Components
-
-### ProtectedRoute
-**Location**: `src/components/ProtectedRoute.tsx`
-**Purpose**: Route wrapper that handles authentication and authorization.
-
-## Architecture Benefits 🚀
-
-### Modular Hook System
-- **Single Responsibility**: Each hook manages one specific data domain
-- **Testability**: Hooks can be tested in isolation
-- **Maintainability**: Smaller, focused code files
-- **Performance**: Concurrent data loading with Promise.all
-- **Reusability**: Hooks can be used independently across components
-
-### Code Quality Improvements
-- **65% Complexity Reduction**: Main dashboard hook reduced from 563 to ~120 lines
-- **99.5% Test Coverage**: 371/373 tests passing
-- **Type Safety**: Full TypeScript coverage
-- **Error Handling**: Improved error boundaries and handling
-
-## Best Practices for Component Reuse
-
-1. **Check This Document First**: Before creating a new component, check if a similar one exists here.
-2. **Update Documentation**: When creating new reusable components, add them to this document.
-3. **Maintain Consistency**: Use existing components when possible to maintain UI consistency.
-4. **Component Location**: Place reusable components in appropriate directories:
-   - Generic UI components: `src/components/ui/`
-   - Feature-specific components: `src/components/<feature>/`
-   - Shared hooks: `src/hooks/`
-5. **Hook Architecture**: Follow the modular hook pattern for data management:
-   - Create focused hooks for specific data domains
-   - Use a main orchestrator hook for coordination
-   - Implement concurrent data fetching where appropriate
-   - Maintain clear separation of concerns
-
-## Recently Added Components
-
-This section tracks recently added components that should be considered for reuse:
-
-1. **Dashboard Hook Architecture** (Added: January 2025)
-   - useDashboardData (refactored orchestrator)
-   - useEmployeesData (employee management)
-   - useReviewCyclesData (cycle operations)
-   - useSurveyQuestions (survey management)
-   - useCycleSelection (selection logic)
-   - dashboardUtils (shared utilities)
-
-2. CompetencySummaryCard (Added: Jan 30, 2024)
-3. CompetencyDetails (Added: Jan 30, 2024)
-4. ScoreDistributionCard (Added: Jan 30, 2024)
-5. TeamSummaryStats (Added: Jan 30, 2024)
-
-## Component Roadmap
-
-Components planned for development:
-
-1. Feedback Form Components
-2. Report Generation Components
-3. Dashboard Widgets
-4. **Enhanced Hook Integration**: Further integration of modular hook patterns across the application
-
-## Directory Structure
-
-```
-src/
-├── components/
-│   ├── ui/           # Shadcn UI components
-│   ├── competency/   # Competency components
-│   ├── dashboard/    # Dashboard components
-│   │   ├── cards/    # Card components
-│   ├── employee-review/
-│   ├── layout/
-│   ├── account/
-│   ├── feedback/
-│   ├── review-cycle/
-│   ├── reviews/
-│   └── auth/
-├── hooks/           # Shared hooks (modular architecture)
-│   ├── useEmployeesData.ts      # Employee data management
-│   ├── useReviewCyclesData.ts   # Review cycle operations
-│   ├── useSurveyQuestions.ts    # Survey question handling
-│   ├── useCycleSelection.ts     # Cycle selection logic
-│   ├── useDashboardData.ts      # Main dashboard orchestrator
-│   └── useAIReportManagement.ts # AI report management (refactored)
-└── utils/
-    └── dashboardUtils.ts        # Dashboard utility functions
-``` 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LoadingButton } from '@/components/ui/loading-variants';
+import { LoadingButton, ErrorContainer } from '@/components/ui/loading-variants';
 import { SurveyQuestion, StructuredResponses, ReviewCycleType } from '@/types/survey';
 import { LikertScaleQuestion } from './LikertScaleQuestion';
 import { OpenEndedQuestion } from './OpenEndedQuestion';
@@ -165,7 +165,7 @@ export function DynamicSurveyForm({
 
   // Debug UI rendering
   if (sortedQuestions.length === 0) {
-    return <div className="p-4 border border-red-500 rounded">Error: No questions found for this survey type.</div>;
+    return <ErrorContainer message="No questions found for this survey type." variant="error" />;
   }
 
   return (
@@ -191,7 +191,7 @@ export function DynamicSurveyForm({
             {currentQuestion ? (
               renderQuestion(currentQuestion)
             ) : (
-              <div className="p-4 border border-red-500 rounded">Error: Current question not found</div>
+              <ErrorContainer message="Current question not found" variant="error" />
             )}
           </form>
         </CardContent>

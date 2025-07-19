@@ -108,6 +108,76 @@ Provide your response in this exact JSON format:
   }
 });
 
+// Analyze feedback for analytics (competency scores and insights)
+app.post('/api/analyze-feedback-analytics', async (req, res) => {
+  try {
+    console.log('Analytics analysis request:', JSON.stringify(req.body, null, 2));
+    
+    const { relationship, strengths, areas_for_improvement } = req.body;
+    
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+
+    const openai = getOpenAIClient();
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { 
+          role: "system", 
+          content: `You are an expert in performance analysis and competency assessment. Analyze the provided feedback and extract:
+
+1. Key insights/themes from the feedback
+2. Competency scores based on evidence in the feedback
+
+Focus on these core competencies: Communication, Technical Skills, Leadership, Problem Solving, Collaboration, Adaptability, Initiative.
+
+Rate each competency from 1-5 based on evidence in the feedback (1=Poor, 2=Below Average, 3=Average, 4=Good, 5=Excellent). Only include competencies that have clear evidence in the feedback.`
+        },
+        { 
+          role: "user", 
+          content: `Please analyze this ${relationship} feedback:
+
+Strengths:
+${strengths}
+
+Areas for Improvement:
+${areas_for_improvement}
+
+Provide your response in this exact JSON format:
+{
+  "competency_scores": [
+    {
+      "name": "Communication",
+      "score": 4,
+      "evidence": "Quote from feedback that supports this score",
+      "confidence": "high"
+    }
+  ],
+  "key_insights": [
+    "Clear, actionable insight derived from the feedback"
+  ]
+}`
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    });
+
+    const analysis = JSON.parse(completion.choices[0].message.content!);
+    console.log('Analytics AI Response:', JSON.stringify(analysis, null, 2));
+    
+    res.json(analysis);
+  } catch (error) {
+    console.error('Analytics OpenAI API error:', error);
+    res.status(500).json({
+      error: 'Failed to analyze feedback for analytics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Catch all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../../dist/index.html'));
