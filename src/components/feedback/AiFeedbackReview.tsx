@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -65,31 +65,37 @@ export function AiFeedbackReview({
     setIsAnalyzing
   } = useAnalysisSteps();
 
+  // Add ref to prevent duplicate analysis calls in React StrictMode
+  const analysisStartedRef = useRef(false);
+
   // Only start analysis if we don't have a saved response
   useEffect(() => {
     const shouldStartAnalysis = !aiResponse && 
                               !localStorage.getItem(`feedback_analysis_${feedbackRequestId}`) && 
-                              !isAnalyzing;
+                              !isAnalyzing &&
+                              !analysisStartedRef.current; // Prevent duplicate calls
     
     if (shouldStartAnalysis) {
       console.log('Starting initial analysis');
+      analysisStartedRef.current = true; // Mark as started
       setIsAnalyzing(true);
     }
-  }, [feedbackRequestId]); // Add feedbackRequestId to dependencies
+  }, [feedbackRequestId, aiResponse, isAnalyzing]); // Add missing dependencies
 
   // Start analysis when isAnalyzing is set to true
   useEffect(() => {
-    if (isAnalyzing) {
+    if (isAnalyzing && !aiResponse) { // Only run if we don't already have a response
       void analyzeFeedback(feedbackData, {
         onStepComplete: progressToNextStep,
         onError: markStepsAsError,
         onComplete: () => {
           completeAllSteps();
           setIsAnalyzing(false);
+          analysisStartedRef.current = false; // Reset for future use
         }
       });
     }
-  }, [isAnalyzing, analyzeFeedback, feedbackData, progressToNextStep, markStepsAsError, completeAllSteps]);
+  }, [isAnalyzing, analyzeFeedback, feedbackData, progressToNextStep, markStepsAsError, completeAllSteps, aiResponse]);
 
   // Debounce feedback changes
   const debouncedFeedbackChange = useCallback(
