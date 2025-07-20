@@ -96,7 +96,7 @@ describe('useReviewCycleForm', () => {
         title: "Success",
         description: "Review cycle created successfully",
       });
-      expect(mockNavigate).toHaveBeenCalledWith('/reviews');
+      expect(mockNavigate).toHaveBeenCalledWith('/reviews/cycle-123?new=true');
       expect(result.current.isSubmitting).toBe(false);
     });
 
