@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vercel dev",
+    "dev:vite-only": "vite",
     "dev:vercel": "vercel dev",
     "build": "tsc && vite build",
     "build:no-tests": "vite build",
