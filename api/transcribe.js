@@ -1,44 +1,37 @@
-import express from 'express';
-import multer from 'multer';
 import OpenAI from 'openai';
+import formidable from 'formidable';
 import fs from 'fs';
-import path from 'path';
 
-// Extend Express Request type to include file from multer
-interface MulterRequest extends express.Request {
-  file?: Express.Multer.File;
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-// Configure multer for file uploads (store in memory)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 25 * 1024 * 1024 // 25MB limit (Whisper's max)
+// Disable default body parser to handle file uploads
+export const config = {
+  api: {
+    bodyParser: false,
   },
-  fileFilter: (req: express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // Accept audio files
-    if (file.mimetype.startsWith('audio/') || file.mimetype === 'video/webm') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only audio files are allowed'));
-    }
-  }
-});
+};
 
-export async function transcribeAudio(req: MulterRequest, res: express.Response) {
-  console.log('🎤 Transcribe endpoint hit:', {
-    method: req.method,
-    url: req.url,
-    hasFile: !!req.file,
-    teamMemberName: req.body?.teamMemberName,
-    headers: Object.keys(req.headers)
-  });
-  
+export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Only allow POST method
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
+    console.log('🎤 Transcribe endpoint hit:', {
+      method: req.method,
+      url: req.url,
+      headers: Object.keys(req.headers)
+    });
+
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OpenAI API key not configured');
       return res.status(500).json({ 
@@ -47,32 +40,38 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
       });
     }
 
-    if (!req.file) {
+    // Parse the multipart form data
+    const form = formidable({
+      maxFileSize: 25 * 1024 * 1024, // 25MB limit
+      keepExtensions: true,
+    });
+
+    const [fields, files] = await form.parse(req);
+    
+    console.log('Parsed form data:', {
+      fields: Object.keys(fields),
+      files: Object.keys(files)
+    });
+
+    if (!files.audio || !files.audio[0]) {
       return res.status(400).json({ 
         error: 'No audio file provided',
         details: 'Please upload an audio file for transcription'
       });
     }
 
-    const audioFile = req.file;
+    const audioFile = files.audio[0];
     
     console.log('Received audio file:', {
-      originalname: audioFile.originalname,
+      originalFilename: audioFile.originalFilename,
       mimetype: audioFile.mimetype,
-      size: audioFile.size
+      size: audioFile.size,
+      filepath: audioFile.filepath
     });
 
-    // Create a temporary file for Whisper API
-    const tempDir = path.join(process.cwd(), 'temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    const tempFilename = `audio_${Date.now()}_${Math.random().toString(36).substring(7)}.webm`;
-    const tempFilePath = path.join(tempDir, tempFilename);
-
-    // Write the buffer to a temporary file
-    fs.writeFileSync(tempFilePath, audioFile.buffer);
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
 
     try {
       // Simple prompt for professional transcription
@@ -80,21 +79,25 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
 
       // Transcribe with Whisper
       const transcription = await openai.audio.transcriptions.create({
-        file: fs.createReadStream(tempFilePath),
+        file: fs.createReadStream(audioFile.filepath),
         model: "whisper-1",
-        language: "en", // Can be made configurable
-        response_format: "verbose_json", // Get timestamps and confidence
-        temperature: 0.1, // Lower temperature for more consistent results
-        prompt: prompt // Add context for better name recognition
+        language: "en",
+        response_format: "verbose_json",
+        temperature: 0.1,
+        prompt: prompt
       });
 
       // Clean up temporary file
-      fs.unlinkSync(tempFilePath);
+      try {
+        fs.unlinkSync(audioFile.filepath);
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup temp file:', cleanupError);
+      }
 
       // Process the transcription for better formatting
       const processedText = processTranscription(transcription.text);
 
-      res.json({
+      return res.status(200).json({
         success: true,
         transcription: processedText,
         originalText: transcription.text,
@@ -102,10 +105,14 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
         language: transcription.language || 'en'
       });
 
-    } catch (whisperError: any) {
+    } catch (whisperError) {
       // Clean up temp file even if transcription fails
-      if (fs.existsSync(tempFilePath)) {
-        fs.unlinkSync(tempFilePath);
+      try {
+        if (audioFile.filepath && fs.existsSync(audioFile.filepath)) {
+          fs.unlinkSync(audioFile.filepath);
+        }
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup temp file after error:', cleanupError);
       }
 
       console.error('Whisper API error:', whisperError);
@@ -117,16 +124,16 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
         errorMessage = 'Rate limit exceeded. Please try again in a moment';
       }
 
-      res.status(500).json({
+      return res.status(500).json({
         error: errorMessage,
         details: whisperError.message,
         code: whisperError.code
       });
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Transcription endpoint error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Internal server error',
       details: error.message
     });
@@ -134,7 +141,7 @@ export async function transcribeAudio(req: MulterRequest, res: express.Response)
 }
 
 // Process transcription for better formatting
-function processTranscription(text: string): string {
+function processTranscription(text) {
   if (!text) return text;
   
   let processed = text.trim();
@@ -154,9 +161,4 @@ function processTranscription(text: string): string {
   processed = processed.replace(/([a-z])\s+([A-Z][a-z])/g, '$1. $2');
   
   return processed;
-}
-
-
-
-// Export the multer middleware for use in routes
-export const audioUpload = upload.single('audio'); 
+} 

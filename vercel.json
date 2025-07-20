@@ -1,6 +1,5 @@
 {
   "buildCommand": "npx vite build",
-  "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
   "outputDirectory": "dist",
@@ -34,6 +33,11 @@
       "dest": "/index.html"
     }
   ],
+  "functions": {
+    "api/transcribe.js": {
+      "maxDuration": 30
+    }
+  },
   "github": {
     "silent": true
   }
