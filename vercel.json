@@ -36,6 +36,15 @@
   "functions": {
     "api/transcribe.js": {
       "maxDuration": 30
+    },
+    "api/generate-report.js": {
+      "maxDuration": 30
+    },
+    "api/analyze-feedback.js": {
+      "maxDuration": 15
+    },
+    "api/analyze-feedback-analytics.js": {
+      "maxDuration": 15
     }
   },
   "github": {
