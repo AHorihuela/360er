@@ -84,7 +84,7 @@ export function AiFeedbackReview({
 
   // Start analysis when isAnalyzing is set to true
   useEffect(() => {
-    if (isAnalyzing && !aiResponse) { // Only run if we don't already have a response
+    if (isAnalyzing && !aiResponse) { // Remove ref guard here - already protected by isAnalyzing state
       void analyzeFeedback(feedbackData, {
         onStepComplete: progressToNextStep,
         onError: markStepsAsError,
@@ -261,6 +261,7 @@ export function AiFeedbackReview({
           onClick={() => {
             resetAnalysis();
             resetSteps();
+            analysisStartedRef.current = false; // Reset the ref guard for re-analysis
             setIsAnalyzing(true);
           }}
           disabled={isLoading}
