@@ -27,7 +27,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_TARGET || 'https://squad360.vercel.app',
+        target: process.env.VITE_API_TARGET || 'https://www.squad360.io',
         changeOrigin: true,
         secure: true,
       },
