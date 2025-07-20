@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "dev:vite-only": "vite",
-    "dev:vercel": "vercel dev",
+    "dev": "vite",
+    "dev:local": "concurrently \"vite\" \"vercel dev --listen 3000\"",
+    "dev:api": "vercel dev --listen 3000",
     "build": "tsc && vite build",
     "build:no-tests": "vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
