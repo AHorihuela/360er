@@ -26,6 +26,7 @@ import AnalyticsPage from '@/pages/analytics';
 import { MethodologyExplanation } from '@/components/methodology/MethodologyExplanation';
 import { Badge } from '@/components/ui/badge';
 import { Analytics } from '@vercel/analytics/react';
+import { StructuredData, schemas } from '@/components/seo/StructuredData';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -50,6 +51,11 @@ function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col dark:bg-gray-950">
+      {/* Structured Data for SEO and LLM optimization */}
+      <StructuredData data={schemas.organization} />
+      <StructuredData data={schemas.softwareApplication} />
+      <StructuredData data={schemas.faqPage} />
+      <StructuredData data={schemas.howTo} />
       {/* Navigation */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-gray-950/80">
         <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">

@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Disallow sensitive areas
+Disallow: /dashboard
+Disallow: /reviews
+Disallow: /employees
+Disallow: /account
+Disallow: /feedback/
+Disallow: /auth/
+
+# Allow public pages
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /methodology
+
+# Sitemap location
+Sitemap: https://www.squad360.io/sitemap.xml
+
+# Crawl delay to be respectful
+Crawl-delay: 1
