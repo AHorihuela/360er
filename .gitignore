@@ -51,3 +51,12 @@ lerna-debug.log*
 
 # SSL certificates for development
 localhost*.pem
+
+# Test artifacts and screenshots
+.playwright-mcp/
+
+# Migration data and database dumps
+migration-data/
+
+# API development files
+api/
