@@ -239,14 +239,7 @@ export function EmployeesPage() {
       // Build the query - filter by user_id only if not in master account mode
       let query = supabase
         .from('employees')
-        .select(`
-          *,
-          feedback_requests (
-            id,
-            review_cycle_id,
-            created_at
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       // Only filter by user_id if not a master account or not viewing all accounts
@@ -260,15 +253,26 @@ export function EmployeesPage() {
 
       if (error) throw error;
 
+      // Fetch feedback_requests separately to avoid relationship issues
+      const { data: feedbackRequestsData, error: feedbackError } = await supabase
+        .from('feedback_requests')
+        .select('id, employee_id, review_cycle_id, created_at');
+
+      if (feedbackError) throw feedbackError;
+
       // Process the data to get the latest feedback request for each employee
-      const processedData = data.map(employee => ({
-        ...employee,
-        latest_feedback_request: employee.feedback_requests
-          ? employee.feedback_requests.sort((a: FeedbackRequest, b: FeedbackRequest) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0] || null
-          : null
-      }));
+      const processedData = data.map(employee => {
+        const employeeFeedbackRequests = feedbackRequestsData?.filter(req => req.employee_id === employee.id) || [];
+        return {
+          ...employee,
+          feedback_requests: employeeFeedbackRequests,
+          latest_feedback_request: employeeFeedbackRequests.length > 0
+            ? employeeFeedbackRequests.sort((a: FeedbackRequest, b: FeedbackRequest) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              )[0] || null
+            : null
+        };
+      });
 
       // Fetch feedback response counts for latest feedback requests
       const latestFeedbackRequestIds = processedData
