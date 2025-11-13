@@ -167,12 +167,6 @@ export function useEmployeeReviewData({
             status,
             target_responses,
             unique_link,
-            employee:employees (
-              id,
-              name,
-              role,
-              user_id
-            ),
             feedback_responses (
               id,
               submitted_at,
@@ -194,10 +188,20 @@ export function useEmployeeReviewData({
 
       if (cycleError) throw cycleError;
 
+      // Fetch employee data separately to avoid relationship issues
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', employeeId)
+        .single();
+
+      if (employeeError) throw employeeError;
+
       const request = cycleData.feedback_requests[0];
       setReviewCycle(cycleData);
       setFeedbackRequest({
         ...request,
+        employee: employeeData, // Manually link employee data
         feedback: request.feedback_responses,
         _count: {
           responses: request.feedback_responses?.length || 0,
