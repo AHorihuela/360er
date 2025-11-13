@@ -42,12 +42,6 @@ export function useReviewCycle(cycleId: string | undefined) {
             status,
             target_responses,
             unique_link,
-            employee:employees (
-              id,
-              name,
-              role,
-              user_id
-            ),
             feedback_responses (
               id,
               submitted_at,
@@ -81,6 +75,14 @@ export function useReviewCycle(cycleId: string | undefined) {
       // Store the cycle owner's user ID
       setCycleOwnerUserId(cycleData.user_id)
 
+      // Fetch employees separately to avoid relationship issues
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('user_id', cycleData.user_id)
+
+      if (employeesError) throw employeesError
+
       // Process feedback requests
       const processedRequests = cycleData.feedback_requests.map((request: any) => {
         console.log('Processing request:', request)
@@ -98,8 +100,8 @@ export function useReviewCycle(cycleId: string | undefined) {
           status = REQUEST_STATUS.PENDING
         }
 
-        // Ensure employee data is properly structured
-        const employee = Array.isArray(request.employee) ? request.employee[0] : request.employee
+        // Manually link employee data using employee_id
+        const employee = employeesData?.find(emp => emp.id === request.employee_id) || null
         
         return {
           ...request,
