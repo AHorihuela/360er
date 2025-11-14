@@ -144,6 +144,7 @@ export async function testDatabasePolicyEnforcement(feedbackRequestId: string, s
  * Debug function to get detailed information about a feedback request
  */
 export async function debugFeedbackRequestState(uniqueLink: string) {
+  // Fetch feedback_request first to avoid !inner join issues
   const { data: feedbackRequest, error } = await anonymousClient
     .from('feedback_requests')
     .select(`
@@ -151,32 +152,39 @@ export async function debugFeedbackRequestState(uniqueLink: string) {
       status,
       unique_link,
       created_at,
-      review_cycle:review_cycles!inner (
-        id,
-        title,
-        review_by_date,
-        status,
-        created_at
-      )
+      review_cycle_id
     `)
     .ilike('unique_link', uniqueLink.replace(/[-]+$/, ''))
     .single();
 
-  if (error || !feedbackRequest) {
-    return {
-      error: 'Feedback request not found',
-      details: error
-    };
-  }
+  if (error) return { data: null, error };
+  if (!feedbackRequest) return { data: null, error: { message: 'Feedback request not found' } };
 
-  const reviewCycle = Array.isArray(feedbackRequest.review_cycle) 
-    ? feedbackRequest.review_cycle[0] 
-    : feedbackRequest.review_cycle;
-  
+  // Fetch review_cycle separately
+  const { data: reviewCycle, error: cycleError } = await anonymousClient
+    .from('review_cycles')
+    .select(`
+      id,
+      title,
+      review_by_date,
+      status,
+      created_at
+    `)
+    .eq('id', feedbackRequest.review_cycle_id)
+    .single();
+
+  if (cycleError) return { data: null, error: cycleError };
+
+  // Manually combine the data
+  const combinedData = {
+    ...feedbackRequest,
+    review_cycle: reviewCycle
+  };
+
   const dueDateValidation = await validateDueDateAccess(reviewCycle.id as string);
 
   return {
-    feedbackRequest,
+    feedbackRequest: combinedData,
     dueDateValidation,
     currentPolicies: {
       // We can add policy checking here if needed

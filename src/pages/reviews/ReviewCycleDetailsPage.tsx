@@ -308,7 +308,7 @@ export function ReviewCycleDetailsPage() {
 
             if (insertError) throw insertError;
 
-            // Fetch the complete data after insert
+            // Fetch the complete data after insert, avoiding !inner join
             const { data: newRequests, error: selectError } = await supabase
               .from('feedback_requests')
               .select(`
@@ -320,37 +320,48 @@ export function ReviewCycleDetailsPage() {
                 target_responses,
                 manually_completed,
                 created_at,
-                updated_at,
-                employee:employees!inner (
-                  id,
-                  name,
-                  role,
-                  user_id
-                ),
-                feedback_responses (
-                  id,
-                  submitted_at,
-                  relationship
-                )
+                updated_at
               `)
               .eq('review_cycle_id', cycleId)
               .in('employee_id', selectedIds);
 
             if (selectError) throw selectError;
 
+            // Fetch employee data separately
+            const { data: employeesData, error: empError } = await supabase
+              .from('employees')
+              .select('id, name, role, user_id')
+              .in('id', selectedIds);
+
+            if (empError) throw empError;
+
+            // Fetch feedback_responses separately if needed
+            const requestIds = newRequests?.map(req => req.id) || [];
+            const { data: responsesData, error: respError } = await supabase
+              .from('feedback_responses')
+              .select('id, feedback_request_id, submitted_at, relationship')
+              .in('feedback_request_id', requestIds);
+
+            if (respError) throw respError;
+
             const typedRequests = (newRequests || []).map(req => {
-              const responseCount = req.feedback_responses?.length || 0;
+              // Manually link employee data
+              const employee = employeesData?.find(emp => emp.id === req.employee_id);
+              // Manually link feedback responses
+              const feedback_responses = responsesData?.filter(resp => resp.feedback_request_id === req.id) || [];
+              const responseCount = feedback_responses.length;
+              
               return {
                 ...req,
-                employee: Array.isArray(req.employee) ? req.employee[0] : req.employee,
-                feedback_responses: req.feedback_responses?.map(response => ({
+                employee,
+                feedback_responses: feedback_responses.map(response => ({
                   id: response.id,
                   status: 'completed',
                   submitted_at: response.submitted_at,
                   relationship: response.relationship,
                   strengths: null,
                   areas_for_improvement: null
-                })) || [],
+                })),
                 _count: {
                   responses: responseCount
                 }
@@ -408,28 +419,32 @@ export function ReviewCycleDetailsPage() {
                 target_responses,
                 manually_completed,
                 created_at,
-                updated_at,
-                employee:employees!inner (
-                  id,
-                  name,
-                  role,
-                  user_id
-                ),
-                feedback_responses (
-                  id,
-                  submitted_at,
-                  relationship
-                )
+                updated_at
               `);
 
             if (requestError) throw requestError;
 
+            // Fetch employee data separately for the single employee
+            const singleEmployeeData = employeeData; // We already have this from the form
+            
+            // Fetch feedback_responses separately if needed
+            const requestIds = requestData?.map(req => req.id) || [];
+            const { data: responsesData, error: respError } = await supabase
+              .from('feedback_responses')
+              .select('id, feedback_request_id, submitted_at, relationship')
+              .in('feedback_request_id', requestIds);
+
+            if (respError) throw respError;
+
             const typedRequests = (requestData || []).map(req => {
-              const responseCount = req.feedback_responses?.length || 0;
+              // Manually link employee and feedback data
+              const feedback_responses = responsesData?.filter(resp => resp.feedback_request_id === req.id) || [];
+              const responseCount = feedback_responses.length;
+              
               return {
                 ...req,
-                employee: Array.isArray(req.employee) ? req.employee[0] : req.employee,
-                feedback_responses: req.feedback_responses?.map(response => ({
+                employee: singleEmployeeData,
+                feedback_responses: feedback_responses.map(response => ({
                   id: response.id,
                   status: 'completed',
                   submitted_at: response.submitted_at,

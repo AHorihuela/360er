@@ -152,35 +152,45 @@ export function useManagerFeedback({ userId, reviewCycleId }: UseManagerFeedback
 
     setIsLoading(true);
     try {
+      // Fetch feedback_responses and filter manually to avoid !inner join issues
       let query = supabase
         .from('feedback_responses')
-        .select(`
-          *,
-          feedback_requests!inner (
-            employee_id,
-            review_cycle_id
-          )
-        `)
-        .eq('feedback_requests.review_cycle_id', reviewCycleId)
-        .eq('feedback_requests.employee_id', employeeId)
+        .select('*')
         .eq('relationship', 'manager')
         .order('submitted_at', { ascending: false });
 
+      const { data: allResponses, error: responsesError } = await query;
+      if (responsesError) throw responsesError;
+
+      // Fetch feedback_requests separately  
+      const { data: feedbackRequests, error: requestsError } = await supabase
+        .from('feedback_requests')
+        .select('id, employee_id, review_cycle_id')
+        .eq('review_cycle_id', reviewCycleId)
+        .eq('employee_id', employeeId);
+
+      if (requestsError) throw requestsError;
+
+      // Manual filtering: only responses for the specified review cycle and employee
+      const requestIds = feedbackRequests?.map(req => req.id) || [];
+      const filteredResponses = allResponses?.filter(response => 
+        requestIds.includes(response.feedback_request_id)
+      ) || [];
+
+      // Apply date filtering manually if needed
+      let finalResponses = filteredResponses;
       if (startDate) {
-        query = query.gte('submitted_at', startDate.toISOString());
+        finalResponses = finalResponses.filter(response => 
+          new Date(response.submitted_at) >= startDate
+        );
       }
       if (endDate) {
-        query = query.lte('submitted_at', endDate.toISOString());
+        finalResponses = finalResponses.filter(response => 
+          new Date(response.submitted_at) <= endDate
+        );
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching manager feedback:', error);
-        throw error;
-      }
-
-      return data || [];
+      return finalResponses || [];
 
     } catch (error: any) {
       console.error('Error fetching manager feedback:', error);
@@ -204,34 +214,43 @@ export function useManagerFeedback({ userId, reviewCycleId }: UseManagerFeedback
 
     setIsLoading(true);
     try {
+      // Fetch all manager feedback_responses and filter manually to avoid !inner join issues
       let query = supabase
         .from('feedback_responses')
-        .select(`
-          *,
-          feedback_requests!inner (
-            review_cycle_id,
-            employee_id
-          )
-        `)
-        .eq('feedback_requests.review_cycle_id', reviewCycleId)
+        .select('*')
         .eq('relationship', 'manager')
         .order('submitted_at', { ascending: false });
 
+      const { data: allResponses, error: responsesError } = await query;
+      if (responsesError) throw responsesError;
+
+      // Fetch feedback_requests for this review cycle separately
+      const { data: feedbackRequests, error: requestsError } = await supabase
+        .from('feedback_requests')
+        .select('id, review_cycle_id, employee_id')
+        .eq('review_cycle_id', reviewCycleId);
+
+      if (requestsError) throw requestsError;
+
+      // Manual filtering: only responses for this review cycle
+      const requestIds = feedbackRequests?.map(req => req.id) || [];
+      let filteredResponses = allResponses?.filter(response => 
+        requestIds.includes(response.feedback_request_id)
+      ) || [];
+
+      // Apply date filtering manually if needed
       if (startDate) {
-        query = query.gte('submitted_at', startDate.toISOString());
+        filteredResponses = filteredResponses.filter(response => 
+          new Date(response.submitted_at) >= startDate
+        );
       }
       if (endDate) {
-        query = query.lte('submitted_at', endDate.toISOString());
+        filteredResponses = filteredResponses.filter(response => 
+          new Date(response.submitted_at) <= endDate
+        );
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching cycle feedback:', error);
-        throw error;
-      }
-
-      return data || [];
+      return filteredResponses || [];
 
     } catch (error: any) {
       console.error('Error fetching cycle feedback:', error);
