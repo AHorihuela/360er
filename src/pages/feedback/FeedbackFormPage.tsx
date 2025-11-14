@@ -238,7 +238,7 @@ export function FeedbackFormPage() {
       if (feedbackWithSession) {
         console.log('Found feedback data:', feedbackWithSession);
         const existingFeedback = feedbackWithSession.find(
-          f => f.session_id === sessionId
+          f => (f as any).session_id === sessionId
         );
 
         if (existingFeedback) {
