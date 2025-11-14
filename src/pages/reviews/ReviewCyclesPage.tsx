@@ -184,34 +184,7 @@ export function ReviewCyclesPage() {
           review_by_date,
           created_at,
           updated_at,
-          user_id,
-          feedback_requests!review_cycles_id_fkey (
-            id,
-            status,
-            target_responses,
-            created_at,
-            updated_at,
-            manually_completed,
-            review_cycle_id,
-            employee_id,
-            unique_link,
-            employees!inner (
-              id,
-              name,
-              role
-            ),
-            feedback_responses!feedback_responses_feedback_request_id_fkey (
-              id,
-              status,
-              created_at,
-              submitted_at,
-              relationship,
-              strengths,
-              areas_for_improvement,
-              overall_rating,
-              feedback_request_id
-            )
-          )
+          user_id
         `);
 
       // Only show all accounts if BOTH master account AND viewing all accounts is enabled
@@ -235,12 +208,68 @@ export function ReviewCyclesPage() {
         console.error('No data returned from Supabase');
         return;
       }
+
+      // Fetch feedback_requests separately to avoid relationship issues
+      const { data: feedbackRequestsData, error: feedbackError } = await supabase
+        .from('feedback_requests')
+        .select(`
+          id,
+          status,
+          target_responses,
+          created_at,
+          updated_at,
+          manually_completed,
+          review_cycle_id,
+          employee_id,
+          unique_link
+        `);
+
+      if (feedbackError) throw feedbackError;
+
+      // Fetch employees separately
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('employees')
+        .select('id, name, role, user_id');
+
+      if (employeesError) throw employeesError;
+
+      // Fetch feedback_responses separately
+      const { data: feedbackResponsesData, error: responsesError } = await supabase
+        .from('feedback_responses')
+        .select(`
+          id,
+          status,
+          created_at,
+          submitted_at,
+          relationship,
+          strengths,
+          areas_for_improvement,
+          overall_rating,
+          feedback_request_id
+        `);
+
+      if (responsesError) throw responsesError;
       
 
 
       const processedCycles: ReviewCycle[] = reviewCyclesData
         .map(cycle => {
-          const validFeedbackRequests = (cycle.feedback_requests || [])
+          // Manually link feedback requests to this cycle
+          const cycleFeedbackRequests = feedbackRequestsData?.filter(req => req.review_cycle_id === cycle.id) || [];
+          
+          const validFeedbackRequests = cycleFeedbackRequests
+            .map(request => {
+              // Manually link employee data
+              const employee = employeesData?.find(emp => emp.id === request.employee_id);
+              // Manually link feedback responses
+              const feedback_responses = feedbackResponsesData?.filter(resp => resp.feedback_request_id === request.id) || [];
+              
+              return {
+                ...request,
+                employees: employee ? [employee] : [],
+                feedback_responses
+              };
+            })
             .filter(request => {
               if (!isValidTimestamp(request.created_at)) {
                 console.error(`Invalid request created_at timestamp for request ${request.id}`);
