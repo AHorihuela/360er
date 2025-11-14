@@ -136,7 +136,7 @@ export function FeedbackFormPage() {
       const cleanLink = uniqueLink.replace(/[-]+$/, '');
       console.log('Fetching feedback request with cleaned link:', cleanLink);
 
-      // Use anonymous client for feedback operations
+      // Use anonymous client for feedback operations - avoid automatic joins to prevent PostgREST errors
       const { data: requestData, error: requestError } = await anonymousClient
         .from('feedback_requests')
         .select(`
@@ -145,25 +145,10 @@ export function FeedbackFormPage() {
           employee_id,
           status,
           unique_link,
-          target_responses,
-          employee:employees (
-            id,
-            name,
-            role,
-            user_id
-          ),
-          review_cycle:review_cycles (
-            id,
-            title,
-            review_by_date,
-            status,
-            type
-          )
+          target_responses
         `)
-        .ilike('unique_link', cleanLink)
+.eq('unique_link', cleanLink)
         .single();
-
-      console.log('Initial request result:', { requestData, requestError });
 
       if (requestError) {
         console.error('Error verifying feedback request:', requestError);
@@ -171,8 +156,35 @@ export function FeedbackFormPage() {
       }
 
       if (!requestData) {
-        throw new Error('No feedback request found');
+        throw new Error('Feedback request not found');
       }
+
+      // Fetch employee data separately to avoid PostgREST relationship issues
+      const { data: employeeData, error: employeeError } = await anonymousClient
+        .from('employees')
+        .select('id, name, role, user_id')
+        .eq('id', requestData.employee_id)
+        .single();
+
+      if (employeeError) throw employeeError;
+
+      // Fetch review_cycle data separately  
+      const { data: reviewCycleData, error: cycleError } = await anonymousClient
+        .from('review_cycles')
+        .select('id, title, review_by_date, status, type')
+        .eq('id', requestData.review_cycle_id)
+        .single();
+
+      if (cycleError) throw cycleError;
+
+      // Manually combine the data
+      const combinedRequestData = {
+        ...requestData,
+        employee: employeeData,
+        review_cycle: reviewCycleData
+      };
+
+      console.log('Initial request result:', { requestData: combinedRequestData, requestError: null });
 
       // Fetch feedback data
       const { data: feedback, error: feedbackError } = await anonymousClient
@@ -236,11 +248,9 @@ export function FeedbackFormPage() {
         }
       }
 
-      // Combine the data
+      // Combine the data using our manually linked data
       const combinedData: FeedbackRequest = {
-        ...requestData,
-        employee: Array.isArray(requestData.employee) ? requestData.employee[0] : requestData.employee,
-        review_cycle: Array.isArray(requestData.review_cycle) ? requestData.review_cycle[0] : requestData.review_cycle,
+        ...combinedRequestData,
         feedback: feedback as CoreFeedbackResponse[]
       };
 
@@ -284,7 +294,7 @@ export function FeedbackFormPage() {
         .from('feedback_requests')
         .select('id, unique_link')
         .eq('id', feedbackRequest.id)
-        .ilike('unique_link', cleanLink)
+.eq('unique_link', cleanLink)
         .single();
 
       if (verifyError || !verifiedRequest) {

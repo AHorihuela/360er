@@ -154,7 +154,7 @@ export async function debugFeedbackRequestState(uniqueLink: string) {
       created_at,
       review_cycle_id
     `)
-    .ilike('unique_link', uniqueLink.replace(/[-]+$/, ''))
+.eq('unique_link', uniqueLink.replace(/[-]+$/, ''))
     .single();
 
   if (error) return { data: null, error };
