@@ -186,7 +186,7 @@ export function FeedbackFormPage() {
 
       console.log('Initial request result:', { requestData: combinedRequestData, requestError: null });
 
-      // Fetch feedback data
+      // Fetch feedback data - make session_id optional to handle database schema differences
       const { data: feedback, error: feedbackError } = await anonymousClient
         .from('feedback_responses')
         .select(`
@@ -194,7 +194,6 @@ export function FeedbackFormPage() {
           feedback_request_id,
           submitted_at,
           status,
-          session_id,
           strengths,
           areas_for_improvement,
           relationship,
@@ -203,7 +202,32 @@ export function FeedbackFormPage() {
         `)
         .eq('feedback_request_id', requestData.id);
 
-      console.log('Feedback result:', { feedback, feedbackError });
+      // Try to fetch session_id separately if needed (graceful degradation)
+      let feedbackWithSession = feedback;
+      if (feedback && feedback.length > 0) {
+        try {
+          const { data: sessionData } = await anonymousClient
+            .from('feedback_responses')
+            .select('id, session_id')
+            .eq('feedback_request_id', requestData.id);
+          
+          // Merge session data if available
+          if (sessionData) {
+            feedbackWithSession = feedback.map(item => {
+              const sessionInfo = sessionData.find(s => s.id === item.id);
+              return {
+                ...item,
+                session_id: sessionInfo?.session_id || null
+              };
+            });
+          }
+        } catch (sessionError) {
+          // Session ID not available - continue without it
+          console.warn('Session ID not available in database, proceeding without session tracking');
+        }
+      }
+
+      console.log('Feedback result:', { feedback: feedbackWithSession, feedbackError });
 
       if (feedbackError) {
         console.error('Error fetching feedback:', feedbackError);
@@ -211,9 +235,9 @@ export function FeedbackFormPage() {
       }
 
       // Check for any existing feedback from this session (both submitted and in-progress)
-      if (feedback) {
-        console.log('Found feedback data:', feedback);
-        const existingFeedback = feedback.find(
+      if (feedbackWithSession) {
+        console.log('Found feedback data:', feedbackWithSession);
+        const existingFeedback = feedbackWithSession.find(
           f => f.session_id === sessionId
         );
 
@@ -251,7 +275,7 @@ export function FeedbackFormPage() {
       // Combine the data using our manually linked data
       const combinedData: FeedbackRequest = {
         ...combinedRequestData,
-        feedback: feedback as CoreFeedbackResponse[]
+        feedback: feedbackWithSession as CoreFeedbackResponse[]
       };
 
       console.log('Setting feedback request with data:', combinedData);

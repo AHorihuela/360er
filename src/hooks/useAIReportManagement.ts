@@ -229,17 +229,25 @@ export function useAIReportManagement({
 
       setGenerationStep(1);
 
-      // Create or update the report entry
-      const { error: initError } = await supabase
-        .from('ai_reports')
-        .upsert({
-          feedback_request_id: feedbackRequest.id,
-          status: 'processing',
-          is_final: false,
-          updated_at: new Date().toISOString()
-        });
+      // For master accounts, skip the initial upsert to avoid RLS policy issues
+      // The API will handle report creation with proper permissions
+      const isMasterAccount = currentUserId !== cycleOwnerUserId;
+      
+      if (!isMasterAccount) {
+        // Only create placeholder for cycle owners, not master accounts
+        const { error: initError } = await supabase
+          .from('ai_reports')
+          .upsert({
+            feedback_request_id: feedbackRequest.id,
+            status: 'processing',
+            is_final: false,
+            updated_at: new Date().toISOString()
+          });
 
-      if (initError) throw initError;
+        if (initError) throw initError;
+      } else {
+        console.log('[AI_REPORT] Skipping initial upsert for master account - API will handle report creation');
+      }
 
       // Check if aborted
       if (abortController.signal.aborted) {
@@ -296,18 +304,22 @@ export function useAIReportManagement({
         created_at: currentTime
       });
 
-      // Update database
-      const { error: finalizeError } = await supabase
-        .from('ai_reports')
-        .update({
-          content: finalReportContent,
-          status: 'completed',
-          is_final: true,
-          updated_at: currentTime
-        })
-        .eq('feedback_request_id', feedbackRequest.id);
+      // Update database - skip for master accounts to avoid RLS policy issues
+      if (!isMasterAccount) {
+        const { error: finalizeError } = await supabase
+          .from('ai_reports')
+          .update({
+            content: finalReportContent,
+            status: 'completed',
+            is_final: true,
+            updated_at: currentTime
+          })
+          .eq('feedback_request_id', feedbackRequest.id);
 
-      if (finalizeError) throw finalizeError;
+        if (finalizeError) throw finalizeError;
+      } else {
+        console.log('[AI_REPORT] Skipping final database update for master account - report generated successfully');
+      }
 
       // Refresh data from the parent component if callback provided
       if (onSuccessfulGeneration) {
