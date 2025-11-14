@@ -24,6 +24,7 @@ interface Props {
       updated_at: string;
     }>;
   };
+  aiReport?: { content: string; created_at: string; } | null;
   onExportPDF: () => void;
   onReportChange?: (value: string) => void;
   onGenerateReport: () => void;
@@ -48,6 +49,7 @@ const LOCAL_STORAGE_KEY = 'performanceSummaryExpanded';
 
 export function AIReport({ 
   feedbackRequest, 
+  aiReport: aiReportProp,
   onExportPDF, 
   onReportChange,
   onGenerateReport,
@@ -62,7 +64,10 @@ export function AIReport({
   const { toast } = useToast();
   
   const [aiReport, setAiReport] = useState<{ content: string; created_at: string; } | null>(() => {
-    // Initialize with existing report if available
+    // Prioritize prop from hook, fallback to database
+    if (aiReportProp) {
+      return aiReportProp;
+    }
     if (feedbackRequest?.ai_reports?.[0]) {
       return {
         content: feedbackRequest.ai_reports[0].content,
@@ -111,7 +116,10 @@ export function AIReport({
 
   // Handle updates to feedback request
   useEffect(() => {
-    if (feedbackRequest?.ai_reports?.[0]) {
+    // Prioritize prop from hook
+    if (aiReportProp) {
+      setAiReport(aiReportProp);
+    } else if (feedbackRequest?.ai_reports?.[0]) {
       const newReport = {
         content: feedbackRequest.ai_reports[0].content,
         created_at: feedbackRequest.ai_reports[0].updated_at
@@ -128,7 +136,7 @@ export function AIReport({
       // Only clear the report if we're not generating (to avoid clearing during generation)
       setAiReport(null);
     }
-  }, [feedbackRequest?.ai_reports, isGeneratingReport]);
+  }, [aiReportProp, feedbackRequest?.ai_reports, isGeneratingReport]);
 
   // Handle generation completion
   useEffect(() => {

@@ -56,7 +56,11 @@ export function useAIReportManagement({
         content: feedbackRequest.ai_reports[0].content,
         created_at: feedbackRequest.ai_reports[0].updated_at
       });
+    } else if (!feedbackRequest?.ai_reports && !aiReport) {
+      // Only clear state if there's no existing generated report in memory
+      setAiReport(null);
     }
+    // Don't override aiReport state if we have content from a recent generation
   }, [feedbackRequest?.ai_reports]);
 
   // Add debounced save function
@@ -229,11 +233,19 @@ export function useAIReportManagement({
 
       setGenerationStep(1);
 
-      // For master accounts, skip the initial upsert to avoid RLS policy issues
-      // The API will handle report creation with proper permissions
-      const isMasterAccount = currentUserId !== cycleOwnerUserId;
+      // Check if user is a master account to determine database operation strategy
+      let isMasterAccount = false;
+      try {
+        isMasterAccount = await checkMasterAccountStatus(currentUserId);
+      } catch (error) {
+        console.error('[AI_REPORT] Error checking master account status for database operations:', error);
+      }
+
+      // For master accounts, skip database operations to avoid RLS policy issues
+      console.log('[AI_REPORT] Master account check result:', { isMasterAccount, currentUserId: currentUserId?.substring(0, 8), cycleOwnerUserId: cycleOwnerUserId?.substring(0, 8) });
       
       if (!isMasterAccount) {
+        console.log('[AI_REPORT] Creating initial placeholder for cycle owner');
         // Only create placeholder for cycle owners, not master accounts
         const { error: initError } = await supabase
           .from('ai_reports')
@@ -244,7 +256,10 @@ export function useAIReportManagement({
             updated_at: new Date().toISOString()
           });
 
-        if (initError) throw initError;
+        if (initError) {
+          console.error('[AI_REPORT] Initial upsert failed:', initError);
+          throw initError;
+        }
       } else {
         console.log('[AI_REPORT] Skipping initial upsert for master account - API will handle report creation');
       }

@@ -15,6 +15,7 @@ import { ReviewCycle, FeedbackRequest, GenerationStep } from '@/types/reviews/em
 interface ReportSectionProps {
   reviewCycle: ReviewCycle;
   feedbackRequest: FeedbackRequest;
+  aiReport?: { content: string; created_at: string; } | null;
   onExportPDF: () => Promise<void>;
   onReportChange: (report: any) => void;
   onGenerateReport: (timeRange?: TimeRange) => void;
@@ -43,6 +44,7 @@ const timeRangePresets = [
 export function ReportSection({
   reviewCycle,
   feedbackRequest,
+  aiReport,
   onExportPDF,
   onReportChange,
   onGenerateReport,
@@ -297,6 +299,7 @@ export function ReportSection({
       {isM2E && existingReport && (
         <AIReport 
           feedbackRequest={feedbackRequest as any}
+          aiReport={aiReport}
           onExportPDF={onExportPDF}
           onReportChange={onReportChange}
           onGenerateReport={onGenerateReport}
@@ -313,6 +316,7 @@ export function ReportSection({
       {!isM2E && (
         <AIReport 
           feedbackRequest={feedbackRequest as any}
+          aiReport={aiReport}
           onExportPDF={onExportPDF}
           onReportChange={onReportChange}
           onGenerateReport={onGenerateReport}

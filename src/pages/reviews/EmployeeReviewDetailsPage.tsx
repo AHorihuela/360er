@@ -248,6 +248,7 @@ export function EmployeeReviewDetailsPage() {
       <ReportSection
         reviewCycle={reviewCycle}
         feedbackRequest={feedbackRequest}
+        aiReport={aiReport}
         onExportPDF={handleExportPDF}
         onReportChange={handleReportChange}
         onGenerateReport={handleGenerateReport}
