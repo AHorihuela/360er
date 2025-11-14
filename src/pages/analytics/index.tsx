@@ -88,21 +88,10 @@ export default function AnalyticsPage() {
       try {
         console.log("[DEBUG] Fetching review cycles for analytics:", { user: user.id, viewingAllAccounts, isMasterAccount });
         
-        // Build query to fetch review cycles
+        // Build query to fetch review cycles - avoiding nested relationships to prevent PostgREST errors
         let query = supabase
           .from('review_cycles')
-          .select(`
-            *,
-            feedback_requests:feedback_requests(
-              *,
-              employee:employees(*),
-              feedback_responses(*),
-              analytics:feedback_analytics(
-                id,
-                insights
-              )
-            )
-          `)
+          .select('*')
           .order('created_at', { ascending: false });
         
         // Only filter by user_id if not a master account or not viewing all accounts
@@ -122,13 +111,60 @@ export default function AnalyticsPage() {
             variant: 'destructive',
           });
         } else if (reviewCycles) {
-          console.log("Fetched review cycles:", reviewCycles);
-          setAllReviewCycles(reviewCycles);
+          // Fetch related data separately to avoid PostgREST relationship errors
+          const { data: feedbackRequests, error: requestsError } = await supabase
+            .from('feedback_requests')
+            .select('*');
+
+          if (requestsError) throw requestsError;
+
+          const { data: employees, error: employeesError } = await supabase
+            .from('employees')
+            .select('*');
+
+          if (employeesError) throw employeesError;
+
+          const { data: feedbackResponses, error: responsesError } = await supabase
+            .from('feedback_responses')
+            .select('*');
+
+          if (responsesError) throw responsesError;
+
+          const { data: analyticsData, error: analyticsError } = await supabase
+            .from('feedback_analytics')
+            .select('id, feedback_request_id, insights');
+
+          if (analyticsError) throw analyticsError;
+
+          // Manually link all the data to review cycles
+          const enhancedReviewCycles = reviewCycles.map(cycle => {
+            const cycleFeedbackRequests = feedbackRequests?.filter(req => req.review_cycle_id === cycle.id) || [];
+            
+            const enhancedRequests = cycleFeedbackRequests.map(request => {
+              const employee = employees?.find(emp => emp.id === request.employee_id);
+              const responses = feedbackResponses?.filter(resp => resp.feedback_request_id === request.id) || [];
+              const analytics = analyticsData?.find(ana => ana.feedback_request_id === request.id);
+              
+              return {
+                ...request,
+                employee,
+                feedback_responses: responses,
+                analytics
+              };
+            });
+
+            return {
+              ...cycle,
+              feedback_requests: enhancedRequests
+            };
+          });
+          console.log("Fetched review cycles:", enhancedReviewCycles);
+          setAllReviewCycles(enhancedReviewCycles);
 
           // If no cycle is selected, use the most recent one
           const cycleToShow = selectedCycleId 
-            ? reviewCycles.find(c => c.id === selectedCycleId) 
-            : reviewCycles[0];
+            ? enhancedReviewCycles.find(c => c.id === selectedCycleId) 
+            : enhancedReviewCycles[0];
 
           if (cycleToShow) {
             console.log("Selected cycle:", cycleToShow);
