@@ -57,11 +57,26 @@ export function useAIReportManagement({
         created_at: feedbackRequest.ai_reports[0].updated_at
       });
     } else if (!feedbackRequest?.ai_reports && !aiReport) {
-      // Only clear state if there's no existing generated report in memory
-      setAiReport(null);
+      // Check localStorage for master account reports before clearing state
+      const localStorageKey = `ai_report_${feedbackRequest?.id}`;
+      const storedReport = localStorage.getItem(localStorageKey);
+      
+      if (storedReport) {
+        try {
+          const parsedReport = JSON.parse(storedReport);
+          setAiReport(parsedReport);
+          console.log('[AI_REPORT] Loaded report from localStorage for master account');
+        } catch (error) {
+          console.error('[AI_REPORT] Error parsing stored report:', error);
+          localStorage.removeItem(localStorageKey);
+          setAiReport(null);
+        }
+      } else {
+        setAiReport(null);
+      }
     }
     // Don't override aiReport state if we have content from a recent generation
-  }, [feedbackRequest?.ai_reports]);
+  }, [feedbackRequest?.ai_reports, feedbackRequest?.id]);
 
   // Add debounced save function
   const debouncedSave = useCallback(
@@ -233,35 +248,48 @@ export function useAIReportManagement({
 
       setGenerationStep(1);
 
-      // Check if user is a master account to determine database operation strategy
-      let isMasterAccount = false;
-      try {
-        isMasterAccount = await checkMasterAccountStatus(currentUserId);
-      } catch (error) {
-        console.error('[AI_REPORT] Error checking master account status for database operations:', error);
-      }
+      // Determine database operation strategy based on ownership, not master account status
+      // If user owns the cycle, use normal database operations regardless of master account status
+      const isOwner = currentUserId === cycleOwnerUserId;
+      const shouldBypassDatabase = !isOwner; // Only bypass for non-owners (true master account access)
 
-      // For master accounts, skip database operations to avoid RLS policy issues
-      console.log('[AI_REPORT] Master account check result:', { isMasterAccount, currentUserId: currentUserId?.substring(0, 8), cycleOwnerUserId: cycleOwnerUserId?.substring(0, 8) });
+      console.log('[AI_REPORT] Database operation strategy:', { 
+        isOwner, 
+        shouldBypassDatabase, 
+        currentUserId: currentUserId?.substring(0, 8), 
+        cycleOwnerUserId: cycleOwnerUserId?.substring(0, 8) 
+      });
       
-      if (!isMasterAccount) {
+      if (!shouldBypassDatabase) {
         console.log('[AI_REPORT] Creating initial placeholder for cycle owner');
-        // Only create placeholder for cycle owners, not master accounts
-        const { error: initError } = await supabase
+        
+        // Use proper Supabase UPSERT with onConflict to handle duplicates correctly
+        console.log('[AI_REPORT] Attempting proper UPSERT operation with conflict resolution');
+        const { data: upsertData, error: upsertError } = await supabase
           .from('ai_reports')
           .upsert({
             feedback_request_id: feedbackRequest.id,
             status: 'processing',
             is_final: false,
             updated_at: new Date().toISOString()
-          });
+          }, {
+            onConflict: 'feedback_request_id',
+            ignoreDuplicates: false
+          })
+          .select();
 
-        if (initError) {
-          console.error('[AI_REPORT] Initial upsert failed:', initError);
-          throw initError;
+        console.log('[AI_REPORT] UPSERT result:', { upsertData, upsertError });
+        
+        if (upsertError) {
+          console.error('[AI_REPORT] UPSERT failed:', upsertError);
+          throw upsertError;
+        }
+        
+        if (upsertData && upsertData.length > 0) {
+          console.log('[AI_REPORT] Successfully created/updated initial record');
         }
       } else {
-        console.log('[AI_REPORT] Skipping initial upsert for master account - API will handle report creation');
+        console.log('[AI_REPORT] Skipping initial upsert for non-owner master account - API will handle report creation');
       }
 
       // Check if aborted
@@ -314,14 +342,24 @@ export function useAIReportManagement({
       const currentTime = new Date().toISOString();
 
       // Update state first to ensure immediate UI update
-      setAiReport({
+      const reportData = {
         content: finalReportContent,
         created_at: currentTime
-      });
+      };
+      
+      setAiReport(reportData);
+      
+      // For non-owners accessing via master account, save to localStorage for persistence
+      if (shouldBypassDatabase) {
+        const localStorageKey = `ai_report_${feedbackRequest.id}`;
+        localStorage.setItem(localStorageKey, JSON.stringify(reportData));
+        console.log('[AI_REPORT] Saved report to localStorage for non-owner master account');
+      }
 
-      // Update database - skip for master accounts to avoid RLS policy issues
-      if (!isMasterAccount) {
-        const { error: finalizeError } = await supabase
+      // Update database for cycle owners
+      if (!shouldBypassDatabase) {
+        console.log('[AI_REPORT] Saving final report content to database');
+        const { data: finalData, error: finalizeError } = await supabase
           .from('ai_reports')
           .update({
             content: finalReportContent,
@@ -329,11 +367,23 @@ export function useAIReportManagement({
             is_final: true,
             updated_at: currentTime
           })
-          .eq('feedback_request_id', feedbackRequest.id);
+          .eq('feedback_request_id', feedbackRequest.id)
+          .select();
 
-        if (finalizeError) throw finalizeError;
+        console.log('[AI_REPORT] Final update result:', { finalData, finalizeError });
+        
+        if (finalizeError) {
+          console.error('[AI_REPORT] Final update failed:', finalizeError);
+          throw finalizeError;
+        }
+        
+        if (finalData && finalData.length > 0) {
+          console.log('[AI_REPORT] Successfully saved report content to database');
+        } else {
+          console.warn('[AI_REPORT] Final update succeeded but no rows affected');
+        }
       } else {
-        console.log('[AI_REPORT] Skipping final database update for master account - report generated successfully');
+        console.log('[AI_REPORT] Skipping final database update for non-owner master account - report generated successfully');
       }
 
       // Refresh data from the parent component if callback provided
