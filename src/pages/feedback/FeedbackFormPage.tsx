@@ -184,7 +184,18 @@ export function FeedbackFormPage() {
         review_cycle: reviewCycleData
       };
 
-      console.log('Initial request result:', { requestData: combinedRequestData, requestError: null });
+      console.log('Initial request result:', { 
+        requestData: combinedRequestData, 
+        hasEmployee: !!employeeData,
+        hasCycle: !!reviewCycleData
+      });
+
+      if (!employeeData) {
+        console.error('FeedbackFormPage - Employee data missing for ID:', requestData.employee_id);
+      }
+      if (!reviewCycleData) {
+        console.error('FeedbackFormPage - Review cycle data missing for ID:', requestData.review_cycle_id);
+      }
 
       // Fetch feedback data - make session_id optional to handle database schema differences
       const { data: feedback, error: feedbackError } = await anonymousClient

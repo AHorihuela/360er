@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Sidebar, DesktopSidebar, SidebarLink } from "./sidebar";
-import { LayoutDashboard, Users, ClipboardList, Settings, LogOut, BarChart, BookOpen, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, Settings, LogOut, BarChart, BookOpen, MessageSquare, Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -21,16 +21,18 @@ export function SidebarDemo({
   setSidebarExpanded 
 }: SidebarDemoProps = {}) {
   const navigate = useNavigate();
-  const { closeMobileMenu } = useMobileMenu();
+  const { closeMobileMenu, toggleMobileMenu } = useMobileMenu();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
+    setOpen(false);
     closeMobileMenu();
   };
 
   const handleLinkClick = (href: string) => {
     navigate(href);
+    setOpen(false);
     closeMobileMenu();
   };
 
@@ -91,16 +93,25 @@ export function SidebarDemo({
   return (
     <div
       className={cn(
-        "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 flex-shrink-0 h-full"
+        "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 flex-shrink-0 h-auto md:h-full"
       )}
     >
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-neutral-100 dark:bg-neutral-800 w-full border-b border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center gap-2">
+          <LogoIcon />
+          <span className="font-bold text-sm text-neutral-800 dark:text-neutral-200">Squad360</span>
+        </div>
+        <Menu className="h-6 w-6 text-neutral-800 dark:text-neutral-200 cursor-pointer" onClick={toggleMobileMenu} />
+      </div>
+
       <Sidebar open={open} setOpen={handleSetOpen}>
         {/* Custom sidebar content that shows on mobile when forceOpen is true */}
         <motion.div
           className={cn(
             "h-full px-4 py-4 bg-neutral-100 dark:bg-neutral-800 w-[300px] flex-shrink-0",
             // Show on mobile when forceOpen is true, otherwise hide on mobile
-            forceOpen ? "flex flex-col" : "hidden md:flex md:flex-col"
+            forceOpen ? "flex flex-col fixed inset-y-0 left-0 z-50 w-64 shadow-xl h-full" : "hidden md:flex md:flex-col"
           )}
           animate={{
             width: open ? "300px" : "60px",

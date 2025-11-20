@@ -184,6 +184,25 @@ export function useAIReportManagement({
       let currentSession = null;
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       
+      console.log('[AI_REPORT] Authentication debug:', {
+        sessionUser: session?.user?.id,
+        sessionEmail: session?.user?.email,
+        authError
+      });
+
+      // CRITICAL: Test which database we're actually connected to
+      const { data: dbTest } = await supabase
+        .from('review_cycles')
+        .select('id, user_id')
+        .eq('id', '0958757d-1f8b-42fa-9742-fdf08c624b0d')
+        .single();
+      
+      console.log('[AI_REPORT] DIRECT DATABASE TEST:', {
+        cycleId: dbTest?.id,
+        actualOwnerInDB: dbTest?.user_id,
+        expectedOwner: 'cb093adc-a2dd-4535-93ba-1e81dcb7d7ce'
+      });
+      
       if (authError || !session) {
         console.warn('[AI_REPORT] Session not found, attempting refresh...');
         // Try to refresh the session
@@ -208,13 +227,10 @@ export function useAIReportManagement({
 
       
 
-      // Verify access permissions
+      // Fetch feedback request data avoiding automatic joins (PostgREST relationship issue)
       const { data: feedbackRequestData, error: fetchError } = await supabase
         .from('feedback_requests')
-        .select(`
-          *,
-          review_cycles (user_id)
-        `)
+        .select('*')
         .eq('id', feedbackRequest.id)
         .single();
 
@@ -222,7 +238,24 @@ export function useAIReportManagement({
         throw new Error(`Failed to verify access: ${fetchError.message}`);
       }
 
-      const cycleOwnerUserId = feedbackRequestData?.review_cycles?.user_id;
+      // Fetch review cycle data separately to avoid PostgREST relationship issues
+      const { data: reviewCycleData, error: cycleError } = await supabase
+        .from('review_cycles')
+        .select('user_id')
+        .eq('id', feedbackRequestData.review_cycle_id)
+        .single();
+
+      if (cycleError) {
+        throw new Error(`Failed to fetch cycle owner: ${cycleError.message}`);
+      }
+
+      console.log('[AI_REPORT] Feedback request data debug:', {
+        feedbackRequestId: feedbackRequestData?.id,
+        reviewCycleId: feedbackRequestData?.review_cycle_id,
+        cycleUserId: reviewCycleData?.user_id
+      });
+
+      const cycleOwnerUserId = reviewCycleData?.user_id;
       const currentUserId = currentSession.user.id;
 
       if (cycleOwnerUserId !== currentUserId) {
@@ -256,38 +289,31 @@ export function useAIReportManagement({
       console.log('[AI_REPORT] Database operation strategy:', { 
         isOwner, 
         shouldBypassDatabase, 
-        currentUserId: currentUserId?.substring(0, 8), 
-        cycleOwnerUserId: cycleOwnerUserId?.substring(0, 8) 
+        currentUserId: currentUserId, 
+        cycleOwnerUserId: cycleOwnerUserId,
+        fullContext: { currentUserId, cycleOwnerUserId }
       });
       
       if (!shouldBypassDatabase) {
         console.log('[AI_REPORT] Creating initial placeholder for cycle owner');
         
-        // Use proper Supabase UPSERT with onConflict to handle duplicates correctly
-        console.log('[AI_REPORT] Attempting proper UPSERT operation with conflict resolution');
-        const { data: upsertData, error: upsertError } = await supabase
+        // Restore original simple UPSERT that was working before constraints were added
+        console.log('[AI_REPORT] Using original simple UPSERT pattern');
+        const { error: initError } = await supabase
           .from('ai_reports')
           .upsert({
             feedback_request_id: feedbackRequest.id,
             status: 'processing',
             is_final: false,
             updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'feedback_request_id',
-            ignoreDuplicates: false
-          })
-          .select();
+          });
 
-        console.log('[AI_REPORT] UPSERT result:', { upsertData, upsertError });
-        
-        if (upsertError) {
-          console.error('[AI_REPORT] UPSERT failed:', upsertError);
-          throw upsertError;
+        if (initError) {
+          console.error('[AI_REPORT] UPSERT failed:', initError);
+          throw initError;
         }
         
-        if (upsertData && upsertData.length > 0) {
-          console.log('[AI_REPORT] Successfully created/updated initial record');
-        }
+        console.log('[AI_REPORT] Successfully created/updated initial record');
       } else {
         console.log('[AI_REPORT] Skipping initial upsert for non-owner master account - API will handle report creation');
       }

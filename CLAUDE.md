@@ -124,14 +124,14 @@ When asked to do something, just do it - including obvious follow-up actions nee
 
 ## Database Operations
 
-- YOU MUST ALWAYS use the **TESTING DATABASE** (apwhdpqsifessytazlzp) for development work, testing, and experimentation
-- YOU MUST NEVER modify the **PRODUCTION DATABASE** (vwckinhujlyviulpmtjo) without Alberto's EXPLICIT permission
+- When working on the **main branch**: Use the **PRODUCTION DATABASE** (vwckinhujlyviulpmtjo) for database operations
+- When working on the **enterprise dev branch**: Use the **TESTING DATABASE** (apwhdpqsifessytazlzp) for database operations
 - Database IDs are documented in MIGRATION_PLAN.md - reference this file when unsure
-- Before executing ANY database query on production, YOU MUST:
-  1. Verify you have explicit permission to modify production
+- Before executing ANY database query, YOU MUST:
+  1. Verify which branch you're on
   2. State clearly which database you're targeting
   3. Explain what the query will do
-- If you accidentally modify production, YOU MUST immediately inform Alberto and document what was changed
+- If you accidentally modify the wrong database, YOU MUST immediately inform Alberto and document what was changed
 
 ## Issue tracking
 

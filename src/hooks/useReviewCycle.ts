@@ -103,6 +103,10 @@ export function useReviewCycle(cycleId: string | undefined) {
         // Manually link employee data using employee_id
         const employee = employeesData?.find(emp => emp.id === request.employee_id) || null
         
+        if (!employee) {
+          console.warn(`Employee not found for request ${request.id} (employee_id: ${request.employee_id})`);
+        }
+
         return {
           ...request,
           status,

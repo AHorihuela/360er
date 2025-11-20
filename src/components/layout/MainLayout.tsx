@@ -49,7 +49,7 @@ export function MainLayout({ children }: MainLayoutProps): JSX.Element {
       sidebarExpanded, 
       setSidebarExpanded 
     }}>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-background">
         {/* Mobile Overlay - only when menu is open */}
         {isMobileMenuOpen && (
           <div 
@@ -58,11 +58,8 @@ export function MainLayout({ children }: MainLayoutProps): JSX.Element {
           />
         )}
 
-        {/* Sidebar - hidden on mobile by default, normal on desktop */}
-        <div className={`
-          ${isMobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 w-64' : 'hidden md:block'} 
-          h-full
-        `}>
+        {/* Sidebar */}
+        <div className="w-full md:w-auto md:h-full z-50">
           <SidebarDemo 
             forceOpen={isMobileMenuOpen}
             sidebarExpanded={sidebarExpanded}
