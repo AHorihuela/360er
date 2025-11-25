@@ -4,11 +4,11 @@
 import { describe, it, expect } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
-const TEST_SUPABASE_URL = 'https://apwhdpqsifessytazlzp.supabase.co';
-const TEST_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwd2hkcHFzaWZlc3N5dGF6bHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5NTUxNTYsImV4cCI6MjAzMTUzMTE1Nn0.YA6IjRuFrKr8cjdI1pOpneTKV2DQZ3_aocOV7hIKCOo';
+// Use environment variables for Supabase credentials (production database on main branch)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Use the TESTING database for integration tests
-const testSupabase = createClient(TEST_SUPABASE_URL, TEST_SUPABASE_ANON_KEY);
+const testSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 describe('Database Relationships Integration Tests', () => {
   

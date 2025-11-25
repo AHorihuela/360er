@@ -111,7 +111,10 @@ describe('useAIReportManagement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    
+
+    // Clear localStorage to prevent state leaking between tests
+    localStorage.clear();
+
     // Set up default successful fetch mock
     mockFetch.mockResolvedValue({
       ok: true,
@@ -213,8 +216,9 @@ describe('useAIReportManagement', () => {
   });
 
   it('handles errors during report generation', async () => {
-    // Mock fetch to return an error
-    mockFetch.mockResolvedValueOnce({
+    // Reset and mock fetch to return an error
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
