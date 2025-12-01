@@ -39,9 +39,12 @@ Do the task including obvious follow-ups. Pause only when:
 
 ## Writing Code
 
+- When submitting work, verify you have FOLLOWED ALL RULES (see Rule #1).
 - Make SMALLEST reasonable changes. Simple > clever. Readability is primary.
 - NEVER rewrite implementations without explicit permission.
+- Get Alberto's approval before implementing backward compatibility.
 - Match surrounding code style even if it differs from style guides.
+- Don't manually change whitespace; use a formatting tool instead.
 - Fix broken things immediately. Reduce duplication even if tedious.
 - See `documentation/code-style-guide.md` for naming and comment conventions.
 
@@ -64,7 +67,6 @@ Do the task including obvious follow-ups. Pause only when:
 
 - **main branch** → PRODUCTION DATABASE (vwckinhujlyviulpmtjo)
 - **enterprise dev branch** → TESTING DATABASE (apwhdpqsifessytazlzp)
-- Database IDs documented in MIGRATION_PLAN.md
 
 Before ANY database query:
 1. Verify which branch you're on
