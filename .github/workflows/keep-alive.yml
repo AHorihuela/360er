@@ -1,0 +1,24 @@
+name: Squad360 Supabase Keep-Alive
+
+on:
+  schedule:
+    # Run twice daily at different times to maintain database activity
+    - cron: '23 7 * * *'   # 7:23 AM UTC
+    - cron: '47 19 * * *'  # 7:47 PM UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Random delay to avoid predictable patterns
+        run: sleep $((RANDOM % 300))
+
+      - name: Ping health endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://360er.vercel.app/api/health)
+          if [ "$response" != "200" ]; then
+            echo "Health check failed with status: $response"
+            exit 1
+          fi
+          echo "Health check passed"
