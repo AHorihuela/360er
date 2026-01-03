@@ -30,18 +30,42 @@ const linked = mainData.map(item => ({
 }));
 ```
 
-## Critical Testing Gap
+## Local Supabase Development (Jan 2026)
 
-**Issue:** Unit tests mock Supabase completely, hiding real database relationship errors
+**Setup:** Local Supabase via Docker replaces remote testing database.
 
-**Implication:** Tests passing does NOT equal functionality working in real environment
+**Benefits:**
+- Integration tests run against real local database, catching PostgREST issues
+- No risk of accidentally modifying production data during development
+- Faster iteration (no network latency)
+- Works offline
+
+**Workflow:**
+```bash
+npm run supabase:start   # Start local Supabase
+npm run supabase:reset   # Reset and re-seed with test data
+npm run test:integration # Run tests against local DB
+npm run supabase:stop    # Stop when done
+```
+
+**Environment files:**
+- `.env.local` - Points to local Supabase (127.0.0.1:54321)
+- `.env.production.local` - Points to production Supabase
+
+**Test data:** `supabase/seed.sql` creates realistic mock data including employees, review cycles, feedback requests/responses, and AI reports.
+
+## Testing Gap (Resolved)
+
+**Previous Issue:** Unit tests mocked Supabase completely, hiding real database relationship errors.
+
+**Current Solution:** Two-tier testing approach:
+1. `npm run test:unit` - Fast mocked tests for logic validation
+2. `npm run test:integration` - Real database tests against local Supabase
 
 **Validation Rule:** After implementing ANY fix:
-1. Test manually first
-2. Use Playwright agent for UI verification
+1. Run integration tests with local Supabase
+2. Test manually for UI verification
 3. Verify actual functionality works with real data
-
-**Root Cause:** Playwright agent has authentication limitations for protected routes, and mocked tests don't catch real DB issues.
 
 ## Production Security Cleanup (Dec 2025)
 

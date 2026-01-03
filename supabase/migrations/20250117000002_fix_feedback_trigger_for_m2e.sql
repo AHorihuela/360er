@@ -1,9 +1,7 @@
--- Migration: Fix handle_feedback_response trigger for Manager-to-Employee feedback
--- Date: January 17, 2025  
+-- Migration: Handle feedback_response trigger for Manager-to-Employee feedback
 -- Purpose: Allow M2E feedback submission without unique_link requirement
 --
--- The current trigger requires unique_link IS NOT NULL for all feedback,
--- but M2E feedback uses direct manager submission (no anonymous links needed)
+-- M2E feedback uses direct manager submission (no anonymous links needed)
 
 -- Update the handle_feedback_response function to handle M2E cycles
 CREATE OR REPLACE FUNCTION handle_feedback_response()
@@ -50,19 +48,6 @@ BEGIN
         WHEN NEW.status = 'submitted' THEN NOW()
         ELSE NULL
     END;
-
-    -- Handle linking for in-progress feedback  
-    IF NEW.status = 'submitted' THEN
-        -- Link to existing in-progress if one exists
-        NEW.previous_version_id := (
-            SELECT id FROM feedback_responses
-            WHERE feedback_request_id = NEW.feedback_request_id
-            AND session_id = NEW.session_id
-            AND status = 'in_progress'
-            ORDER BY submitted_at DESC
-            LIMIT 1
-        );
-    END IF;
 
     RETURN NEW;
 END;

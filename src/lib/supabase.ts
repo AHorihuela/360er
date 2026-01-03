@@ -7,6 +7,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Debug: show which Supabase instance we're connecting to
+if (import.meta.env.DEV) {
+  console.log('[SUPABASE] Connecting to:', supabaseUrl.includes('127.0.0.1') ? 'LOCAL' : 'PRODUCTION', supabaseUrl);
+}
+
 // Note: This app intentionally creates two Supabase client instances:
 // 1. Main client for authenticated user operations (dashboard, user management)
 // 2. Anonymous client for public feedback submission (completely isolated auth)

@@ -73,12 +73,4 @@ $$;
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION analyze_feedback_with_openai TO authenticated;
 
--- Create policy for feedback_analytics table
-CREATE POLICY analyze_feedback_policy ON feedback_analytics
-  FOR ALL
-  TO authenticated
-  USING (auth.uid() IN (
-    SELECT user_id 
-    FROM feedback_requests 
-    WHERE id = feedback_request_id
-  )); 
+-- Note: Policy for feedback_analytics is created in 20240130000003_create_feedback_analytics.sql 

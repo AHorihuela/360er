@@ -7,7 +7,7 @@ Rule #1: If you want exception to ANY rule, YOU MUST STOP and get explicit permi
 
 **Critical constraint:** PostgREST automatic joins often fail. Use manual data linking (separate queries + JS joins). See `documentation/session-notes.md`.
 
-**Testing gap:** Unit tests mock Supabase, hiding real DB errors. Tests passing does NOT equal functionality working. Always manually test database queries and UI functionality.
+**Testing approach:** Unit tests mock Supabase for speed; integration tests use local Supabase (Docker) for real DB validation. Run `npm run test:integration` with local Supabase running to catch PostgREST issues before production.
 
 ## Foundational Rules
 
@@ -65,13 +65,28 @@ Do the task including obvious follow-ups. Pause only when:
 
 ## Database Operations
 
-- **main branch** → PRODUCTION DATABASE (vwckinhujlyviulpmtjo)
-- **enterprise dev branch** → TESTING DATABASE (apwhdpqsifessytazlzp)
+**Environments:**
+- **Local development** → Local Supabase (Docker) at `http://127.0.0.1:54321`
+- **Production** → Remote Supabase (vwckinhujlyviulpmtjo)
 
-Before ANY database query:
-1. Verify which branch you're on
-2. State clearly which database you're targeting
-3. Explain what the query will do
+**Local Development Commands:**
+```bash
+npm run supabase:start   # Start local Supabase (Docker)
+npm run supabase:stop    # Stop local Supabase
+npm run supabase:reset   # Reset DB and re-seed with test data
+npm run supabase:status  # Show local URLs and credentials
+```
+
+**Testing Commands:**
+```bash
+npm run test:unit        # Fast, mocked tests
+npm run test:integration # Against local Supabase (requires supabase:start)
+```
+
+Before ANY production database query:
+1. Confirm you intend to modify production
+2. State clearly what the query will do
+3. Use `/pre-migration` for schema changes
 
 If wrong database modified: IMMEDIATELY inform Alberto and document what was changed.
 
@@ -89,6 +104,7 @@ If wrong database modified: IMMEDIATELY inform Alberto and document what was cha
 | Large tasks | `documentation/dev-docs-workflow.md` or `/dev-docs` |
 | Code style questions | `documentation/code-style-guide.md` |
 | Database changes | `/pre-migration` then `/audit` |
+| Local DB setup | `npm run supabase:start` then `npm run supabase:reset` |
 | Known issues | `documentation/session-notes.md` |
 
 ## Codebase Map
