@@ -46,7 +46,16 @@ Do the task including obvious follow-ups. Pause only when:
 - Match surrounding code style even if it differs from style guides.
 - Don't manually change whitespace; use a formatting tool instead.
 - Fix broken things immediately. Reduce duplication even if tedious.
+- All code files should start with a 2-line comment explaining what the file does, prefixed with `ABOUTME:`.
 - See `documentation/code-style-guide.md` for naming and comment conventions.
+
+## Post-Task Workflow
+
+When done with a coding task:
+1. Run `/review` on the changes made to double-check quality
+2. Verify sufficient test coverage exists
+3. Run tests to confirm nothing is broken
+4. When finishing, include a brief reminder of what you worked on (helps Alberto track multiple concurrent agents)
 
 ## Version Control
 
@@ -63,25 +72,27 @@ Do the task including obvious follow-ups. Pause only when:
 - Test output must be pristine. Run `/audit` before database schema changes.
 - Follow TDD for new features/bugfixes: see `documentation/tdd-workflow.md`.
 
-## Database Operations
+## Local Development
 
-**Environments:**
-- **Local development** → Local Supabase (Docker) at `http://127.0.0.1:54321`
-- **Production** → Remote Supabase (vwckinhujlyviulpmtjo)
+Local dev uses a fully isolated Supabase stack via Docker. This keeps test data separate from production.
 
-**Local Development Commands:**
+- **Test user**: `test@test.com` / `test123!`
+- **Studio**: http://127.0.0.1:54323 (local database browser)
+- **API**: http://127.0.0.1:54321
+
 ```bash
 npm run supabase:start   # Start local Supabase (Docker)
 npm run supabase:stop    # Stop local Supabase
 npm run supabase:reset   # Reset DB and re-seed with test data
-npm run supabase:status  # Show local URLs and credentials
-```
-
-**Testing Commands:**
-```bash
 npm run test:unit        # Fast, mocked tests
 npm run test:integration # Against local Supabase (requires supabase:start)
 ```
+
+## Database Operations
+
+**Environments:**
+- **Local development** → Local Supabase (Docker)
+- **Production** → Remote Supabase (vwckinhujlyviulpmtjo)
 
 Before ANY production database query:
 1. Confirm you intend to modify production
