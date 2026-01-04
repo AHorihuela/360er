@@ -60,3 +60,6 @@ migration-data/
 
 # API development files
 api/
+
+# Git worktrees (isolated development branches)
+360er-enterprise/
