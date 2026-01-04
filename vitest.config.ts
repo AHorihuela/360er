@@ -10,6 +10,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-utils/setup.ts'],
     include: ['**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    exclude: ['**/node_modules/**', '**/360er-enterprise/**'],
     // Extended timeout for integration tests that hit the local DB
     testTimeout: 10000,
     // Environment variables for local Supabase
